@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg: #161622;
+  --color-card: #232334;
+  --color-card-lighter: #2c2c40;
+  --color-purple: #8b5cf6;
+  --color-indigo: #6366f1;
+  --color-pink: #ff85a1;
+  --color-cyan: #38bdf8;
+  --color-orange: #f97316;
+  --color-emerald: #10b981;
+  --color-text-muted: #8a8d9b;
+  --color-white: #ffffff;
+}
+
+@layer base {
+  body {
+    background-color: #161622;
+    color: #ffffff;
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  
+  ::selection {
+    background-color: #8b5cf6;
+    color: #ffffff;
+  }
+}
+
+/* Custom Scrollbars in Dark UI Palette */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #161622;
+}
+::-webkit-scrollbar-thumb {
+  background: #2a2a3e;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #6366f1;
+}
+
+/* Glass & Card Styles matching uploaded dark UI design */
+.glass-panel {
+  background: #232334;
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-card {
+  background: #232334;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.4);
+}
+
+.glass-card:hover {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 12px 35px -5px rgba(99, 102, 241, 0.15);
+}
+
+.nav-pill-active {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 4px 20px -2px rgba(99, 102, 241, 0.45);
+  color: #ffffff !important;
+}
+
+.btn-gradient-purple {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  box-shadow: 0 4px 15px -3px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s ease;
+}
+
+.btn-gradient-purple:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px -2px rgba(99, 102, 241, 0.6);
+}
+
+/* Animated Orbita Shapes (Circle, Triangle, Square) Keyframes */
+@keyframes orbita-circle-bounce {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+  }
+  50% {
+    transform: translateY(-3.5px) scale(1.14);
+    box-shadow: 0 0 16px rgba(168, 85, 247, 0.9);
+  }
+}
+
+@keyframes orbita-triangle-bounce {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+    filter: drop-shadow(0 0 6px rgba(249, 115, 22, 0.5));
+  }
+  50% {
+    transform: translateY(3.5px) rotate(12deg);
+    filter: drop-shadow(0 0 14px rgba(249, 115, 22, 0.9));
+  }
+}
+
+@keyframes orbita-square-bounce {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg) scale(1);
+    box-shadow: 0 0 8px rgba(56, 189, 248, 0.5);
+  }
+  50% {
+    transform: translateY(-3px) rotate(-10deg) scale(1.1);
+    box-shadow: 0 0 16px rgba(56, 189, 248, 0.9);
+  }
+}
+
+.animate-orbita-circle {
+  animation: orbita-circle-bounce 2.6s ease-in-out infinite;
+}
+
+.animate-orbita-triangle {
+  animation: orbita-triangle-bounce 3.2s ease-in-out infinite;
+}
+
+.animate-orbita-square {
+  animation: orbita-square-bounce 2.8s ease-in-out infinite;
+}
+

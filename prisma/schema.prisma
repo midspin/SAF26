@@ -1,0 +1,703 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Event {
+  id          String   @id @default(uuid())
+  name        String
+  code        String   @unique
+  year        Int
+  description String?
+  startDate   String?
+  endDate     String?
+  status      String   @default("Active") // Active, Planning, Completed, Archived
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  artists                  Artist[]
+  artworks                 Artwork[]
+  curators                 Curator[]
+  pocs                     Poc[]
+  programmingPeople        ProgrammingPerson[]
+  technicalPeople          TechnicalPerson[]
+  productionPeople         ProductionPerson[]
+  inventoryPeople          InventoryPerson[]
+  venues                   Venue[]
+  rooms                    Room[]
+  installations            ArtistInstallation[]
+  technicalRequirements    TechnicalRequirement[]
+  productionRequirements   ProductionRequirement[]
+  inventoryItems           InventoryItem[]
+  inventoryAllocations     InventoryAllocation[]
+  inventoryMovements       InventoryMovement[]
+  purchaseRequests         PurchaseRequest[]
+  rentalRecords            RentalRecord[]
+  importBatches            InventoryImportBatch[]
+  googleSyncLogs           GoogleSheetSyncLog[]
+  auditLogs                AuditLog[]
+  notifications            Notification[]
+}
+
+model Artist {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artistName  String
+  artistPhoto String?
+  biography   String?
+  country     String?
+  city        String?
+  email       String?
+  phone       String?
+  website     String?
+  notes       String?
+  status      String   @default("Confirmed") // Confirmed, Pending, In Discussion, Cancelled
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  artworks                 Artwork[]
+  curatorAssignments       ArtistCuratorAssignment[]
+  pocAssignments           ArtistPocAssignment[]
+  programmingAssignments   ArtistProgrammingAssignment[]
+  installations            ArtistInstallation[]
+  technicalRequirements    TechnicalRequirement[]
+  productionRequirements   ProductionRequirement[]
+  allocations              InventoryAllocation[]
+  purchaseRequests         PurchaseRequest[]
+  rentalRecords            RentalRecord[]
+}
+
+model Artwork {
+  id               String   @id @default(uuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artistId         String
+  artist           Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artworkName      String
+  description      String?
+  images           String?  // JSON string array or primary image URL
+  dimensions       String?
+  weight           String?
+  medium           String?
+  installationType String?  // Hanging, Floor, Projection, Interactive, Outdoor, Outdoor Pavilion
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  installations          ArtistInstallation[]
+  technicalRequirements  TechnicalRequirement[]
+  productionRequirements ProductionRequirement[]
+  allocations            InventoryAllocation[]
+  purchaseRequests       PurchaseRequest[]
+  rentalRecords          RentalRecord[]
+}
+
+model Curator {
+  id           String   @id @default(uuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String
+  category     String?  // Culinary Arts, Music, Theatre, Dance, Craft, Visual Arts, Special Projects, Accessibility
+  photo        String?
+  profile      String?
+  organisation String?
+  email        String?
+  phone        String?
+  website      String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  artistAssignments ArtistCuratorAssignment[]
+}
+
+model ArtistCuratorAssignment {
+  id        String   @id @default(uuid())
+  artistId  String
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  curatorId String
+  curator   Curator  @relation(fields: [curatorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([artistId, curatorId])
+}
+
+model Poc {
+  id           String   @id @default(uuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String
+  photo        String?
+  organisation String?
+  role         String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  altPhone     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  artistAssignments ArtistPocAssignment[]
+}
+
+model ArtistPocAssignment {
+  id        String   @id @default(uuid())
+  artistId  String
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  pocId     String
+  poc       Poc      @relation(fields: [pocId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([artistId, pocId])
+}
+
+model ProgrammingPerson {
+  id               String   @id @default(uuid())
+  eventId          String
+  eventIdsJson     String?
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name             String
+  photo            String?
+  role             String?
+  organisation     String?
+  email            String?
+  phone            String?
+  whatsapp         String?
+  responsibilities String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  artistAssignments ArtistProgrammingAssignment[]
+}
+
+model ArtistProgrammingAssignment {
+  id                  String            @id @default(uuid())
+  artistId            String
+  artist              Artist            @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  programmingPersonId String
+  programmingPerson   ProgrammingPerson @relation(fields: [programmingPersonId], references: [id], onDelete: Cascade)
+  createdAt           DateTime          @default(now())
+
+  @@unique([artistId, programmingPersonId])
+}
+
+model TechnicalPerson {
+  id           String   @id @default(uuid())
+  eventId      String
+  eventIdsJson String?
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String
+  photo        String?
+  role         String   // Technical Head, Technical Manager, Installation Team, Technical Engineer, AV Technician, Lighting Technician, Sound Technician, IT / Network, Venue Manager, Other
+  organisation String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  skills       String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model ProductionPerson {
+  id               String   @id @default(uuid())
+  eventId          String
+  eventIdsJson     String?
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name             String
+  photo            String?
+  role             String   // Production Head, Production Manager, Production Coordinator, Logistics Coordinator, Vendor Coordinator, Production Assistant, Other
+  organisation     String?
+  email            String?
+  phone            String?
+  whatsapp         String?
+  responsibilities String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model InventoryPerson {
+  id           String   @id @default(uuid())
+  eventId      String
+  eventIdsJson String?
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name         String
+  photo        String?
+  role         String?
+  organisation String?
+  email        String?
+  phone        String?
+  whatsapp     String?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Venue {
+  id              String   @id @default(uuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venueName       String
+  mainVenueImage  String?
+  venueDocument   String?  // PDF or Image attachment URL
+  venueDocumentType String? // PDF, IMAGE, DOCUMENT
+  address         String?
+  contactName     String?
+  contactPhone    String?
+  contactEmail    String?
+  description     String?
+  openingHours    String?
+  accessInfo      String?
+  loadingInfo     String?
+  parkingInfo     String?
+  powerInfo       String?
+  internetInfo    String?
+  technicalNotes  String?
+  productionNotes String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  rooms         Room[]
+  installations ArtistInstallation[]
+  allocations   InventoryAllocation[]
+  purchaseReqs  PurchaseRequest[]
+  rentalRecords RentalRecord[]
+}
+
+model Room {
+  id                String   @id @default(uuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  venueId           String
+  venue             Venue    @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  roomNumber        String
+  roomName          String
+  floor             String?
+  area              String?
+  length            String?
+  width             String?
+  height            String?
+  capacity          String?
+  roomImage         String?
+  roomImagesJson    String?  // JSON array of images
+  floorplan         String?  // URL to Floorplan PDF or Image
+  elevation         String?  // URL to Elevation Drawing PDF or Image
+  techProdLayout    String?  // Technical & Production Layout PDF or Image URL
+  powerInfo         String?
+  internetInfo      String?
+  lightingInfo      String?
+  existingEquipment String?
+  accessInfo        String?
+  restrictions      String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  installations ArtistInstallation[]
+  allocations   InventoryAllocation[]
+  purchaseReqs  PurchaseRequest[]
+  rentalRecords RentalRecord[]
+}
+
+model ArtistInstallation {
+  id                String   @id @default(uuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artistId          String
+  artist            Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artworkId         String?
+  artwork           Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  venueId           String?
+  venue             Venue?   @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  roomId            String?
+  room              Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  installationNotes String?
+  installationStatus String  @default("Planned") // Planned, Ready, Installation Pending, Installation In Progress, Installed, Removed, Completed
+  startDate         String?
+  endDate           String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model TechnicalRequirement {
+  id              String   @id @default(uuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artistId        String
+  artist          Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artworkId       String?
+  artwork         Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  requirementType String   // Video, Projection, LED, Audio, Lighting, Computer, Networking, Power, Sensor, Interactive, Structural, Other
+  description     String
+  quantity        Int      @default(1)
+  specification   String?
+  priority        String   @default("Medium") // Low, Medium, High, Critical
+  status          String   @default("Open") // Open, Allocated, Procurement Requested, Fulfilled, Cancelled
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ProductionRequirement {
+  id              String   @id @default(uuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  artistId        String
+  artist          Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  artworkId       String?
+  artwork         Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  requirementType String   // Furniture, Fabrication, Carpentry, Metal Work, Printing, Materials, Transport, Labour, Tools, Electrical, Logistics, Consumables, Other
+  description     String
+  quantity        Int      @default(1)
+  specification   String?
+  priority        String   @default("Medium") // Low, Medium, High, Critical
+  status          String   @default("Open") // Open, Allocated, Procurement Requested, Fulfilled, Cancelled
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model InventoryItem {
+  id                  String   @id @default(uuid())
+  eventId             String
+  event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  
+  // Legacy 15 Fields from Inventory TECH 2026.xlsx
+  safCode             String   // e.g. "Ac-1"
+  inventoryCategory   String   // e.g. "Technical"
+  subCategory         String   // e.g. "Cables"
+  element             String   // e.g. "HDMI"
+  yearOfPurchase      String?  // e.g. "2023" or "Na"
+  brandProject        String?  // e.g. "Sony" or "Na"
+  model               String?  // e.g. "VPL-FHZ85" or "Na"
+  sizeLwh             String?  // e.g. "10M" or "Na"
+  uom                 String?  // e.g. "Mtr", "Pcs", "Nos"
+  serialNo            String?  // e.g. "SN-88421" or "Na"
+  totalQuantity       Int      @default(0)
+  location            String?  // e.g. "Delhi Warehouse"
+  condition           String?  // e.g. "OK", "Fair", "Damaged"
+  throwRatio          String?  // e.g. "1.2 - 1.8" or "Na"
+  remarks             String?
+
+  // Operational Fields
+  inventoryUsageType  String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
+  inventorySource     String?  @default("Owned") // Owned, Rental, Purchased, Transferred
+  ownershipType       String?  @default("SAF") // SAF, Sponsor, Vendor, Loaned
+  isFaulty            Boolean  @default(false) // Flagged red in Excel import / faulty item
+  reservedQuantity    Int      @default(0)
+  allocatedQuantity   Int      @default(0)
+  damagedQuantity     Int      @default(0)
+  maintenanceQuantity Int      @default(0)
+  availableQuantity   Int      @default(0)
+  inventoryStatus     String   @default("Available") // Available, Fully Allocated, In Maintenance, Retired
+  assetId             String?  // Database asset ID e.g. INV-000001
+  vendorId            String?
+  vendor              Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  purchaseDate        String?
+  purchaseCost        Float?
+  rentalStartDate     String?
+  rentalEndDate       String?
+  purchaseLink        String?
+  rentalLink          String?
+  image               String?
+  createdBy           String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  allocations InventoryAllocation[]
+  movements   InventoryMovement[]
+}
+
+model InventoryAllocation {
+  id                String   @id @default(uuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  inventoryItemId   String
+  inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  artistId          String?
+  artist            Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  artworkId         String?
+  artwork           Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  venueId           String?
+  venue             Venue?   @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  roomId            String?
+  room              Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  department        String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
+  requestedQuantity Int
+  approvedQuantity  Int
+  issuedQuantity    Int      @default(0)
+  returnedQuantity  Int      @default(0)
+  damagedQuantity   Int      @default(0)
+  status            String   @default("Approved") // Requested, Approved, Issued, Partially Returned, Returned, Damaged
+  requestedBy       String?
+  approvedBy        String?
+  issuedBy          String?
+  allocationDate    String?
+  requiredDate      String?
+  returnDueDate     String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  movements InventoryMovement[]
+}
+
+model InventoryMovement {
+  id                String   @id @default(uuid())
+  eventId           String
+  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  inventoryItemId   String
+  inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
+  movementType      String   // Opening Stock, Stock Added, Allocated, Issued, Returned, Damaged, Maintenance, Repaired, Lost, Transferred, Retired, Disposed, Stock Adjustment, Rental Received, Rental Returned
+  quantity          Int
+  previousTotal     Int
+  newTotal          Int
+  previousAvailable Int
+  newAvailable     Int
+  performedBy       String?
+  reason            String?
+  notes             String?
+  allocationId      String?
+  allocation        InventoryAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
+  createdAt         DateTime @default(now())
+}
+
+model PurchaseRequest {
+  id                 String   @id @default(uuid())
+  eventId            String
+  event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  department         String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
+  artistId           String?
+  artist             Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  artworkId          String?
+  artwork            Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  venueId            String?
+  venue              Venue?   @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  roomId             String?
+  room               Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  itemName           String
+  brand              String?
+  model              String?
+  itemType           String?  @default("Purchase") // Purchase, Rental
+  category           String?
+  specification      String?
+  quantity           Int
+  uom                String?
+  priority           String   @default("Medium") // Low, Medium, High, Urgent
+  requiredDate       String?
+  vendorId           String?
+  vendor             Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  purchaseLink       String?
+  estimatedUnitCost  Float?
+  estimatedTotal     Float?
+  approvedCost       Float?
+  actualCost         Float?
+  tax                Float?
+  shipping           Float?
+  otherCharges       Float?
+  finalCost          Float?
+  status             String   @default("Request Raised") // Requirement Identified, Request Raised, Vendor Shortlisted, Quote Received, Approval Pending, Approved, Purchase Ordered, Shipped, Received, Added to Inventory, Cancelled
+  requestedBy        String?
+  approvedBy         String?
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  quotes VendorQuote[]
+}
+
+model RentalRecord {
+  id               String   @id @default(uuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  department       String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
+  artistId         String?
+  artist           Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
+  artworkId        String?
+  artwork          Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
+  venueId          String?
+  venue            Venue?   @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  roomId           String?
+  room             Room?    @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  itemName         String
+  category         String?
+  specification    String?
+  quantity         Int
+  uom              String?
+  vendorId         String?
+  vendor           Vendor?  @relation(fields: [vendorId], references: [id], onDelete: SetNull)
+  rentalLink       String?
+  rentalRate       Float?
+  rateType         String?  @default("Daily") // Daily, Weekly, Monthly, Event Flat
+  rentalStart      String?
+  rentalEnd        String?
+  pickupDate       String?
+  returnDate       String?
+  transportCost    Float?
+  installationCost Float?
+  tax              Float?
+  otherCharges     Float?
+  estimatedTotal   Float?
+  actualTotal      Float?
+  status           String   @default("Request Raised") // Requirement Identified, Request Raised, Quote Received, Approval Pending, Approved, Rental Booked, Equipment Received, Issued, In Use, Returned, Closed, Cancelled
+  requestedBy      String?
+  approvedBy       String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  quotes VendorQuote[]
+}
+
+model Vendor {
+  id            String   @id @default(uuid())
+  name          String
+  company       String?
+  category      String?  // AV, Lighting, Carpentry, Freight, Printing, IT, General
+  contactPerson String?
+  email         String?
+  phone         String?
+  website       String?
+  address       String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  inventoryItems   InventoryItem[]
+  purchaseRequests PurchaseRequest[]
+  rentalRecords    RentalRecord[]
+  quotes           VendorQuote[]
+}
+
+model VendorQuote {
+  id                 String           @id @default(uuid())
+  purchaseRequestId  String?
+  purchaseRequest    PurchaseRequest? @relation(fields: [purchaseRequestId], references: [id], onDelete: Cascade)
+  rentalRecordId     String?
+  rentalRecord       RentalRecord?    @relation(fields: [rentalRecordId], references: [id], onDelete: Cascade)
+  vendorId           String
+  vendor             Vendor           @relation(fields: [vendorId], references: [id], onDelete: Cascade)
+  itemName           String?
+  quantity           Int?
+  unitPrice          Float?
+  totalPrice         Float?
+  deliveryCost       Float?
+  installationCost   Float?
+  tax                Float?
+  finalCost          Float
+  validUntil         String?
+  quoteFile          String?
+  isPreferred        Boolean          @default(false)
+  notes              String?
+  createdAt          DateTime         @default(now())
+}
+
+model InventoryImportBatch {
+  id            String   @id @default(uuid())
+  eventId       String
+  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  fileName      String
+  uploadedBy    String
+  uploadedAt    DateTime @default(now())
+  totalRows     Int
+  importedRows  Int
+  updatedRows   Int
+  mergedRows    Int
+  skippedRows   Int
+  errorRows     Int
+  status        String   @default("Completed") // Staging, Processing, Completed, Rolled Back, Failed
+
+  rows InventoryImportRow[]
+}
+
+model InventoryImportRow {
+  id               String               @id @default(uuid())
+  batchId          String
+  batch            InventoryImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowNumber        Int
+  rawDataJson      String
+  safCode          String?
+  status           String               // Imported, Updated, Merged, Skipped, Error
+  resolutionAction String?              // Merge, Keep Separate, Skip, Auto
+  message          String?
+}
+
+model GoogleSheetSyncLog {
+  id           String   @id @default(uuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  workbookId   String
+  tabName      String
+  entityType   String   // INVENTORY, TECHNICAL_ALLOCATION, TECHNICAL_PROCUREMENT, PRODUCTION_ALLOCATION, PRODUCTION_PROCUREMENT
+  entityId     String
+  operation    String   // INSERT, UPDATE, DELETE
+  status       String   @default("Synced") // Pending, Processing, Synced, Failed, Retry
+  errorMessage String?
+  attemptCount Int      @default(1)
+  lastAttempt  DateTime @default(now())
+  syncedAt     DateTime?
+}
+
+model GoogleSheetRowMapping {
+  id            String   @id @default(uuid())
+  workbookId    String
+  tabName       String
+  entityType    String
+  entityId      String
+  sheetRowIndex Int
+  updatedAt     DateTime @updatedAt
+
+  @@unique([workbookId, tabName, entityId])
+}
+
+model AuditLog {
+  id               String   @id @default(uuid())
+  eventId          String
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  userName         String
+  userRole         String
+  entityType       String
+  entityId         String
+  action           String   // CREATE, UPDATE, DELETE, ALLOCATE, RETURN, RETIRE, SYNC, IMPORT
+  previousValueJson String?
+  newValueJson     String?
+  createdAt        DateTime @default(now())
+}
+
+model Notification {
+  id          String   @id @default(uuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  title       String
+  message     String
+  type        String   @default("info") // info, success, warning, error
+  targetRoles String?  // Comma-separated list of target roles e.g. "TECHNICAL HEAD,PRODUCTION & LAYOUT,INVENTORY MANAGER,PROCUREMENT MANAGER"
+  isRead      Boolean  @default(false)
+  link        String?
+  createdAt   DateTime @default(now())
+}
+
+model User {
+  id                 String   @id @default(uuid())
+  name               String
+  username           String?  @unique
+  password           String?  @default("password")
+  email              String   @unique
+  phone              String?
+  role               String   @default("SUPER ADMIN") // SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION & LAYOUT, TECHNICAL INSTALLATION, TECH INSTALL TEAM, INVENTORY MANAGER, PROCUREMENT MANAGER, VENUE MANAGER, VIEWER
+  department         String?  // Technical, Production, Inventory, Programming, Curatorial, Management
+  avatar             String?
+  mustChangePassword Boolean  @default(false)
+  teamMemberId       String?
+  assignedEventIds   String?  // JSON array string e.g. ["evt-1", "evt-2"]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @default(now()) @updatedAt
+}
