@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { teamType, eventId, eventIds, name, photo, role, organisation, email, phone, whatsapp, notes, responsibilities, skills } = body;
+    const { teamType, eventId, eventIds, name, photo, role, systemRole, userRole, organisation, email, phone, whatsapp, notes, responsibilities, skills } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ success: false, error: 'Member name is required.' }, { status: 400 });
@@ -141,16 +141,18 @@ export async function POST(req: Request) {
       });
     }
 
-    // Determine mapped User Role based on team type & designation
-    let mappedRole = 'TECHNICAL TEAM';
-    if (upperTeam === 'TECHNICAL') {
-      mappedRole = 'TECHNICAL TEAM';
-    } else if (upperTeam === 'PRODUCTION') {
-      mappedRole = 'PRODUCTION TEAM';
-    } else if (upperTeam === 'PROGRAMMING') {
-      mappedRole = 'PROGRAMMING TEAM';
-    } else if (upperTeam === 'INVENTORY') {
-      mappedRole = 'INVENTORY TEAM';
+    // Determine mapped User Role based on designation or explicit systemRole
+    let mappedRole = (systemRole || userRole || '').trim();
+    if (!mappedRole) {
+      if (upperTeam === 'TECHNICAL') {
+        mappedRole = 'TECHNICAL TEAM';
+      } else if (upperTeam === 'PRODUCTION') {
+        mappedRole = 'PRODUCTION TEAM';
+      } else if (upperTeam === 'PROGRAMMING') {
+        mappedRole = 'PROGRAMMING TEAM';
+      } else if (upperTeam === 'INVENTORY') {
+        mappedRole = 'INVENTORY TEAM';
+      }
     }
 
     // Generate unique default username and email

@@ -40,7 +40,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ success: false, error: 'Team member not found' }, { status: 404 });
     }
 
-    const { name, photo, role, organisation, email, phone, whatsapp, notes, responsibilities, skills, artistIds, eventIds } = body;
+    const { name, photo, role, systemRole, userRole, organisation, email, phone, whatsapp, notes, responsibilities, skills, artistIds, eventIds } = body;
 
     if (!name || !name.trim()) {
       return NextResponse.json({ success: false, error: 'Member name is required.' }, { status: 400 });
@@ -134,15 +134,20 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       });
     }
 
-    // Sync updated eventIds to linked User profile
-    if (eventIdsJson) {
+    // Sync updated role & eventIds to linked User profile
+    const targetRole = (systemRole || userRole || '').trim();
+    const updateUserData: any = {};
+    if (eventIdsJson) updateUserData.assignedEventIds = eventIdsJson;
+    if (targetRole) updateUserData.role = targetRole;
+
+    if (Object.keys(updateUserData).length > 0) {
       try {
         await prisma.user.updateMany({
           where: { teamMemberId: id },
-          data: { assignedEventIds: eventIdsJson },
+          data: updateUserData,
         });
       } catch (uErr) {
-        console.error('Error updating user assignedEventIds:', uErr);
+        console.error('Error updating user profile:', uErr);
       }
     }
 

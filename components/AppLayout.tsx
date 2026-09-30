@@ -372,77 +372,95 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => clearTimeout(timer);
   }, [searchQuery, selectedEventId]);
 
-  // Define All Available Navigation Sections
-  const allNavSections = [
-    {
-      title: 'OVERVIEW',
-      rolesAllowed: ['SUPER ADMIN', 'TECHNICAL TEAM', 'PRODUCTION TEAM', 'PROGRAMMING TEAM', 'INVENTORY TEAM', 'VIEWER'],
-      items: [
-        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-        { name: 'Events', href: '/events', icon: Calendar },
-      ],
-    },
-    {
-      title: 'CURATORIAL & PROGRAMMING',
-      rolesAllowed: ['SUPER ADMIN', 'PROGRAMMING TEAM', 'TECHNICAL TEAM', 'PRODUCTION TEAM', 'INVENTORY TEAM'],
-      items: [
-        { name: 'Artists', href: '/artists', icon: Users },
-        { name: 'Artworks', href: '/artworks', icon: Palette, hideForRoles: ['TECHNICAL TEAM', 'INVENTORY TEAM'] },
-        { name: 'Curators', href: '/curators', icon: Briefcase, hideForRoles: ['TECHNICAL TEAM', 'INVENTORY TEAM'] },
-        { name: 'Teams & Staff', href: '/teams', icon: UserCog, hideForRoles: ['TECHNICAL TEAM', 'INVENTORY TEAM'] },
-      ],
-    },
-    {
-      title: 'SPACES & PRODUCTION',
-      rolesAllowed: ['SUPER ADMIN', 'PRODUCTION TEAM', 'TECHNICAL TEAM'],
-      items: [
-        { name: 'Venues', href: '/venues', icon: Building2 },
-        { name: 'Rooms', href: '/rooms', icon: DoorOpen },
-        { name: 'Installations', href: '/installations', icon: MapPin },
-        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'New Table' },
-        { name: 'Technical & Production', href: '/requirements', icon: Wrench },
-      ],
-    },
-    {
-      title: 'INVENTORY & PROCUREMENT',
-      rolesAllowed: ['SUPER ADMIN', 'TECHNICAL TEAM', 'PRODUCTION TEAM', 'INVENTORY TEAM'],
-      items: [
-        { name: 'Master Inventory Pool', href: '/inventory', icon: Package },
-        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'Production' },
-        { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, badge: 'Tech' },
-        { name: 'Excel Migration Wizard', href: '/inventory/import', icon: FileSpreadsheet, badge: 'Legacy 2026' },
-        { name: 'Purchase & Rentals', href: '/procurement', icon: ShoppingCart },
-        { name: 'Vendors Directory', href: '/vendors', icon: Building2 },
-      ],
-    },
-    {
-      title: 'INTEGRATIONS & GOVERNANCE',
-      rolesAllowed: ['SUPER ADMIN'],
-      items: [
-        { name: 'Google Sheets 1-Way Sync', href: '/google-sheets', icon: RefreshCw, badge: 'Live Mirror' },
-        { name: 'Reports & Analytics', href: '/reports', icon: FileText },
-        { name: 'Audit Logs', href: '/audit-logs', icon: ShieldCheck },
-        { name: 'Settings & Users', href: '/settings', icon: Settings },
-      ],
-    },
-  ];
-
-  // Filter Navigation Sections for the Active User Role
-  const filteredNavSections = allNavSections
-    .filter((sec) => sec.rolesAllowed.includes((activeRole || '').trim().toUpperCase()))
-    .map((sec) => ({
-      ...sec,
-      items: sec.items.filter((item: any) => !item.hideForRoles || !item.hideForRoles.includes((activeRole || '').trim().toUpperCase())),
-    }));
-
-  const rolesList = [
+  // Import Role Permissions Helper
+  const [availableRolesList, setAvailableRolesList] = useState<string[]>([
     'SUPER ADMIN',
     'TECHNICAL TEAM',
     'PRODUCTION TEAM',
     'PROGRAMMING TEAM',
     'INVENTORY TEAM',
     'VIEWER',
+  ]);
+
+  useEffect(() => {
+    const updateRolesList = () => {
+      try {
+        const { getRoles } = require('@/lib/permissions');
+        const roles = getRoles();
+        if (roles && roles.length > 0) {
+          setAvailableRolesList(roles.map((r: any) => r.name));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    };
+    updateRolesList();
+    window.addEventListener('saf-roles-updated', updateRolesList);
+    return () => window.removeEventListener('saf-roles-updated', updateRolesList);
+  }, []);
+
+  // Define All Available Navigation Sections with module IDs for fine-grained permission control
+  const allNavSections = [
+    {
+      title: 'OVERVIEW',
+      items: [
+        { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, moduleId: 'dashboard' },
+        { name: 'Events', href: '/events', icon: Calendar, moduleId: 'events' },
+      ],
+    },
+    {
+      title: 'CURATORIAL & PROGRAMMING',
+      items: [
+        { name: 'Artists', href: '/artists', icon: Users, moduleId: 'artists' },
+        { name: 'Artworks', href: '/artworks', icon: Palette, moduleId: 'artworks' },
+        { name: 'Curators', href: '/curators', icon: Briefcase, moduleId: 'curators' },
+        { name: 'Teams & Staff', href: '/teams', icon: UserCog, moduleId: 'teams' },
+      ],
+    },
+    {
+      title: 'SPACES & PRODUCTION',
+      items: [
+        { name: 'Venues', href: '/venues', icon: Building2, moduleId: 'venues' },
+        { name: 'Rooms', href: '/rooms', icon: DoorOpen, moduleId: 'rooms' },
+        { name: 'Installations', href: '/installations', icon: MapPin, moduleId: 'installations' },
+        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'New Table', moduleId: 'inventory' },
+        { name: 'Technical & Production', href: '/requirements', icon: Wrench, moduleId: 'installations' },
+      ],
+    },
+    {
+      title: 'INVENTORY & PROCUREMENT',
+      items: [
+        { name: 'Master Inventory Pool', href: '/inventory', icon: Package, moduleId: 'inventory' },
+        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'Production', moduleId: 'inventory' },
+        { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, badge: 'Tech', moduleId: 'inventory' },
+        { name: 'Excel Migration Wizard', href: '/inventory/import', icon: FileSpreadsheet, badge: 'Legacy 2026', moduleId: 'import' },
+        { name: 'Purchase & Rentals', href: '/procurement', icon: ShoppingCart, moduleId: 'procurement' },
+        { name: 'Vendors Directory', href: '/vendors', icon: Building2, moduleId: 'vendors' },
+      ],
+    },
+    {
+      title: 'INTEGRATIONS & GOVERNANCE',
+      items: [
+        { name: 'Google Sheets 1-Way Sync', href: '/google-sheets', icon: RefreshCw, badge: 'Live Mirror', moduleId: 'google-sheets' },
+        { name: 'Reports & Analytics', href: '/reports', icon: FileText, moduleId: 'reports' },
+        { name: 'Audit Logs', href: '/audit-logs', icon: ShieldCheck, moduleId: 'audit-logs' },
+        { name: 'Settings & Users', href: '/settings', icon: Settings, moduleId: 'settings' },
+      ],
+    },
   ];
+
+  // Dynamically Filter Navigation Sections using lib/permissions
+  const filteredNavSections = allNavSections
+    .map((sec) => {
+      const { canUserViewModule } = require('@/lib/permissions');
+      const allowedItems = sec.items.filter((item: any) =>
+        canUserViewModule(activeRole, item.moduleId)
+      );
+      return { ...sec, items: allowedItems };
+    })
+    .filter((sec) => sec.items.length > 0);
+
+  const rolesList = availableRolesList;
 
   // If on /login page, render children directly without the layout wrapper
   if (pathname === '/login') {
