@@ -189,7 +189,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
   // Card #2 Document Attachments State (PDF, Excel, Word, Images)
   const [uploadedFiles, setUploadedFiles] = useState<
-    { id: string; name: string; size: string; type: string; url: string; date: string }[]
+    { id: string; name: string; size: string; type: string; url: string; date: string; isDefault?: boolean }[]
   >([
     {
       id: 'doc-1',
@@ -198,6 +198,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       type: 'pdf',
       url: '#',
       date: '22 Sep 2026',
+      isDefault: true,
     },
     {
       id: 'doc-2',
@@ -206,12 +207,15 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       type: 'excel',
       url: '#',
       date: '20 Sep 2026',
+      isDefault: true,
     },
   ]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    const newDocs: { id: string; name: string; size: string; type: string; url: string; date: string; isDefault?: boolean }[] = [];
 
     Array.from(files).forEach((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
@@ -221,17 +225,24 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       else if (['doc', 'docx'].includes(ext)) fileType = 'word';
       else if (['png', 'jpg', 'jpeg', 'webp', 'svg'].includes(ext)) fileType = 'image';
 
-      const newDoc = {
+      newDocs.push({
         id: `file-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
         name: file.name,
         size: `${(file.size / (1024 * 1024)).toFixed(2)} MB`,
         type: fileType,
         url: URL.createObjectURL(file),
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-      };
-
-      setUploadedFiles((prev) => [newDoc, ...prev]);
+        isDefault: false,
+      });
     });
+
+    setUploadedFiles((prev) => {
+      // Automatically remove default sample documents whenever new files are uploaded by Programming Team or Super Admin
+      const realUploadedFilesOnly = prev.filter((f) => !f.isDefault);
+      return [...newDocs, ...realUploadedFilesOnly];
+    });
+
+    e.target.value = '';
   };
 
   const handleRemoveFile = (fileId: string) => {
@@ -254,6 +265,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   const [assignItemNotes, setAssignItemNotes] = useState('');
   const [submittingAssign, setSubmittingAssign] = useState(false);
   const [assignModalSearch, setAssignModalSearch] = useState('');
+  const [modalItemQuantities, setModalItemQuantities] = useState<Record<string, number>>({});
 
   const openAssignModal = (dept: 'PRODUCTION' | 'TECHNICAL') => {
     setAssignItemModalDepartment(dept);
@@ -262,16 +274,20 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     setAssignItemQuantity(1);
     setAssignItemNotes('');
     setAssignModalSearch('');
+    setModalItemQuantities({});
     setAssignItemModalOpen(true);
   };
 
-  const handleConfirmAssignItem = async () => {
-    if (!selectedAssignInvId) {
+  const handleConfirmAssignItem = async (overrideItemId?: string, overrideQty?: number) => {
+    const targetInvId = overrideItemId || selectedAssignInvId;
+    if (!targetInvId) {
       alert('Please select a master pool item to allocate.');
       return;
     }
-    const itemToAssign = inventoryItems.find((i) => i.id === selectedAssignInvId);
+    const itemToAssign = inventoryItems.find((i) => i.id === targetInvId);
     if (!itemToAssign) return;
+
+    const targetQty = overrideQty || modalItemQuantities[targetInvId] || assignItemQuantity || 1;
 
     setSubmittingAssign(true);
     try {
@@ -280,13 +296,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId: artistData?.eventId || itemToAssign.eventId,
-          inventoryItemId: selectedAssignInvId,
+          inventoryItemId: targetInvId,
           artistId: artistData.id,
           artworkId: selectedAssignArtworkId || artistData.artworks?.[0]?.id || null,
           venueId: artistData.installations?.[0]?.venueId || null,
           roomId: artistData.installations?.[0]?.roomId || null,
           department: assignItemModalDepartment,
-          requestedQuantity: assignItemQuantity,
+          requestedQuantity: targetQty,
           approvedBy: userRole,
           notes: assignItemNotes || `${assignItemModalDepartment} Allotment for Artist`,
         }),
@@ -300,7 +316,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           show: true,
           safCode: itemToAssign.safCode,
           elementName: itemToAssign.element,
-          quantity: assignItemQuantity,
+          quantity: targetQty,
         });
         playSuccessChime();
       } else {
@@ -316,6 +332,40 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
   // Inventory Pool & Modal State
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
+
+  // Computed modal stock items filter
+  const filteredModalStockItems = inventoryItems.filter((item) => {
+    const itemCat = (item.inventoryCategory || '').trim().toLowerCase();
+    const itemDept = (item.inventoryUsageType || '').trim().toUpperCase();
+    const targetDept = (assignItemModalDepartment || '').trim().toUpperCase();
+
+    // 1. Category Filtering:
+    // Production Allotment: Exclude "Technical" category completely
+    // Technical Stock Allotment: Include ONLY "Technical" category / TECHNICAL usage
+    if (targetDept === 'PRODUCTION') {
+      if (itemCat === 'technical') return false;
+    } else if (targetDept === 'TECHNICAL') {
+      if (itemCat !== 'technical' && itemDept !== 'TECHNICAL') return false;
+    }
+
+    // 2. Search Query Matching
+    const q = assignModalSearch.toLowerCase().trim();
+    if (!q) return true;
+
+    return (
+      (item.safCode && item.safCode.toLowerCase().includes(q)) ||
+      (item.element && item.element.toLowerCase().includes(q)) ||
+      (item.subCategory && item.subCategory.toLowerCase().includes(q)) ||
+      (item.inventoryCategory && item.inventoryCategory.toLowerCase().includes(q)) ||
+      (item.brandProject && item.brandProject.toLowerCase().includes(q)) ||
+      (item.model && item.model.toLowerCase().includes(q)) ||
+      (item.location && item.location.toLowerCase().includes(q)) ||
+      (item.serialNo && item.serialNo.toLowerCase().includes(q)) ||
+      (item.remarks && item.remarks.toLowerCase().includes(q))
+    );
+  });
+
+  const selectedAssignItemInfo = inventoryItems.find((i) => i.id === selectedAssignInvId);
   const [allocModalOpen, setAllocModalOpen] = useState(false);
   const [selectedInvId, setSelectedInvId] = useState<string>('');
   const [requestedQty, setRequestedQty] = useState<number>(1);
@@ -1964,18 +2014,26 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                       className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs hover:border-amber-500/40 transition-colors"
                     >
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="font-mono font-bold text-[#38bdf8] bg-[#232334] px-2 py-0.5 rounded-lg border border-white/10">
                             {item.safCode}
                           </span>
-                          <span className="font-bold text-white">{item.element}</span>
+                          <span className="font-bold text-white text-sm">{item.element}</span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-800/40">
-                            {item.subCategory || item.inventoryCategory}
+                            {item.subCategory || item.inventoryCategory || 'General'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-[#8a8d9b] mt-1">
-                          Model: {item.model || 'Standard'} | Brand: {item.brandProject || 'SAF Master'} | Available: <strong className="text-[#10b981]">{item.availableQuantity}</strong> / Total: {item.totalQuantity}
-                        </p>
+                        <div className="text-[11px] text-[#8a8d9b] mt-1.5 flex items-center gap-x-2.5 gap-y-0.5 flex-wrap">
+                          <span>Brand: <strong className="text-slate-200">{item.brandProject || item.brand || 'Na'}</strong></span>
+                          <span>•</span>
+                          <span>Model: <strong className="text-slate-200">{item.model || 'Na'}</strong></span>
+                          <span>•</span>
+                          <span>Size/LWH: <strong className="text-slate-200">{item.sizeLwh || 'Na'}</strong></span>
+                          <span>•</span>
+                          <span>Unit: <strong className="text-slate-200">{item.uom || 'Na'}</strong></span>
+                          <span>•</span>
+                          <span>Available: <strong className="text-[#10b981]">{item.availableQuantity ?? 0}</strong> / Total: {item.totalQuantity ?? 0}</span>
+                        </div>
                       </div>
 
                       {canManageTechnicalInventory && (
@@ -3015,57 +3073,187 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       {/* ALLOTMENT ASSIGNMENT MODAL (PRODUCTION ALLOTMENT & TECHNICAL STOCK ALLOTMENT) */}
       {assignItemModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#232334] border border-white/10 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
-                <Package className={`w-4 h-4 ${assignItemModalDepartment === 'PRODUCTION' ? 'text-amber-400' : 'text-emerald-400'}`} />
-                Assign {assignItemModalDepartment === 'PRODUCTION' ? 'Production Allotment' : 'Technical Stock Allotment'} Item
-              </h3>
-              <button onClick={() => setAssignItemModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            <div className="bg-[#232334] border border-white/10 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                  <Package className={`w-4 h-4 ${assignItemModalDepartment === 'PRODUCTION' ? 'text-amber-400' : 'text-emerald-400'}`} />
+                  Assign {assignItemModalDepartment === 'PRODUCTION' ? 'Production Allotment' : 'Technical Stock Allotment'} Item
+                </h3>
+                <button onClick={() => setAssignItemModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div className="space-y-4 text-xs">
-              {/* Item search & select */}
-              <div>
-                <label className="text-[#8a8d9b] block font-bold mb-1">
-                  Search & Select Master Pool Item ({assignItemModalDepartment}) *
-                </label>
-                <input
-                  type="text"
-                  value={assignModalSearch}
-                  onChange={(e) => setAssignModalSearch(e.target.value)}
-                  placeholder="Search item by SAF code, element, subcategory..."
-                  className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold mb-2 focus:outline-none focus:border-amber-400"
-                />
-                <select
-                  value={selectedAssignInvId}
-                  onChange={(e) => setSelectedAssignInvId(e.target.value)}
-                  className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold max-h-40"
-                >
-                  <option value="">-- Choose Stock Item --</option>
-                  {inventoryItems
-                    .filter((item) => {
-                      const itemDept = item.inventoryUsageType || 'TECHNICAL';
-                      const isDeptMatch = itemDept === assignItemModalDepartment;
-                      const q = assignModalSearch.toLowerCase().trim();
-                      const isSearchMatch =
-                        !q ||
-                        (item.safCode && item.safCode.toLowerCase().includes(q)) ||
-                        (item.element && item.element.toLowerCase().includes(q)) ||
-                        (item.subCategory && item.subCategory.toLowerCase().includes(q)) ||
-                        (item.brandProject && item.brandProject.toLowerCase().includes(q)) ||
-                        (item.model && item.model.toLowerCase().includes(q));
-                      return isDeptMatch && isSearchMatch;
-                    })
-                    .map((item) => (
+              <div className="space-y-4 text-xs">
+                {/* Item search & select */}
+                <div>
+                  <label className="text-[#8a8d9b] block font-bold mb-1">
+                    Search & Select Master Pool Item ({assignItemModalDepartment === 'PRODUCTION' ? 'PRODUCTION - EXCLUDING TECHNICAL' : 'TECHNICAL'}) *
+                  </label>
+                  <input
+                    type="text"
+                    value={assignModalSearch}
+                    onChange={(e) => setAssignModalSearch(e.target.value)}
+                    placeholder="Search item by SAF code, element, subcategory..."
+                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold mb-2 focus:outline-none focus:border-amber-400"
+                  />
+
+                  {/* Scrollable Master Pool Stock Items List with Qty & Allocate Button */}
+                  <div className="mb-3 max-h-60 overflow-y-auto bg-[#161622] border border-white/10 rounded-2xl p-2 space-y-2 shadow-inner custom-scrollbar">
+                    <div className="text-[10px] uppercase font-black tracking-wider text-[#8a8d9b] px-2 py-1 flex items-center justify-between border-b border-white/5 mb-1">
+                      <span>Stock Items Pool ({filteredModalStockItems.length} available)</span>
+                      <span className="text-amber-400">Set Qty &amp; Allocate</span>
+                    </div>
+                    {filteredModalStockItems.length === 0 ? (
+                      <div className="p-4 text-center text-[#8a8d9b] italic text-xs">
+                        No matching items found in {assignItemModalDepartment.toLowerCase()} pool.
+                      </div>
+                    ) : (
+                      filteredModalStockItems.map((item) => {
+                        const isSelected = selectedAssignInvId === item.id;
+                        const isOutOfStock = item.availableQuantity <= 0;
+                        const itemQty = modalItemQuantities[item.id] || 1;
+
+                        return (
+                          <div
+                            key={item.id}
+                            className={`p-2.5 rounded-xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs ${
+                              isSelected
+                                ? 'bg-amber-500/15 border-amber-400/60 shadow-md'
+                                : 'bg-[#1c1c2a] hover:bg-[#232338] border-white/5'
+                            } ${isOutOfStock ? 'opacity-50' : ''}`}
+                          >
+                            {/* Left: Item Details */}
+                            <div
+                              className="min-w-0 flex-1 cursor-pointer"
+                              onClick={() => setSelectedAssignInvId(item.id)}
+                            >
+                              <div className="font-bold text-white flex items-center gap-1.5 flex-wrap">
+                                <span className="text-amber-400 font-mono text-[11px] bg-amber-500/10 px-1.5 py-0.5 rounded border border-amber-500/20">
+                                  [{item.safCode}]
+                                </span>
+                                <span className="font-bold text-white text-xs">{item.element}</span>
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
+                                  {item.subCategory || item.inventoryCategory || 'General'}
+                                </span>
+                              </div>
+                              <div className="text-[10px] text-[#8a8d9b] mt-1 flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+                                <span>Brand: <strong className="text-slate-200">{item.brandProject || item.brand || 'Na'}</strong></span>
+                                <span>•</span>
+                                <span>Model: <strong className="text-slate-200">{item.model || 'Na'}</strong></span>
+                                <span>•</span>
+                                <span>Size/LWH: <strong className="text-slate-200">{item.sizeLwh || 'Na'}</strong></span>
+                                <span>•</span>
+                                <span>Unit: <strong className="text-slate-200">{item.uom || 'Na'}</strong></span>
+                              </div>
+                            </div>
+
+                            {/* Right: Stock Badge, Qty Input & Allocate Button */}
+                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                              <span
+                                className={`px-2 py-1 rounded-lg text-[10px] font-black shrink-0 ${
+                                  isOutOfStock
+                                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                    : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                }`}
+                              >
+                                Avail: {item.availableQuantity} / {item.totalQuantity}
+                              </span>
+
+                              {/* Qty Input Field */}
+                              <div className="flex items-center gap-1 shrink-0">
+                                <span className="text-[10px] text-[#8a8d9b] font-bold">Qty:</span>
+                                <input
+                                  type="number"
+                                  min={1}
+                                  max={Math.max(1, item.availableQuantity)}
+                                  disabled={isOutOfStock}
+                                  value={itemQty}
+                                  onChange={(e) => {
+                                    const val = Math.max(1, Math.min(item.availableQuantity || 1, parseInt(e.target.value) || 1));
+                                    setModalItemQuantities((prev) => ({ ...prev, [item.id]: val }));
+                                  }}
+                                  className="w-14 bg-[#141420] border border-white/20 rounded-lg px-2 py-1 text-white text-center font-bold text-xs focus:outline-none focus:border-amber-400 disabled:opacity-50"
+                                />
+                              </div>
+
+                              {/* Inline Allocate Button */}
+                              <button
+                                type="button"
+                                disabled={isOutOfStock || submittingAssign}
+                                onClick={() => {
+                                  setSelectedAssignInvId(item.id);
+                                  handleConfirmAssignItem(item.id, itemQty);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg font-black text-xs transition-all shadow-sm flex items-center gap-1 shrink-0 ${
+                                  isOutOfStock
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
+                                    : assignItemModalDepartment === 'PRODUCTION'
+                                    ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
+                                    : 'bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-emerald-500/20'
+                                }`}
+                              >
+                                <Plus className="w-3.5 h-3.5" /> Allocate
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+
+                  <select
+                    value={selectedAssignInvId}
+                    onChange={(e) => setSelectedAssignInvId(e.target.value)}
+                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  >
+                    <option value="">
+                      {assignModalSearch.trim() !== ''
+                        ? `-- Choose Stock Item (${filteredModalStockItems.length} found) --`
+                        : `-- Choose Stock Item (${filteredModalStockItems.length} available) --`}
+                    </option>
+                    {filteredModalStockItems.map((item) => (
                       <option key={item.id} value={item.id} disabled={item.availableQuantity <= 0}>
-                        [{item.safCode}] {item.element} - Avail: {item.availableQuantity} / Total: {item.totalQuantity} {item.availableQuantity <= 0 ? '(Out of Stock)' : ''}
+                        [{item.safCode}] {item.element} ({item.subCategory || item.inventoryCategory}) | Brand: {item.brandProject || item.brand || 'Na'} | Model: {item.model || 'Na'} | Size: {item.sizeLwh || 'Na'} | Unit: {item.uom || 'Na'} - Avail: {item.availableQuantity}/{item.totalQuantity} {item.availableQuantity <= 0 ? '(Out of Stock)' : ''}
                       </option>
                     ))}
-                </select>
-              </div>
+                  </select>
+
+                  {/* Selected Item Badge Preview */}
+                  {selectedAssignItemInfo && (
+                    <div className="mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-[#8a8d9b] font-medium block text-[10px]">SELECTED STOCK ITEM:</span>
+                          <span className="font-extrabold text-amber-300">
+                            [{selectedAssignItemInfo.safCode}] {selectedAssignItemInfo.element}
+                          </span>
+                          <span className="text-amber-200/80 ml-2 text-[10px]">
+                            ({selectedAssignItemInfo.subCategory || selectedAssignItemInfo.inventoryCategory})
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedAssignInvId('')}
+                          className="text-[10px] text-amber-400 hover:underline font-bold px-2 py-1 rounded bg-amber-400/10"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="text-[10px] text-[#8a8d9b] pt-1 flex items-center gap-x-2 gap-y-0.5 flex-wrap border-t border-amber-500/20">
+                        <span>Brand: <strong className="text-white">{selectedAssignItemInfo.brandProject || selectedAssignItemInfo.brand || 'Na'}</strong></span>
+                        <span>•</span>
+                        <span>Model: <strong className="text-white">{selectedAssignItemInfo.model || 'Na'}</strong></span>
+                        <span>•</span>
+                        <span>Size/LWH: <strong className="text-white">{selectedAssignItemInfo.sizeLwh || 'Na'}</strong></span>
+                        <span>•</span>
+                        <span>Unit: <strong className="text-white">{selectedAssignItemInfo.uom || 'Na'}</strong></span>
+                        <span>•</span>
+                        <span>Available: <strong className="text-emerald-400">{selectedAssignItemInfo.availableQuantity} / {selectedAssignItemInfo.totalQuantity}</strong></span>
+                      </div>
+                    </div>
+                  )}
+                </div>
 
               {/* Artwork selector */}
               {artistData.artworks?.length > 0 && (
@@ -3121,7 +3309,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 <button
                   type="button"
                   disabled={!selectedAssignInvId || submittingAssign}
-                  onClick={handleConfirmAssignItem}
+                  onClick={() => handleConfirmAssignItem()}
                   className={`px-4 py-2 rounded-xl font-extrabold text-xs shadow-md ${
                     assignItemModalDepartment === 'PRODUCTION'
                       ? 'bg-amber-500 hover:bg-amber-400 text-slate-950'

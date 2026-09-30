@@ -202,8 +202,20 @@ export default function ArtistPdfExportModal({
     designation: poc.poc?.role || 'Designation',
   })) || [];
 
-  // Allocated stock items
-  const allocatedItems = artistData?.allocations || [];
+  // Separated allocations into Production Allotment and Technical Stock Allotment
+  const productionAllocations = (artistData?.allocations || []).filter((alloc: any) => {
+    const dept = (alloc.department || '').toUpperCase();
+    const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
+    const cat = (alloc.inventoryItem?.inventoryCategory || '').toLowerCase();
+    return dept === 'PRODUCTION' || usage === 'PRODUCTION' || (cat !== '' && cat !== 'technical');
+  });
+
+  const technicalAllocations = (artistData?.allocations || []).filter((alloc: any) => {
+    const dept = (alloc.department || '').toUpperCase();
+    const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
+    const cat = (alloc.inventoryItem?.inventoryCategory || '').toLowerCase();
+    return dept !== 'PRODUCTION' && usage !== 'PRODUCTION' && (cat === '' || cat === 'technical');
+  });
 
   // Rent / Purchase items combined
   const purchaseItems = (artistData?.purchaseRequests || []).map((pr: any) => ({
@@ -212,7 +224,8 @@ export default function ArtistPdfExportModal({
     brand: pr.brand || 'Na',
     model: pr.model || 'Na',
     qty: pr.quantity || 1,
-    notes: pr.notes || 'Purchase Item',
+    type: pr.itemType || 'Purchase',
+    notes: pr.notes || 'Purchase Request',
   }));
 
   const rentalItems = (artistData?.rentalRecords || []).map((rr: any) => ({
@@ -221,15 +234,42 @@ export default function ArtistPdfExportModal({
     brand: rr.vendor?.name || 'Na',
     model: rr.category || 'Na',
     qty: rr.quantity || 1,
+    type: 'Rental',
     notes: rr.notes || 'Rental Record',
   }));
 
   const rentPurchaseList = [...purchaseItems, ...rentalItems];
 
-  // Pagination item splits
-  const page1StockItems = allocatedItems.slice(0, 15);
-  const page2StockItems = allocatedItems.slice(15);
-  const hasPage2 = page2StockItems.length > 0 || rentPurchaseList.length > 0;
+  // Dynamic pagination item splits across 3 distinct tables (fits up to 13 total rows on Page 1)
+  const PAGE_1_CAPACITY = 13;
+  let page1RemainingCapacity = PAGE_1_CAPACITY;
+
+  // 1. Production Allotment allocation
+  const page1ProdCount = Math.min(productionAllocations.length, page1RemainingCapacity);
+  const page1ProductionItems = productionAllocations.slice(0, page1ProdCount);
+  const page2ProductionItems = productionAllocations.slice(page1ProdCount);
+  page1RemainingCapacity -= Math.max(page1ProdCount, 1);
+
+  // 2. Technical Stock Allotment allocation
+  const page1TechCount = Math.min(technicalAllocations.length, Math.max(0, page1RemainingCapacity));
+  const page1TechnicalItems = technicalAllocations.slice(0, page1TechCount);
+  const page2TechnicalItems = technicalAllocations.slice(page1TechCount);
+  page1RemainingCapacity -= Math.max(page1TechCount, 1);
+
+  // 3. Rent / Purchase List allocation
+  const page1RentCount = Math.min(rentPurchaseList.length, Math.max(0, page1RemainingCapacity));
+  const page1RentPurchaseList = rentPurchaseList.slice(0, page1RentCount);
+  const page2RentPurchaseList = rentPurchaseList.slice(page1RentCount);
+
+  // Determine if Rent/Purchase list should appear on Page 1
+  const renderRentPurchaseOnPage1 =
+    page1RentPurchaseList.length > 0 ||
+    (rentPurchaseList.length === 0 && page1RemainingCapacity >= 0);
+
+  const hasPage2 =
+    page2ProductionItems.length > 0 ||
+    page2TechnicalItems.length > 0 ||
+    page2RentPurchaseList.length > 0;
 
   return (
     <>
@@ -277,7 +317,7 @@ export default function ArtistPdfExportModal({
                   className="page-sheet relative bg-white text-black w-[794px] min-h-[1123px] mx-auto shadow-2xl overflow-hidden box-border"
                   style={{ fontFamily: 'Inter, system-ui, sans-serif' }}
                 >
-                  {/* Foreground HTML Template Image (Prints 100% reliably in Chrome/Edge even if Background Graphics is disabled) */}
+                  {/* Foreground HTML Template Image */}
                   <img
                     src="/doket-template-main-page.png"
                     alt="Technical Docket Page 1 Template"
@@ -285,9 +325,9 @@ export default function ArtistPdfExportModal({
                   />
 
                   {/* Content Container (Z-10) */}
-                  <div className="relative z-10 w-full box-border flex flex-col min-h-[1123px] justify-between pb-36">
+                  <div className="relative z-10 w-full box-border flex flex-col min-h-[1123px] justify-between pb-28">
                     <div className="w-full">
-                      {/* Top Header Clearance (Distance from top to olive green rectangle) */}
+                      {/* Top Header Clearance */}
                       <div className="h-[85px] w-full"></div>
 
                       {/* MAIN OLIVE GREEN BANNER OVERLAY CONTENT */}
@@ -343,12 +383,12 @@ export default function ArtistPdfExportModal({
                         </div>
                       </div>
 
-                      {/* TEAMS SECTION (Positioned in clean white space below olive green box) */}
-                      <div className="mt-6 px-[120px]">
+                      {/* TEAMS SECTION */}
+                      <div className="mt-4 px-[120px]">
                         <div className="grid grid-cols-2 gap-6">
                           {/* Programming team */}
                           <div>
-                            <h3 className="font-bold text-xs text-slate-900 mb-1.5 uppercase tracking-wide">
+                            <h3 className="font-bold text-xs text-slate-900 mb-1 uppercase tracking-wide">
                               Programming team
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
@@ -376,7 +416,7 @@ export default function ArtistPdfExportModal({
 
                           {/* Production team */}
                           <div>
-                            <h3 className="font-bold text-xs text-slate-900 mb-1.5 uppercase tracking-wide">
+                            <h3 className="font-bold text-xs text-slate-900 mb-1 uppercase tracking-wide">
                               Production team
                             </h3>
                             <div className="grid grid-cols-2 gap-3">
@@ -404,61 +444,158 @@ export default function ArtistPdfExportModal({
                         </div>
                       </div>
 
-                      {/* ALLOCATED STOCK ITEMS TABLE (FIRST 10 ITEMS) */}
-                      <div className="mt-6 px-[120px] space-y-1.5">
-                        <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                          Allocated Stock Items
-                        </h3>
-                        <table className="w-full text-left text-xs border-collapse">
-                          <thead>
-                            <tr className="bg-[#858E38] text-white font-bold uppercase text-[11px]">
-                              <th className="py-1.5 px-3">SAF CODE</th>
-                              <th className="py-1.5 px-3">Element</th>
-                              <th className="py-1.5 px-3">Brand</th>
-                              <th className="py-1.5 px-3">Model</th>
-                              <th className="py-1.5 px-3 text-center">Qty</th>
-                              <th className="py-1.5 px-3">Catogory</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-200">
-                            {page1StockItems.length === 0 ? (
-                              <tr>
-                                <td colSpan={6} className="py-3 px-3 text-slate-400 italic text-center">
-                                  No allocated stock items recorded
-                                </td>
+                      {/* 3 SEPARATE TABLES ON DOCKET PAGE 1 */}
+                      <div className="mt-4 px-[120px] space-y-4">
+                        
+                        {/* TABLE 1: PRODUCTION ALLOTMENT */}
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide flex items-center justify-between">
+                            <span>Production Allotment ({productionAllocations.length})</span>
+                          </h3>
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                <th className="py-1 px-2.5">SAF CODE</th>
+                                <th className="py-1 px-2.5">Element</th>
+                                <th className="py-1 px-2.5">Brand</th>
+                                <th className="py-1 px-2.5">Model</th>
+                                <th className="py-1 px-2.5 text-center">Qty</th>
+                                <th className="py-1 px-2.5">Category</th>
                               </tr>
-                            ) : (
-                              page1StockItems.map((alloc: any) => (
-                                <tr key={alloc.id} className="text-slate-800 border-b border-slate-200">
-                                  <td className="py-1.5 px-3 font-semibold">
-                                    {alloc.inventoryItem?.safCode || '-'}
-                                  </td>
-                                  <td className="py-1.5 px-3">{alloc.inventoryItem?.element || '-'}</td>
-                                  <td className="py-1.5 px-3">
-                                    {alloc.inventoryItem?.brandProject || alloc.inventoryItem?.brand || '-'}
-                                  </td>
-                                  <td className="py-1.5 px-3">{alloc.inventoryItem?.model || '-'}</td>
-                                  <td className="py-1.5 px-3 text-center font-semibold">
-                                    {alloc.issuedQuantity || alloc.requestedQuantity || 1}
-                                  </td>
-                                  <td className="py-1.5 px-3">
-                                    {alloc.inventoryItem?.inventoryCategory || 'Technical'}
+                            </thead>
+                            <tbody className="divide-y divide-slate-200">
+                              {page1ProductionItems.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="py-2 px-2.5 text-slate-400 italic text-center text-[11px]">
+                                    No production equipment allocated
                                   </td>
                                 </tr>
-                              ))
-                            )}
-                          </tbody>
-                        </table>
+                              ) : (
+                                page1ProductionItems.map((alloc: any) => (
+                                  <tr key={alloc.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-semibold text-amber-700">
+                                      {alloc.inventoryItem?.safCode || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5 font-bold">{alloc.inventoryItem?.element || '-'}</td>
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.brandProject || alloc.inventoryItem?.brand || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5">{alloc.inventoryItem?.model || '-'}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">
+                                      {alloc.issuedQuantity || alloc.requestedQuantity || 1}
+                                    </td>
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.inventoryCategory || 'Production'}
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* TABLE 2: TECHNICAL STOCK ALLOTMENT */}
+                        <div className="space-y-1">
+                          <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide flex items-center justify-between">
+                            <span>Technical Stock Allotment ({technicalAllocations.length})</span>
+                          </h3>
+                          <table className="w-full text-left text-xs border-collapse">
+                            <thead>
+                              <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                <th className="py-1 px-2.5">SAF CODE</th>
+                                <th className="py-1 px-2.5">Element</th>
+                                <th className="py-1 px-2.5">Brand</th>
+                                <th className="py-1 px-2.5">Model</th>
+                                <th className="py-1 px-2.5 text-center">Qty</th>
+                                <th className="py-1 px-2.5">Category</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-200">
+                              {page1TechnicalItems.length === 0 ? (
+                                <tr>
+                                  <td colSpan={6} className="py-2 px-2.5 text-slate-400 italic text-center text-[11px]">
+                                    No technical stock items allocated
+                                  </td>
+                                </tr>
+                              ) : (
+                                page1TechnicalItems.map((alloc: any) => (
+                                  <tr key={alloc.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-semibold text-emerald-700">
+                                      {alloc.inventoryItem?.safCode || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5 font-bold">{alloc.inventoryItem?.element || '-'}</td>
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.brandProject || alloc.inventoryItem?.brand || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5">{alloc.inventoryItem?.model || '-'}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">
+                                      {alloc.issuedQuantity || alloc.requestedQuantity || 1}
+                                    </td>
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.inventoryCategory || 'Technical'}
+                                    </td>
+                                  </tr>
+                                ))
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* TABLE 3: RENT | PURCHASE LIST (If shown on Page 1) */}
+                        {renderRentPurchaseOnPage1 && (
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide flex items-center justify-between">
+                              <span>Rent | Purchase List ({rentPurchaseList.length})</span>
+                            </h3>
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                  <th className="py-1 px-2.5">Item Name</th>
+                                  <th className="py-1 px-2.5">Brand / Vendor</th>
+                                  <th className="py-1 px-2.5">Model / Specification</th>
+                                  <th className="py-1 px-2.5 text-center">Qty</th>
+                                  <th className="py-1 px-2.5">Type</th>
+                                  <th className="py-1 px-2.5">Notes</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200">
+                                {page1RentPurchaseList.length === 0 ? (
+                                  <tr>
+                                    <td colSpan={6} className="py-2 px-2.5 text-slate-400 italic text-center text-[11px]">
+                                      No rent or purchase items recorded
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  page1RentPurchaseList.map((item: any) => (
+                                    <tr key={item.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                      <td className="py-1 px-2.5 font-bold">{item.itemName}</td>
+                                      <td className="py-1 px-2.5">{item.brand}</td>
+                                      <td className="py-1 px-2.5">{item.model}</td>
+                                      <td className="py-1 px-2.5 text-center font-bold text-slate-900">{item.qty}</td>
+                                      <td className="py-1 px-2.5">
+                                        <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${item.type === 'Rental' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                                          {item.type}
+                                        </span>
+                                      </td>
+                                      <td className="py-1 px-2.5 truncate max-w-[120px]">{item.notes}</td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
                       </div>
                     </div>
 
-                    {/* Bottom Clearance Spacer ensuring NO text overlays into bottom-right mosaic bars */}
-                    <div className="h-16 w-full"></div>
+                    {/* Bottom Clearance Spacer */}
+                    <div className="h-12 w-full"></div>
                   </div>
                 </div>
 
 
-                {/* ================= PAGE 2 (RENDERED IF OVERFLOW OR RENTAL/PURCHASE ITEMS) ================= */}
+                {/* ================= PAGE 2 (OVERFLOW TABLES & RENT/PURCHASE) ================= */}
                 {hasPage2 && (
                   <div
                     className="page-sheet relative bg-white text-black w-[794px] min-h-[1123px] mx-auto shadow-2xl overflow-hidden box-border"
@@ -472,40 +609,82 @@ export default function ArtistPdfExportModal({
                     />
 
                     {/* Content Container (Z-10) */}
-                    <div className="relative z-10 w-full box-border flex flex-col min-h-[1123px] justify-between pb-36">
+                    <div className="relative z-10 w-full box-border flex flex-col min-h-[1123px] justify-between pb-28">
                       <div className="w-full pt-12 px-[120px] space-y-4">
-                        {/* Remaining Allocated Stock Items (If > 10) */}
-                        {page2StockItems.length > 0 && (
-                          <div className="space-y-1.5 pt-1">
-                            <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                              Allocated Stock Items (Continued)
+                        
+                        {/* OVERFLOW PRODUCTION ALLOTMENT TABLE */}
+                        {page2ProductionItems.length > 0 && (
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide">
+                              Production Allotment (Continued)
                             </h3>
                             <table className="w-full text-left text-xs border-collapse">
                               <thead>
-                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[11px]">
-                                  <th className="py-1.5 px-3">SAF CODE</th>
-                                  <th className="py-1.5 px-3">Element</th>
-                                  <th className="py-1.5 px-3">Brand</th>
-                                  <th className="py-1.5 px-3">Model</th>
-                                  <th className="py-1.5 px-3 text-center">Qty</th>
-                                  <th className="py-1.5 px-3">Catogory</th>
+                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                  <th className="py-1 px-2.5">SAF CODE</th>
+                                  <th className="py-1 px-2.5">Element</th>
+                                  <th className="py-1 px-2.5">Brand</th>
+                                  <th className="py-1 px-2.5">Model</th>
+                                  <th className="py-1 px-2.5 text-center">Qty</th>
+                                  <th className="py-1 px-2.5">Category</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-200">
-                                {page2StockItems.map((alloc: any) => (
-                                  <tr key={alloc.id} className="text-slate-800 border-b border-slate-200">
-                                    <td className="py-1.5 px-3 font-semibold">
+                                {page2ProductionItems.map((alloc: any) => (
+                                  <tr key={alloc.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-semibold text-amber-700">
                                       {alloc.inventoryItem?.safCode || '-'}
                                     </td>
-                                    <td className="py-1.5 px-3">{alloc.inventoryItem?.element || '-'}</td>
-                                    <td className="py-1.5 px-3">
+                                    <td className="py-1 px-2.5 font-bold">{alloc.inventoryItem?.element || '-'}</td>
+                                    <td className="py-1 px-2.5">
                                       {alloc.inventoryItem?.brandProject || alloc.inventoryItem?.brand || '-'}
                                     </td>
-                                    <td className="py-1.5 px-3">{alloc.inventoryItem?.model || '-'}</td>
-                                    <td className="py-1.5 px-3 text-center font-semibold">
+                                    <td className="py-1 px-2.5">{alloc.inventoryItem?.model || '-'}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">
                                       {alloc.issuedQuantity || alloc.requestedQuantity || 1}
                                     </td>
-                                    <td className="py-1.5 px-3">
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.inventoryCategory || 'Production'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+
+                        {/* OVERFLOW TECHNICAL ALLOTMENT TABLE */}
+                        {page2TechnicalItems.length > 0 && (
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide">
+                              Technical Stock Allotment (Continued)
+                            </h3>
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                  <th className="py-1 px-2.5">SAF CODE</th>
+                                  <th className="py-1 px-2.5">Element</th>
+                                  <th className="py-1 px-2.5">Brand</th>
+                                  <th className="py-1 px-2.5">Model</th>
+                                  <th className="py-1 px-2.5 text-center">Qty</th>
+                                  <th className="py-1 px-2.5">Category</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200">
+                                {page2TechnicalItems.map((alloc: any) => (
+                                  <tr key={alloc.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-semibold text-emerald-700">
+                                      {alloc.inventoryItem?.safCode || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5 font-bold">{alloc.inventoryItem?.element || '-'}</td>
+                                    <td className="py-1 px-2.5">
+                                      {alloc.inventoryItem?.brandProject || alloc.inventoryItem?.brand || '-'}
+                                    </td>
+                                    <td className="py-1 px-2.5">{alloc.inventoryItem?.model || '-'}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">
+                                      {alloc.issuedQuantity || alloc.requestedQuantity || 1}
+                                    </td>
+                                    <td className="py-1 px-2.5">
                                       {alloc.inventoryItem?.inventoryCategory || 'Technical'}
                                     </td>
                                   </tr>
@@ -515,30 +694,36 @@ export default function ArtistPdfExportModal({
                           </div>
                         )}
 
-                        {/* RENT | PURCHASE LIST TABLE (Only shown if items exist) */}
-                        {rentPurchaseList.length > 0 && (
-                          <div className="space-y-1.5 pt-3">
-                            <h3 className="font-bold text-xs text-slate-900 uppercase tracking-wide">
-                              Rent | Purchase List
+                        {/* RENT | PURCHASE LIST TABLE (If not shown on Page 1 or overflow) */}
+                        {page2RentPurchaseList.length > 0 && (
+                          <div className="space-y-1 pt-2">
+                            <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide">
+                              Rent | Purchase List ({rentPurchaseList.length})
                             </h3>
                             <table className="w-full text-left text-xs border-collapse">
                               <thead>
-                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[11px]">
-                                  <th className="py-1.5 px-3">Item Name</th>
-                                  <th className="py-1.5 px-3">Brand</th>
-                                  <th className="py-1.5 px-3">Model</th>
-                                  <th className="py-1.5 px-3 text-center">Qty</th>
-                                  <th className="py-1.5 px-3">Notes</th>
+                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                  <th className="py-1 px-2.5">Item Name</th>
+                                  <th className="py-1 px-2.5">Brand / Vendor</th>
+                                  <th className="py-1 px-2.5">Model / Specification</th>
+                                  <th className="py-1 px-2.5 text-center">Qty</th>
+                                  <th className="py-1 px-2.5">Type</th>
+                                  <th className="py-1 px-2.5">Notes</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-200">
-                                {rentPurchaseList.map((item: any) => (
-                                  <tr key={item.id} className="text-slate-800 border-b border-slate-200">
-                                    <td className="py-1.5 px-3 font-semibold">{item.itemName}</td>
-                                    <td className="py-1.5 px-3">{item.brand}</td>
-                                    <td className="py-1.5 px-3">{item.model}</td>
-                                    <td className="py-1.5 px-3 text-center font-semibold">{item.qty}</td>
-                                    <td className="py-1.5 px-3">{item.notes}</td>
+                                {page2RentPurchaseList.map((item: any) => (
+                                  <tr key={item.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-bold">{item.itemName}</td>
+                                    <td className="py-1 px-2.5">{item.brand}</td>
+                                    <td className="py-1 px-2.5">{item.model}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">{item.qty}</td>
+                                    <td className="py-1 px-2.5">
+                                      <span className={`px-1.5 py-0.2 rounded text-[9px] font-extrabold ${item.type === 'Rental' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
+                                        {item.type}
+                                      </span>
+                                    </td>
+                                    <td className="py-1 px-2.5 truncate max-w-[120px]">{item.notes}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -547,8 +732,8 @@ export default function ArtistPdfExportModal({
                         )}
                       </div>
 
-                      {/* Bottom Clearance Spacer ensuring NO text overlays into bottom-right mosaic bars */}
-                      <div className="h-16 w-full"></div>
+                      {/* Bottom Clearance Spacer */}
+                      <div className="h-12 w-full"></div>
                     </div>
                   </div>
                 )}
