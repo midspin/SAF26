@@ -37,7 +37,7 @@ async function main() {
 
   // 2. Create Users
   const usersData = [
-    { name: 'Admin Operations', email: 'admin@saf.org', role: 'SUPER ADMIN', department: 'Management' },
+    { name: 'Admin', username: 'Admin', password: 'Admin', email: 'admin@saf.org', role: 'SUPER ADMIN', department: 'Management' },
     { name: 'Sarah Jenkins', email: 's.jenkins@saf.org', role: 'TECHNICAL TEAM', department: 'Technical' },
     { name: 'Marcus Chen', email: 'm.chen@saf.org', role: 'PRODUCTION TEAM', department: 'Production' },
     { name: 'Elena Rostova', email: 'e.rostova@saf.org', role: 'PROGRAMMING TEAM', department: 'Curatorial' },
@@ -48,7 +48,7 @@ async function main() {
   for (const u of usersData) {
     await prisma.user.upsert({
       where: { email: u.email },
-      update: {},
+      update: u,
       create: u,
     });
   }
