@@ -69,13 +69,10 @@ export default function DashboardPage() {
     hs8s: { model: 'Yamaha HS8S (150W Subwoofer)', total: 0, allocated: 0, balance: 0 },
   });
 
-  // Detailed Media Players Breakdown (BrightSign & Cubetech)
-  const [mediaPlayersBreakdown, setMediaPlayersBreakdown] = useState({
-    brightsignHD: { brand: 'BrightSign', model: 'BrightSign HD224 / HD225', element: 'Solid-State HD Digital Signage Player', total: 0, allocated: 0, balance: 0 },
-    brightsignXT: { brand: 'BrightSign', model: 'BrightSign XT1144 / XT1145', element: 'Dual 4K Video Engine Media Player', total: 0, allocated: 0, balance: 0 },
-    cubetech4K: { brand: 'Cubetech', model: 'Cubetech 4K Pro Player', element: 'Multi-Channel Synchronized Video Server', total: 0, allocated: 0, balance: 0 },
-    cubetechHD: { brand: 'Cubetech', model: 'Cubetech HD Sync Player', element: 'Embedded Networked Media Player', total: 0, allocated: 0, balance: 0 },
-  });
+  // Detailed Media Players Breakdown (Dynamic Brand, Model, Element, Total, Allocated, Balance from DB)
+  const [mediaPlayersList, setMediaPlayersList] = useState<
+    { brand: string; model: string; element: string; badge: string; total: number; allocated: number; balance: number }[]
+  >([]);
 
   // Venue & Artwork Distribution Stats for Graph
   const [venueDistribution, setVenueDistribution] = useState<{ name: string; artworkCount: number }[]>([]);
@@ -231,48 +228,69 @@ export default function DashboardPage() {
       const allocHSSpeakersCount = hsMap.hs5.allocated + hsMap.hs8.allocated + hsMap.hs8s.allocated;
       const balHSSpeakersCount = hsMap.hs5.balance + hsMap.hs8.balance + hsMap.hs8s.balance;
 
-      // 6. Calculate Media Players (BrightSign & Cubetech) Count & Balance
-      const mpMap = {
-        brightsignHD: { brand: 'BrightSign', model: 'BrightSign HD224 / HD225', element: 'Solid-State HD Digital Signage Player', total: 0, allocated: 0, balance: 0 },
-        brightsignXT: { brand: 'BrightSign', model: 'BrightSign XT1144 / XT1145', element: 'Dual 4K Video Engine Media Player', total: 0, allocated: 0, balance: 0 },
-        cubetech4K: { brand: 'Cubetech', model: 'Cubetech 4K Pro Player', element: 'Multi-Channel Synchronized Video Server', total: 0, allocated: 0, balance: 0 },
-        cubetechHD: { brand: 'Cubetech', model: 'Cubetech HD Sync Player', element: 'Embedded Networked Media Player', total: 0, allocated: 0, balance: 0 },
-      };
+      // 6. Calculate Media Players (BrightSign, Cubetech, etc.) Count & Balance dynamically from DB
+      const mediaPlayerItems = items.filter((i: any) => {
+        const text = `${i.element || ''} ${i.inventoryCategory || ''} ${i.subCategory || ''} ${i.brandProject || ''} ${i.model || ''}`.toLowerCase();
+        return text.includes('brightsign') || text.includes('cubetech') || (i.subCategory && i.subCategory.toLowerCase() === 'media player');
+      });
 
-      items.forEach((item: any) => {
-        const text = `${item.element || ''} ${item.model || ''} ${item.brandProject || ''} ${item.subCategory || ''}`.toUpperCase();
+      const mpGroupMap: { [key: string]: { brand: string; model: string; element: string; badge: string; total: number; allocated: number; balance: number } } = {};
+
+      let totalMediaPlayersCount = 0;
+      let allocMediaPlayersCount = 0;
+      let balMediaPlayersCount = 0;
+
+      mediaPlayerItems.forEach((item: any) => {
+        let brand = item.brandProject && item.brandProject !== 'Na' ? item.brandProject : '';
+        if (!brand) {
+          const text = `${item.element || ''}`.toLowerCase();
+          if (text.includes('brightsign')) brand = 'BrightSign';
+          else if (text.includes('cubetech')) brand = 'Cubetech';
+          else if (text.includes('raspberry')) brand = 'Raspberry Pi';
+          else brand = item.element || 'Media Player';
+        }
+
+        if (brand.toLowerCase() === 'brightsign') brand = 'BrightSign';
+        if (brand.toLowerCase() === 'cubetech' || brand.toLowerCase() === 'cube tech') brand = 'Cubetech';
+
+        let model = item.model && item.model !== 'Na' ? item.model : '';
+        if (!model) {
+          model = item.element || 'Standard';
+        }
+
+        let element = item.element && item.element !== 'Na' && item.element.toLowerCase() !== brand.toLowerCase()
+          ? item.element
+          : `${brand} ${model} Media Player`;
+
+        let badge = '';
+        if (brand.toLowerCase().includes('brightsign')) {
+          badge = `BS-${model.toUpperCase()}`;
+        } else if (brand.toLowerCase().includes('cubetech')) {
+          badge = `CB-${model.toUpperCase()}`;
+        } else {
+          badge = model.length <= 6 ? model.toUpperCase() : brand.slice(0, 4).toUpperCase();
+        }
+
+        const key = `${brand}-${model}`;
+
         const tot = item.totalQuantity || 0;
         const alc = item.allocatedQuantity || 0;
         const bal = item.availableQuantity || 0;
 
-        if (text.includes('BRIGHTSIGN') || text.includes('HD224') || text.includes('HD225') || text.includes('LS424')) {
-          if (text.includes('XT') || text.includes('1144') || text.includes('4K')) {
-            mpMap.brightsignXT.total += tot;
-            mpMap.brightsignXT.allocated += alc;
-            mpMap.brightsignXT.balance += bal;
-          } else {
-            mpMap.brightsignHD.total += tot;
-            mpMap.brightsignHD.allocated += alc;
-            mpMap.brightsignHD.balance += bal;
-          }
-        } else if (text.includes('CUBETECH') || text.includes('CUBE TECH')) {
-          if (text.includes('4K') || text.includes('PRO')) {
-            mpMap.cubetech4K.total += tot;
-            mpMap.cubetech4K.allocated += alc;
-            mpMap.cubetech4K.balance += bal;
-          } else {
-            mpMap.cubetechHD.total += tot;
-            mpMap.cubetechHD.allocated += alc;
-            mpMap.cubetechHD.balance += bal;
-          }
+        totalMediaPlayersCount += tot;
+        allocMediaPlayersCount += alc;
+        balMediaPlayersCount += bal;
+
+        if (!mpGroupMap[key]) {
+          mpGroupMap[key] = { brand, model, element, badge, total: 0, allocated: 0, balance: 0 };
         }
+        mpGroupMap[key].total += tot;
+        mpGroupMap[key].allocated += alc;
+        mpGroupMap[key].balance += bal;
       });
 
-      setMediaPlayersBreakdown(mpMap);
-
-      const totalMediaPlayersCount = mpMap.brightsignHD.total + mpMap.brightsignXT.total + mpMap.cubetech4K.total + mpMap.cubetechHD.total;
-      const allocMediaPlayersCount = mpMap.brightsignHD.allocated + mpMap.brightsignXT.allocated + mpMap.cubetech4K.allocated + mpMap.cubetechHD.allocated;
-      const balMediaPlayersCount = mpMap.brightsignHD.balance + mpMap.brightsignXT.balance + mpMap.cubetech4K.balance + mpMap.cubetechHD.balance;
+      const mpList = Object.values(mpGroupMap);
+      setMediaPlayersList(mpList);
 
       // 7. Fetch Venues
       const venueRes = await fetch('/api/venues');
@@ -675,118 +693,56 @@ export default function DashboardPage() {
               </div>
 
               <div className="space-y-3">
-                {/* BrightSign HD Series Card */}
-                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#38bdf8]/40 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
-                      BS-HD
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-white">BrightSign HD Series</h4>
-                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">HD224 / HD225 Solid-State Player</p>
-                    </div>
+                {mediaPlayersList.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
+                    <p className="font-semibold text-white">No media players in database</p>
+                    <p className="text-[11px]">Database is empty. Import media player items to view breakdown.</p>
                   </div>
+                ) : (
+                  mediaPlayersList.map((mp, idx) => {
+                    const isCubetech = mp.brand.toLowerCase().includes('cubetech');
+                    const badgeClass = isCubetech
+                      ? 'bg-[#8b5cf6]/10 border-[#8b5cf6]/20 text-[#8b5cf6]'
+                      : 'bg-[#38bdf8]/10 border-[#38bdf8]/20 text-[#38bdf8]';
+                    const hoverClass = isCubetech
+                      ? 'hover:border-[#8b5cf6]/40'
+                      : 'hover:border-[#38bdf8]/40';
 
-                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.brightsignHD.total}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.brightsignHD.allocated}</span>
-                    </div>
-                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
-                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.brightsignHD.balance}</span>
-                    </div>
-                  </div>
-                </div>
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${hoverClass} transition-colors`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-2xl border flex items-center justify-center font-bold text-xs shrink-0 ${badgeClass}`}>
+                            {mp.badge}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
+                              {mp.brand} {mp.model}
+                            </h4>
+                            <p className="text-[10px] text-[#8a8d9b] mt-0.5">{mp.element}</p>
+                          </div>
+                        </div>
 
-                {/* BrightSign XT Series Card */}
-                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#38bdf8]/40 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
-                      BS-XT
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-white">BrightSign XT Series</h4>
-                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">XT1144 Dual 4K Video Engine</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.brightsignXT.total}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.brightsignXT.allocated}</span>
-                    </div>
-                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
-                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.brightsignXT.balance}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cubetech 4K Pro Player Card */}
-                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#8b5cf6]/40 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6] font-bold text-xs shrink-0">
-                      CUBE
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-white">Cubetech 4K Pro Player</h4>
-                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">Multi-Display Synchronized Server</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.cubetech4K.total}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.cubetech4K.allocated}</span>
-                    </div>
-                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
-                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.cubetech4K.balance}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Cubetech HD Sync Player Card */}
-                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#8b5cf6]/40 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6] font-bold text-xs shrink-0">
-                      CB-HD
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-white">Cubetech HD Sync Player</h4>
-                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">Networked Low-Latency Player</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.cubetechHD.total}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.cubetechHD.allocated}</span>
-                    </div>
-                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
-                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.cubetechHD.balance}</span>
-                    </div>
-                  </div>
-                </div>
-
+                        <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                          <div className="text-center">
+                            <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                            <span className="font-extrabold text-white">{mp.total}</span>
+                          </div>
+                          <div className="text-center">
+                            <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                            <span className="font-extrabold text-[#38bdf8]">{mp.allocated}</span>
+                          </div>
+                          <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                            <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                            <span className="font-extrabold text-[#10b981]">{mp.balance}</span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
