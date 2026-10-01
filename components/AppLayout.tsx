@@ -430,12 +430,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     {
       title: 'INVENTORY & PROCUREMENT',
       items: [
-        { name: 'Master Inventory Pool', href: '/inventory', icon: Package, moduleId: 'inventory' },
-        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'Production', moduleId: 'inventory' },
         { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, badge: 'Tech', moduleId: 'inventory' },
-        { name: 'Excel Migration Wizard', href: '/inventory/import', icon: FileSpreadsheet, badge: 'Legacy 2026', moduleId: 'import' },
+        { name: 'Production Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'Production', moduleId: 'inventory' },
         { name: 'Purchase & Rentals', href: '/procurement', icon: ShoppingCart, moduleId: 'procurement' },
-        { name: 'Vendors Directory', href: '/vendors', icon: Building2, moduleId: 'vendors' },
       ],
     },
     {

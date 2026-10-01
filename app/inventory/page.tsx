@@ -415,13 +415,13 @@ export default function InventoryPage() {
             onClick={() => setUploadModalOpen(true)}
             className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer"
           >
-            <Upload className="w-4 h-4" /> Upload .xlsx File
+            <Upload className="w-4 h-4" /> Upload Excel / CSV File
           </button>
           <Link
             href="/inventory/import"
             className="bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-800/80 font-bold text-xs px-3.5 py-2.5 rounded-xl transition-all flex items-center gap-2"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Migration Wizard
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" /> Excel / CSV Wizard
           </Link>
           <button
             onClick={() => {
@@ -438,7 +438,7 @@ export default function InventoryPage() {
                 : 'bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sky-500/20'
             }`}
           >
-            <Plus className="w-4 h-4" /> Add Item
+            <Plus className="w-4 h-4" /> Add New Item
           </button>
         </div>
       </div>
@@ -1036,13 +1036,13 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* MODAL: DIRECT UPLOAD EXCEL (.XLSX) WITH FAULTY DETECTION */}
+      {/* MODAL: DIRECT UPLOAD EXCEL / CSV (.XLSX, .XLS, .CSV) WITH FAULTY DETECTION */}
       {uploadModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl p-6 space-y-4 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <Upload className="w-4 h-4 text-emerald-400" /> Direct Upload Inventory Excel (.xlsx)
+                <Upload className="w-4 h-4 text-emerald-400" /> Direct Upload Inventory File (.xlsx, .xls, .csv)
               </h3>
               <button onClick={() => setUploadModalOpen(false)} className="text-slate-400 hover:text-white">
                 <X className="w-5 h-5" />
@@ -1053,7 +1053,7 @@ export default function InventoryPage() {
               <div className="p-4 border-2 border-dashed border-slate-700 hover:border-emerald-500/50 rounded-xl text-center bg-slate-950/40">
                 <input
                   type="file"
-                  accept=".xlsx,.xls"
+                  accept=".xlsx,.xls,.csv"
                   onChange={handleDirectExcelFileChange}
                   className="hidden"
                   id="directExcel"
@@ -1061,7 +1061,7 @@ export default function InventoryPage() {
                 <label htmlFor="directExcel" className="cursor-pointer block">
                   <FileSpreadsheet className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
                   <span className="font-bold text-slate-200 block">
-                    {uploadedFile ? uploadedFile.name : 'Click to select .xlsx file'}
+                    {uploadedFile ? uploadedFile.name : 'Click to select Excel (.xlsx, .xls) or CSV (.csv) file'}
                   </span>
                   <span className="text-[10px] text-slate-400 mt-1 block">
                     Rows marked in RED or tagged Faulty will be imported as Faulty & blocked from allocation
