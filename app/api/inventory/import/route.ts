@@ -124,146 +124,173 @@ export async function POST(req: Request) {
       });
     }
 
-    // ACTION 2: TRANSACTIONAL COMMIT
+    // ACTION 2: OPTIMIZED TRANSACTIONAL COMMIT
     if (action === 'COMMIT') {
-      const result = await prisma.$transaction(async (tx) => {
-        let importedCount = 0;
-        let mergedCount = 0;
-        let skippedCount = 0;
-        let faultyCount = 0;
+      const result = await prisma.$transaction(
+        async (tx) => {
+          let importedCount = 0;
+          let mergedCount = 0;
+          let skippedCount = 0;
+          let faultyCount = 0;
 
-        const importBatch = await tx.inventoryImportBatch.create({
-          data: {
-            eventId,
-            fileName: fileName || 'Inventory TECH 2026.xlsx',
-            uploadedBy: 'Admin User',
-            totalRows: rows.length,
-            importedRows: 0,
-            updatedRows: 0,
-            mergedRows: 0,
-            skippedRows: 0,
-            errorRows: 0,
-            status: 'Processing',
-          },
-        });
-
-        const currentCount = await tx.inventoryItem.count();
-        let assetCounter = currentCount + 1;
-
-        for (let idx = 0; idx < rows.length; idx++) {
-          const raw = rows[idx];
-          const itemData = extractRowFields(raw, idx);
-          const safCode = itemData.safCode;
-          const userAction = resolutions[safCode] || (safCode ? resolutions[safCode.toLowerCase()] : null) || (safCode ? resolutions[safCode.toUpperCase()] : null) || 'MERGE';
-          const isFaulty = itemData.isFaulty === true;
-
-          if (userAction === 'SKIP') {
-            skippedCount++;
-            continue;
-          }
-
-          const existingItem = await tx.inventoryItem.findFirst({
-            where: { eventId, safCode },
+          const importBatch = await tx.inventoryImportBatch.create({
+            data: {
+              eventId,
+              fileName: fileName || 'Inventory TECH 2026.xlsx',
+              uploadedBy: 'Admin User',
+              totalRows: rows.length,
+              importedRows: 0,
+              updatedRows: 0,
+              mergedRows: 0,
+              skippedRows: 0,
+              errorRows: 0,
+              status: 'Processing',
+            },
           });
 
-          if (existingItem) {
-            if (userAction === 'MERGE' || userAction === 'IMPORT') {
-              const newTotal = existingItem.totalQuantity + itemData.totalQuantity;
-              const newDamaged = isFaulty ? existingItem.damagedQuantity + itemData.totalQuantity : existingItem.damagedQuantity;
-              const newAvailable = Math.max(
-                0,
-                newTotal - existingItem.reservedQuantity - existingItem.allocatedQuantity - newDamaged - existingItem.maintenanceQuantity
-              );
+          // Pre-fetch all existing inventory items for this event to avoid 500+ N+1 queries
+          const existingDbItems = await tx.inventoryItem.findMany({
+            where: { eventId },
+          });
+          const existingItemMap = new Map<string, any>();
+          existingDbItems.forEach((item) => {
+            if (item.safCode) {
+              existingItemMap.set(item.safCode.toLowerCase(), item);
+            }
+          });
 
-              await tx.inventoryItem.update({
-                where: { id: existingItem.id },
-                data: {
-                  totalQuantity: newTotal,
-                  damagedQuantity: newDamaged,
-                  availableQuantity: newAvailable,
-                  isFaulty: existingItem.isFaulty || isFaulty,
-                  condition: isFaulty ? 'Faulty (Red Flagged)' : existingItem.condition,
-                  remarks: `${existingItem.remarks || ''} | Merged Row ${itemData.rowNum} Qty: +${itemData.totalQuantity} ${isFaulty ? '[FAULTY]' : ''}`,
-                },
-              });
+          const currentCount = existingDbItems.length;
+          let assetCounter = currentCount + 1;
 
-              if (isFaulty) faultyCount++;
-              mergedCount++;
+          for (let idx = 0; idx < rows.length; idx++) {
+            const raw = rows[idx];
+            const itemData = extractRowFields(raw, idx);
+            const safCode = itemData.safCode;
+            const safCodeLower = safCode ? safCode.toLowerCase() : '';
+            const userAction =
+              resolutions[safCode] ||
+              (safCode ? resolutions[safCode.toLowerCase()] : null) ||
+              (safCode ? resolutions[safCode.toUpperCase()] : null) ||
+              'MERGE';
+            const isFaulty = itemData.isFaulty === true;
+
+            if (userAction === 'SKIP') {
+              skippedCount++;
               continue;
             }
+
+            const existingItem = existingItemMap.get(safCodeLower);
+
+            if (existingItem) {
+              if (userAction === 'MERGE' || userAction === 'IMPORT') {
+                const newTotal = existingItem.totalQuantity + itemData.totalQuantity;
+                const newDamaged = isFaulty ? existingItem.damagedQuantity + itemData.totalQuantity : existingItem.damagedQuantity;
+                const newAvailable = Math.max(
+                  0,
+                  newTotal - existingItem.reservedQuantity - existingItem.allocatedQuantity - newDamaged - existingItem.maintenanceQuantity
+                );
+
+                const updatedItem = await tx.inventoryItem.update({
+                  where: { id: existingItem.id },
+                  data: {
+                    totalQuantity: newTotal,
+                    damagedQuantity: newDamaged,
+                    availableQuantity: newAvailable,
+                    isFaulty: existingItem.isFaulty || isFaulty,
+                    condition: isFaulty ? 'Faulty (Red Flagged)' : existingItem.condition,
+                    remarks: `${existingItem.remarks || ''} | Merged Row ${itemData.rowNum} Qty: +${itemData.totalQuantity} ${isFaulty ? '[FAULTY]' : ''}`,
+                  },
+                });
+
+                // Update Map cache so duplicate rows within the same batch stack correctly
+                existingItemMap.set(safCodeLower, updatedItem);
+
+                if (isFaulty) faultyCount++;
+                mergedCount++;
+                continue;
+              }
+            }
+
+            const assetId = `INV-${String(assetCounter++).padStart(6, '0')}`;
+            const totalQty = itemData.totalQuantity || 0;
+            const damagedQty = isFaulty ? totalQty : 0;
+            const availQty = isFaulty ? 0 : totalQty;
+
+            const newItem = await tx.inventoryItem.create({
+              data: {
+                eventId,
+                safCode,
+                inventoryCategory: itemData.inventoryCategory || 'Technical',
+                subCategory: itemData.subCategory || 'General',
+                element: itemData.element,
+                yearOfPurchase: itemData.yearOfPurchase || 'Na',
+                brandProject: itemData.brandProject || 'Na',
+                model: itemData.model || 'Na',
+                sizeLwh: itemData.sizeLwh || 'Na',
+                uom: itemData.uom || 'Nos',
+                serialNo: itemData.serialNo || 'Na',
+                totalQuantity: totalQty,
+                damagedQuantity: damagedQty,
+                availableQuantity: availQty,
+                isFaulty,
+                location: itemData.location || 'Central Warehouse',
+                condition: isFaulty ? 'Faulty (Red Flagged)' : (itemData.condition || 'OK'),
+                throwRatio: itemData.throwRatio || 'Na',
+                remarks: itemData.remarks || '',
+                inventoryUsageType: defaultUsageType,
+                assetId,
+                createdBy: 'Excel Import Wizard',
+              },
+            });
+
+            if (safCodeLower) {
+              existingItemMap.set(safCodeLower, newItem);
+            }
+
+            await tx.inventoryMovement.create({
+              data: {
+                eventId,
+                inventoryItemId: newItem.id,
+                movementType: isFaulty ? 'Damaged' : 'Stock Added',
+                quantity: totalQty,
+                previousTotal: 0,
+                newTotal: totalQty,
+                previousAvailable: 0,
+                newAvailable: availQty,
+                performedBy: 'Excel Import Wizard',
+                reason: isFaulty
+                  ? 'Item marked RED / FAULTY in uploaded Excel sheet (Cannot be allocated)'
+                  : `Batch imported from ${fileName}`,
+              },
+            });
+
+            if (isFaulty) faultyCount++;
+            importedCount++;
           }
 
-          const assetId = `INV-${String(assetCounter++).padStart(6, '0')}`;
-          const totalQty = itemData.totalQuantity || 0;
-          const damagedQty = isFaulty ? totalQty : 0;
-          const availQty = isFaulty ? 0 : totalQty;
-
-          const newItem = await tx.inventoryItem.create({
+          await tx.inventoryImportBatch.update({
+            where: { id: importBatch.id },
             data: {
-              eventId,
-              safCode,
-              inventoryCategory: itemData.inventoryCategory || 'Technical',
-              subCategory: itemData.subCategory || 'General',
-              element: itemData.element,
-              yearOfPurchase: itemData.yearOfPurchase || 'Na',
-              brandProject: itemData.brandProject || 'Na',
-              model: itemData.model || 'Na',
-              sizeLwh: itemData.sizeLwh || 'Na',
-              uom: itemData.uom || 'Nos',
-              serialNo: itemData.serialNo || 'Na',
-              totalQuantity: totalQty,
-              damagedQuantity: damagedQty,
-              availableQuantity: availQty,
-              isFaulty,
-              location: itemData.location || 'Central Warehouse',
-              condition: isFaulty ? 'Faulty (Red Flagged)' : (itemData.condition || 'OK'),
-              throwRatio: itemData.throwRatio || 'Na',
-              remarks: itemData.remarks || '',
-              inventoryUsageType: defaultUsageType,
-              assetId,
-              createdBy: 'Excel Import Wizard',
+              importedRows: importedCount,
+              mergedRows: mergedCount,
+              skippedRows: skippedCount,
+              status: 'Completed',
             },
           });
 
-          await tx.inventoryMovement.create({
-            data: {
-              eventId,
-              inventoryItemId: newItem.id,
-              movementType: isFaulty ? 'Damaged' : 'Stock Added',
-              quantity: totalQty,
-              previousTotal: 0,
-              newTotal: totalQty,
-              previousAvailable: 0,
-              newAvailable: availQty,
-              performedBy: 'Excel Import Wizard',
-              reason: isFaulty
-                ? 'Item marked RED / FAULTY in uploaded Excel sheet (Cannot be allocated)'
-                : `Batch imported from ${fileName}`,
-            },
-          });
-
-          if (isFaulty) faultyCount++;
-          importedCount++;
+          return {
+            batchId: importBatch.id,
+            importedCount,
+            mergedCount,
+            skippedCount,
+            faultyCount,
+          };
+        },
+        {
+          timeout: 120000, // 2 minutes transaction timeout for large excel batches
+          maxWait: 20000,
         }
-
-        await tx.inventoryImportBatch.update({
-          where: { id: importBatch.id },
-          data: {
-            importedRows: importedCount,
-            mergedRows: mergedCount,
-            skippedRows: skippedCount,
-            status: 'Completed',
-          },
-        });
-
-        return {
-          batchId: importBatch.id,
-          importedCount,
-          mergedCount,
-          skippedCount,
-          faultyCount,
-        };
-      });
+      );
 
       return NextResponse.json({ success: true, result });
     }
