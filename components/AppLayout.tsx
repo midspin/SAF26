@@ -633,88 +633,20 @@ export default function AppLayout({ children }: AppLayoutProps) {
       <div className="flex-1 flex flex-col pl-72">
         {/* TOP HEADER UTILITY BAR */}
         <header className="h-16 bg-[#161622]/90 backdrop-blur-md border-b border-[#2a2a3e] px-8 flex items-center justify-between sticky top-0 z-20">
-          {/* Left: Role Switcher & Context Info */}
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 bg-[#232334] border border-white/10 rounded-2xl px-3 py-1.5 shadow-inner">
-              <ShieldCheck className="w-4 h-4 text-[#8b5cf6]" />
-              <span className="text-[11px] font-bold text-[#8a8d9b] uppercase tracking-wider">Role:</span>
-              {userSession?.role === 'SUPER ADMIN' || activeRole === 'SUPER ADMIN' ? (
-                <select
-                  value={activeRole}
-                  onChange={(e) => handleRoleChange(e.target.value)}
-                  className="bg-transparent text-xs font-extrabold text-[#38bdf8] focus:outline-none cursor-pointer pr-1"
-                >
-                  {rolesList.map((r) => (
-                    <option key={r} value={r} className="bg-[#161622] text-white font-semibold">
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-xs font-extrabold text-[#38bdf8] px-1">{activeRole}</span>
-              )}
-            </div>
+          {/* Left: Welcome message with name of the user */}
+          <div className="flex items-center gap-3">
+            <h1 className="text-xl font-normal text-white tracking-tight">
+              Hi {userSession?.name || userSession?.username || 'User'}
+            </h1>
           </div>
 
-          {/* Search Trigger Input Box */}
-          <div className="flex-1 max-w-md mx-8">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="w-full bg-[#232334] hover:bg-[#2c2c40] border border-white/10 text-[#8a8d9b] text-xs rounded-2xl px-4 py-2 flex items-center justify-between transition-all group shadow-inner cursor-pointer"
-            >
-              <div className="flex items-center gap-2.5">
-                <Search className="w-4 h-4 text-[#8a8d9b] group-hover:text-[#38bdf8] transition-colors" />
-                <span>Search SAF Code (Ac-15), Artist, Model, Venue...</span>
-              </div>
-              <kbd className="hidden sm:inline-block bg-[#1c1c2a] border border-white/10 text-[10px] font-mono text-[#8b5cf6] px-2 py-0.5 rounded-lg">
-                ⌘K
-              </kbd>
-            </button>
-          </div>
-
-          {/* Right Utilities (Countdown + Notifications + User Avatar) */}
+          {/* Right Utilities (Notifications + Role Dropdown) */}
           <div className="flex items-center gap-4">
-            {/* Countdown Timer */}
-            <div
-              className="hidden lg:flex items-center gap-2 bg-[#232334] border border-white/10 text-xs px-3.5 py-2 rounded-2xl shadow-md"
-              title="Countdown to SAF Festival Opening: 13 Dec 2026, 11:00 AM"
-            >
-              <div className="flex items-center gap-1.5 text-white font-extrabold mr-1">
-                <Clock className="w-4 h-4 text-[#8b5cf6] animate-pulse" />
-                <span className="text-[11px] uppercase tracking-wider text-white font-extrabold hidden xl:inline">Festival Launch:</span>
-              </div>
-              <div className="flex items-center gap-1 font-mono text-xs">
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Months">
-                  {countdown.months}<span className="text-[9px] text-white/80 font-normal ml-0.5">M</span>
-                </span>
-                <span className="text-white/60 font-bold">:</span>
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Weeks">
-                  {countdown.weeks}<span className="text-[9px] text-white/80 font-normal ml-0.5">W</span>
-                </span>
-                <span className="text-white/60 font-bold">:</span>
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Days">
-                  {countdown.days}<span className="text-[9px] text-white/80 font-normal ml-0.5">D</span>
-                </span>
-                <span className="text-white/60 font-bold">:</span>
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Hours">
-                  {countdown.hours}<span className="text-[9px] text-white/80 font-normal ml-0.5">H</span>
-                </span>
-                <span className="text-white/60 font-bold">:</span>
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Minutes">
-                  {countdown.minutes}<span className="text-[9px] text-white/80 font-normal ml-0.5">M</span>
-                </span>
-                <span className="text-white/60 font-bold">:</span>
-                <span className="bg-[#1c1c2a] text-white px-1.5 py-0.5 rounded-lg border border-white/10 font-extrabold" title="Seconds">
-                  {String(countdown.seconds).padStart(2, '0')}<span className="text-[9px] text-white/80 font-normal ml-0.5">S</span>
-                </span>
-              </div>
-            </div>
-
             {/* Notifications Pill Button */}
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="w-10 h-10 rounded-2xl bg-[#232334] border border-white/5 hover:border-[#8b5cf6]/50 flex items-center justify-center text-[#8a8d9b] hover:text-white transition-all relative shadow-sm cursor-pointer"
+                className="w-10 h-10 rounded-2xl bg-[#232334]/80 border border-white/10 hover:border-[#8b5cf6]/50 flex items-center justify-center text-[#8a8d9b] hover:text-white transition-all relative shadow-sm cursor-pointer"
               >
                 <Bell className="w-4.5 h-4.5 text-[#8a8d9b]" />
                 {notifications.some((n) => !n.isRead) && (
@@ -754,28 +686,28 @@ export default function AppLayout({ children }: AppLayoutProps) {
               )}
             </div>
 
-            {/* Profile User Avatar & Logout */}
-            <div className="flex items-center gap-3 bg-[#232334] p-1.5 pr-3.5 rounded-2xl border border-white/10 shadow-sm">
-              <div className="w-8 h-8 rounded-full p-0.5 bg-gradient-to-tr from-[#38bdf8] via-[#a855f7] to-[#ff85a1]">
-                {userSession?.avatar ? (
-                  <img src={userSession.avatar} alt="" className="w-full h-full rounded-full object-cover" />
-                ) : (
-                  <div className="w-full h-full rounded-full bg-[#8b5cf6] text-white font-extrabold text-xs flex items-center justify-center">
-                    {(userSession?.name || 'A').charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              <div className="hidden sm:block text-left">
-                <p className="text-xs font-bold text-white leading-tight">{userSession?.name || 'Admin User'}</p>
-                <p className="text-[9px] text-[#38bdf8] font-semibold">@{userSession?.username || 'Admin'}</p>
-              </div>
-              <button
-                onClick={handleLogout}
-                title="Sign Out"
-                className="ml-1 p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
+            {/* Role Switcher Dropdown (Matching Reference Image) */}
+            <div className="flex items-center gap-2 bg-[#20202e] border border-white/10 rounded-2xl px-4 py-2 text-xs shadow-inner">
+              <ShieldCheck className="w-4 h-4 text-[#8b5cf6]" />
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ROLE:</span>
+              {userSession?.role === 'SUPER ADMIN' || activeRole === 'SUPER ADMIN' ? (
+                <div className="relative flex items-center">
+                  <select
+                    value={activeRole}
+                    onChange={(e) => handleRoleChange(e.target.value)}
+                    className="bg-transparent text-xs font-black text-[#00d2ff] focus:outline-none cursor-pointer pr-5 appearance-none tracking-wider uppercase"
+                  >
+                    {rolesList.map((r) => (
+                      <option key={r} value={r} className="bg-[#161622] text-white font-semibold">
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#00d2ff] absolute right-0 pointer-events-none" />
+                </div>
+              ) : (
+                <span className="text-xs font-black text-[#00d2ff] tracking-wider uppercase">{activeRole}</span>
+              )}
             </div>
           </div>
         </header>
