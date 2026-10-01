@@ -228,10 +228,10 @@ export default function DashboardPage() {
       const allocHSSpeakersCount = hsMap.hs5.allocated + hsMap.hs8.allocated + hsMap.hs8s.allocated;
       const balHSSpeakersCount = hsMap.hs5.balance + hsMap.hs8.balance + hsMap.hs8s.balance;
 
-      // 6. Calculate Media Players (BrightSign, Cubetech, etc.) Count & Balance dynamically from DB
+      // 6. Calculate Media Players (BrightSign & Cubetech) Count & Balance dynamically from DB
       const mediaPlayerItems = items.filter((i: any) => {
         const text = `${i.element || ''} ${i.inventoryCategory || ''} ${i.subCategory || ''} ${i.brandProject || ''} ${i.model || ''}`.toLowerCase();
-        return text.includes('brightsign') || text.includes('cubetech') || (i.subCategory && i.subCategory.toLowerCase() === 'media player');
+        return text.includes('brightsign') || text.includes('cubetech');
       });
 
       const mpGroupMap: { [key: string]: { brand: string; model: string; element: string; badge: string; total: number; allocated: number; balance: number } } = {};
@@ -246,7 +246,6 @@ export default function DashboardPage() {
           const text = `${item.element || ''}`.toLowerCase();
           if (text.includes('brightsign')) brand = 'BrightSign';
           else if (text.includes('cubetech')) brand = 'Cubetech';
-          else if (text.includes('raspberry')) brand = 'Raspberry Pi';
           else brand = item.element || 'Media Player';
         }
 
@@ -258,18 +257,12 @@ export default function DashboardPage() {
           model = item.element || 'Standard';
         }
 
-        let element = item.element && item.element !== 'Na' && item.element.toLowerCase() !== brand.toLowerCase()
+        let element = item.element && item.element !== 'Na' && item.element.toLowerCase() !== brand.toLowerCase() && !item.element.toLowerCase().includes(model.toLowerCase())
           ? item.element
           : `${brand} ${model} Media Player`;
 
-        let badge = '';
-        if (brand.toLowerCase().includes('brightsign')) {
-          badge = `BS-${model.toUpperCase()}`;
-        } else if (brand.toLowerCase().includes('cubetech')) {
-          badge = `CB-${model.toUpperCase()}`;
-        } else {
-          badge = model.length <= 6 ? model.toUpperCase() : brand.slice(0, 4).toUpperCase();
-        }
+        // Badge is strictly model name without BS- prefix (e.g. HD5, XD5, LS3, LS5)
+        let badge = model.toUpperCase();
 
         const key = `${brand}-${model}`;
 
