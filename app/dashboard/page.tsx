@@ -20,6 +20,8 @@ import {
   Sparkles,
   ShieldCheck,
   Volume2,
+  Tv,
+  Film,
 } from 'lucide-react';
 
 export default function DashboardPage() {
@@ -50,6 +52,9 @@ export default function DashboardPage() {
     totalHSSpeakers: 0,
     allocatedHSSpeakers: 0,
     balanceHSSpeakers: 0,
+    totalMediaPlayers: 0,
+    allocatedMediaPlayers: 0,
+    balanceMediaPlayers: 0,
   });
 
   // Detailed Projectors Breakdown (Brand, Model, Total, Allocated, Balance)
@@ -62,6 +67,14 @@ export default function DashboardPage() {
     hs5: { model: 'Yamaha HS5 (5" Active Monitor)', total: 0, allocated: 0, balance: 0 },
     hs8: { model: 'Yamaha HS8 (8" Studio Monitor)', total: 0, allocated: 0, balance: 0 },
     hs8s: { model: 'Yamaha HS8S (150W Subwoofer)', total: 0, allocated: 0, balance: 0 },
+  });
+
+  // Detailed Media Players Breakdown (BrightSign & Cubetech)
+  const [mediaPlayersBreakdown, setMediaPlayersBreakdown] = useState({
+    brightsignHD: { brand: 'BrightSign', model: 'BrightSign HD224 / HD225', element: 'Solid-State HD Digital Signage Player', total: 0, allocated: 0, balance: 0 },
+    brightsignXT: { brand: 'BrightSign', model: 'BrightSign XT1144 / XT1145', element: 'Dual 4K Video Engine Media Player', total: 0, allocated: 0, balance: 0 },
+    cubetech4K: { brand: 'Cubetech', model: 'Cubetech 4K Pro Player', element: 'Multi-Channel Synchronized Video Server', total: 0, allocated: 0, balance: 0 },
+    cubetechHD: { brand: 'Cubetech', model: 'Cubetech HD Sync Player', element: 'Embedded Networked Media Player', total: 0, allocated: 0, balance: 0 },
   });
 
   // Venue & Artwork Distribution Stats for Graph
@@ -218,7 +231,50 @@ export default function DashboardPage() {
       const allocHSSpeakersCount = hsMap.hs5.allocated + hsMap.hs8.allocated + hsMap.hs8s.allocated;
       const balHSSpeakersCount = hsMap.hs5.balance + hsMap.hs8.balance + hsMap.hs8s.balance;
 
-      // 6. Fetch Venues
+      // 6. Calculate Media Players (BrightSign & Cubetech) Count & Balance
+      const mpMap = {
+        brightsignHD: { brand: 'BrightSign', model: 'BrightSign HD224 / HD225', element: 'Solid-State HD Digital Signage Player', total: 0, allocated: 0, balance: 0 },
+        brightsignXT: { brand: 'BrightSign', model: 'BrightSign XT1144 / XT1145', element: 'Dual 4K Video Engine Media Player', total: 0, allocated: 0, balance: 0 },
+        cubetech4K: { brand: 'Cubetech', model: 'Cubetech 4K Pro Player', element: 'Multi-Channel Synchronized Video Server', total: 0, allocated: 0, balance: 0 },
+        cubetechHD: { brand: 'Cubetech', model: 'Cubetech HD Sync Player', element: 'Embedded Networked Media Player', total: 0, allocated: 0, balance: 0 },
+      };
+
+      items.forEach((item: any) => {
+        const text = `${item.element || ''} ${item.model || ''} ${item.brandProject || ''} ${item.subCategory || ''}`.toUpperCase();
+        const tot = item.totalQuantity || 0;
+        const alc = item.allocatedQuantity || 0;
+        const bal = item.availableQuantity || 0;
+
+        if (text.includes('BRIGHTSIGN') || text.includes('HD224') || text.includes('HD225') || text.includes('LS424')) {
+          if (text.includes('XT') || text.includes('1144') || text.includes('4K')) {
+            mpMap.brightsignXT.total += tot;
+            mpMap.brightsignXT.allocated += alc;
+            mpMap.brightsignXT.balance += bal;
+          } else {
+            mpMap.brightsignHD.total += tot;
+            mpMap.brightsignHD.allocated += alc;
+            mpMap.brightsignHD.balance += bal;
+          }
+        } else if (text.includes('CUBETECH') || text.includes('CUBE TECH')) {
+          if (text.includes('4K') || text.includes('PRO')) {
+            mpMap.cubetech4K.total += tot;
+            mpMap.cubetech4K.allocated += alc;
+            mpMap.cubetech4K.balance += bal;
+          } else {
+            mpMap.cubetechHD.total += tot;
+            mpMap.cubetechHD.allocated += alc;
+            mpMap.cubetechHD.balance += bal;
+          }
+        }
+      });
+
+      setMediaPlayersBreakdown(mpMap);
+
+      const totalMediaPlayersCount = mpMap.brightsignHD.total + mpMap.brightsignXT.total + mpMap.cubetech4K.total + mpMap.cubetechHD.total;
+      const allocMediaPlayersCount = mpMap.brightsignHD.allocated + mpMap.brightsignXT.allocated + mpMap.cubetech4K.allocated + mpMap.cubetechHD.allocated;
+      const balMediaPlayersCount = mpMap.brightsignHD.balance + mpMap.brightsignXT.balance + mpMap.cubetech4K.balance + mpMap.cubetechHD.balance;
+
+      // 7. Fetch Venues
       const venueRes = await fetch('/api/venues');
       const venueData = await venueRes.json();
       const venueList = venueData.venues || [];
@@ -250,6 +306,9 @@ export default function DashboardPage() {
         totalHSSpeakers: totalHSSpeakersCount,
         allocatedHSSpeakers: allocHSSpeakersCount,
         balanceHSSpeakers: balHSSpeakersCount,
+        totalMediaPlayers: totalMediaPlayersCount,
+        allocatedMediaPlayers: allocMediaPlayersCount,
+        balanceMediaPlayers: balMediaPlayersCount,
       });
     } catch (err) {
       console.error('Dashboard load error:', err);
@@ -267,7 +326,7 @@ export default function DashboardPage() {
             <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> Super Admin Dashboard
           </h1>
           <p className="text-xs text-[#8a8d9b] mt-0.5">
-            Master operations monitoring center — Artists, Artworks, Technical Inventory, Projectors & Yamaha HS Speakers.
+            Master operations monitoring center — Artists, Artworks, Tech Inventory, Projectors, Yamaha Speakers & Media Players.
           </p>
         </div>
 
@@ -279,8 +338,8 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* SECTION 1: STAT CARDS & TILES (5 MASTER STAT TILES DIRECTLY FROM DATABASE) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+      {/* SECTION 1: STAT CARDS & TILES (DIRECTLY FROM DATABASE) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
         
         {/* TILE 1: TOTAL ARTIST COUNT */}
         <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#8b5cf6]/40 transition-all flex flex-col justify-between">
@@ -392,177 +451,342 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* TILE 6: MEDIA PLAYERS COUNT & BALANCE (BRIGHTSIGN & CUBETECH) */}
+        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#38bdf8]/40 transition-all flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Media Players</span>
+            <div className="w-9 h-9 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8]">
+              <Tv className="w-4.5 h-4.5" />
+            </div>
+          </div>
+
+          <div className="my-4">
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-black text-[#38bdf8]">{stats.totalMediaPlayers}</span>
+              <span className="text-xs font-extrabold text-[#38bdf8] uppercase">Units</span>
+            </div>
+            <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">BrightSign & Cubetech</p>
+          </div>
+
+          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+            <span>Allocated: <strong className="text-white">{stats.allocatedMediaPlayers}</strong></span>
+            <span>Balance: <strong className="text-[#10b981] font-extrabold">{stats.balanceMediaPlayers}</strong></span>
+          </div>
+        </div>
+
       </div>
 
-      {/* SECTION 2: DETAILED BREAKDOWN TILES FOR PROJECTORS & YAMAHA HS SPEAKERS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* SECTION 2: DETAILED BREAKDOWN TILES (PROJECTORS, YAMAHA HS SPEAKERS & MEDIA PLAYERS) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* LEFT 6 COLS: PROJECTOR COUNT WITH BRAND & MODELS AND BALANCE COUNT AFTER ALLOCATION */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <Camera className="w-5 h-5 text-[#f97316]" />
-                <div>
-                  <h3 className="text-sm font-extrabold text-white tracking-tight">
-                    Projectors: Brand, Models & Allocation Balance
-                  </h3>
-                  <p className="text-[10px] text-[#8a8d9b]">Inventory breakdown by brand, model, total and balance</p>
+        {/* CARD 1: PROJECTORS: BRAND, MODELS & BALANCE */}
+        <div className="space-y-4">
+          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Camera className="w-5 h-5 text-[#f97316]" />
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white tracking-tight">
+                      Projectors: Brand & Models
+                    </h3>
+                    <p className="text-[10px] text-[#8a8d9b]">Inventory breakdown by brand & model</p>
+                  </div>
                 </div>
+
+                <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
+                  {stats.balanceProjectors} Balance
+                </span>
               </div>
 
-              <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-3 py-1 rounded-xl border border-[#10b981]/20">
-                {stats.balanceProjectors} Balance Available
-              </span>
-            </div>
-
-            <div className="space-y-3">
-              {projectorsList.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
-                  <p className="font-semibold text-white">No projectors in database</p>
-                  <p className="text-[11px]">Database is empty. Import or add new projector items to see model breakdown.</p>
-                </div>
-              ) : (
-                projectorsList.map((p, idx) => (
-                  <div
-                    key={idx}
-                    className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316] font-bold text-xs shrink-0">
-                        {p.brand.slice(0, 3).toUpperCase()}
-                      </div>
-                      <div>
-                        <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
-                          {p.brand} {p.model}
-                        </h4>
-                        <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                      <div className="text-center">
-                        <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                        <span className="font-extrabold text-white">{p.total}</span>
-                      </div>
-                      <div className="text-center">
-                        <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                        <span className="font-extrabold text-[#38bdf8]">{p.allocated}</span>
-                      </div>
-                      <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
-                        <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                        <span className="font-extrabold text-[#10b981]">{p.balance}</span>
-                      </div>
-                    </div>
+              <div className="space-y-3">
+                {projectorsList.length === 0 ? (
+                  <div className="p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
+                    <p className="font-semibold text-white">No projectors in database</p>
+                    <p className="text-[11px]">Database is empty. Import projector items to view breakdown.</p>
                   </div>
-                ))
-              )}
+                ) : (
+                  projectorsList.map((p, idx) => (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316] font-bold text-xs shrink-0">
+                          {p.brand.slice(0, 3).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
+                            {p.brand} {p.model}
+                          </h4>
+                          <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                        <div className="text-center">
+                          <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                          <span className="font-extrabold text-white">{p.total}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8]">{p.allocated}</span>
+                        </div>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                          <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                          <span className="font-extrabold text-[#10b981]">{p.balance}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* RIGHT 6 COLS: TOTAL HS5, HS8, HS8S SPEAKER COUNT AND BALANCE AFTER ALLOCATION */}
-        <div className="lg:col-span-6 space-y-4">
-          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <Volume2 className="w-5 h-5 text-[#10b981]" />
-                <div>
-                  <h3 className="text-sm font-extrabold text-white tracking-tight">
-                    Yamaha HS Speakers: HS5, HS8, HS8S Breakdown
-                  </h3>
-                  <p className="text-[10px] text-[#8a8d9b]">Studio monitors & subwoofer pool allocation status</p>
+        {/* CARD 2: YAMAHA HS SPEAKERS BREAKDOWN */}
+        <div className="space-y-4">
+          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Volume2 className="w-5 h-5 text-[#10b981]" />
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white tracking-tight">
+                      Yamaha HS Speakers: HS5, HS8, HS8S
+                    </h3>
+                    <p className="text-[10px] text-[#8a8d9b]">Studio monitors & subwoofer allocation</p>
+                  </div>
                 </div>
+
+                <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
+                  {stats.balanceHSSpeakers} Balance
+                </span>
               </div>
 
-              <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-3 py-1 rounded-xl border border-[#10b981]/20">
-                {stats.balanceHSSpeakers} Balance Available
-              </span>
+              <div className="space-y-3">
+                {/* Yamaha HS5 Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-xs shrink-0">
+                      HS5
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Yamaha HS5</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">5" 70W Active Studio Monitor</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{speakersBreakdown.hs5.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs5.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs5.balance}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Yamaha HS8 Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
+                      HS8
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Yamaha HS8</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">8" 120W Bi-Amplified Studio Monitor</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{speakersBreakdown.hs8.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8.balance}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Yamaha HS8S Subwoofer Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#a855f7]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7] font-bold text-xs shrink-0">
+                      HS8S
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Yamaha HS8S Subwoofer</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">8" 150W Powered Subwoofer</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{speakersBreakdown.hs8s.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8s.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8s.balance}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-3">
-              {/* Yamaha HS5 Card */}
-              <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-xs shrink-0">
-                    HS5
-                  </div>
+        {/* CARD 3: MEDIA PLAYERS: BRIGHTSIGN & CUBETECH MODELS */}
+        <div className="space-y-4">
+          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+                <div className="flex items-center gap-2.5">
+                  <Tv className="w-5 h-5 text-[#38bdf8]" />
                   <div>
-                    <h4 className="text-xs font-extrabold text-white">Yamaha HS5</h4>
-                    <p className="text-[10px] text-[#8a8d9b] mt-0.5">5" 70W Nearfield Active Studio Monitor</p>
+                    <h3 className="text-sm font-extrabold text-white tracking-tight">
+                      Media Players: BrightSign & Cubetech
+                    </h3>
+                    <p className="text-[10px] text-[#8a8d9b]">Video servers & digital signage players</p>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                    <span className="font-extrabold text-white">{speakersBreakdown.hs5.total}</span>
-                  </div>
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                    <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs5.allocated}</span>
-                  </div>
-                  <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
-                    <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                    <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs5.balance}</span>
-                  </div>
-                </div>
+                <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
+                  {stats.balanceMediaPlayers} Balance
+                </span>
               </div>
 
-              {/* Yamaha HS8 Card */}
-              <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
-                    HS8
+              <div className="space-y-3">
+                {/* BrightSign HD Series Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#38bdf8]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
+                      BS-HD
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">BrightSign HD Series</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">HD224 / HD225 Solid-State Player</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-white">Yamaha HS8</h4>
-                    <p className="text-[10px] text-[#8a8d9b] mt-0.5">8" 120W Bi-Amplified Studio Monitor</p>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.brightsignHD.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.brightsignHD.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.brightsignHD.balance}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                    <span className="font-extrabold text-white">{speakersBreakdown.hs8.total}</span>
+                {/* BrightSign XT Series Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#38bdf8]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-xs shrink-0">
+                      BS-XT
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">BrightSign XT Series</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">XT1144 Dual 4K Video Engine</p>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                    <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8.allocated}</span>
-                  </div>
-                  <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
-                    <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                    <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8.balance}</span>
-                  </div>
-                </div>
-              </div>
 
-              {/* Yamaha HS8S Subwoofer Card */}
-              <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#a855f7]/40 transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7] font-bold text-xs shrink-0">
-                    HS8S
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-extrabold text-white">Yamaha HS8S Subwoofer</h4>
-                    <p className="text-[10px] text-[#8a8d9b] mt-0.5">8" 150W Bass-Reflex Powered Subwoofer</p>
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.brightsignXT.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.brightsignXT.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.brightsignXT.balance}</span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                    <span className="font-extrabold text-white">{speakersBreakdown.hs8s.total}</span>
+                {/* Cubetech 4K Pro Player Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#8b5cf6]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6] font-bold text-xs shrink-0">
+                      CUBE
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Cubetech 4K Pro Player</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">Multi-Display Synchronized Server</p>
+                    </div>
                   </div>
-                  <div className="text-center">
-                    <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                    <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8s.allocated}</span>
-                  </div>
-                  <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
-                    <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                    <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8s.balance}</span>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.cubetech4K.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.cubetech4K.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.cubetech4K.balance}</span>
+                    </div>
                   </div>
                 </div>
+
+                {/* Cubetech HD Sync Player Card */}
+                <div className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#8b5cf6]/40 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6] font-bold text-xs shrink-0">
+                      CB-HD
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white">Cubetech HD Sync Player</h4>
+                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">Networked Low-Latency Player</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                      <span className="font-extrabold text-white">{mediaPlayersBreakdown.cubetechHD.total}</span>
+                    </div>
+                    <div className="text-center">
+                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                      <span className="font-extrabold text-[#38bdf8]">{mediaPlayersBreakdown.cubetechHD.allocated}</span>
+                    </div>
+                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
+                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                      <span className="font-extrabold text-[#10b981]">{mediaPlayersBreakdown.cubetechHD.balance}</span>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
@@ -622,6 +846,17 @@ export default function DashboardPage() {
                       strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
                       strokeLinecap="round"
                     />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="24"
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="5"
+                      strokeDasharray="150.79"
+                      strokeDashoffset={150.79 * (1 - (stats.totalMediaPlayers / Math.max(stats.totalTechnicalInventory, 1)))}
+                      strokeLinecap="round"
+                    />
                   </>
                 )}
               </svg>
@@ -637,8 +872,8 @@ export default function DashboardPage() {
             </div>
 
             {/* Legends */}
-            <div className="space-y-3 text-xs text-[#8a8d9b] w-full sm:w-auto">
-              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+            <div className="space-y-2.5 text-xs text-[#8a8d9b] w-full sm:w-auto">
+              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
                   <span className="font-semibold text-white">Projectors</span>
@@ -646,7 +881,7 @@ export default function DashboardPage() {
                 <span className="font-bold text-[#f97316]">{stats.totalProjectors} units</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
                   <span className="font-semibold text-white">Yamaha HS Speakers</span>
@@ -654,12 +889,12 @@ export default function DashboardPage() {
                 <span className="font-bold text-[#10b981]">{stats.totalHSSpeakers} units</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
-                  <span className="font-semibold text-white">Available Balance</span>
+                  <span className="font-semibold text-white">Media Players</span>
                 </div>
-                <span className="font-bold text-[#38bdf8]">{stats.availableTechnicalInventory} units</span>
+                <span className="font-bold text-[#38bdf8]">{stats.totalMediaPlayers} units</span>
               </div>
             </div>
           </div>
