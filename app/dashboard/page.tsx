@@ -35,7 +35,7 @@ export default function DashboardPage() {
   const [inventoryItems, setInventoryItems] = useState<any[]>([]);
   const [venues, setVenues] = useState<any[]>([]);
 
-  // Calculated Top-level Stats
+  // Calculated Top-level Stats directly from database
   const [stats, setStats] = useState({
     totalArtists: 0,
     confirmedArtists: 0,
@@ -181,19 +181,7 @@ export default function DashboardPage() {
         projGroupMap[key].balance += bal;
       });
 
-      // Provide authentic baseline entries if DB has few items
-      let projList = Object.values(projGroupMap);
-      if (projList.length === 0) {
-        projList = [
-          { brand: 'Epson', model: 'EB-PU2010W (10K Lumens)', element: 'Laser Projector 10K', total: 6, allocated: 4, balance: 2 },
-          { brand: 'Panasonic', model: 'PT-RZ970 (10K Laser)', element: '3-Chip DLP Projector', total: 4, allocated: 3, balance: 1 },
-          { brand: 'Christie', model: 'D13WU-HS (13.5K)', element: 'High Lumen Projector', total: 3, allocated: 2, balance: 1 },
-          { brand: 'Sony', model: 'VPL-FHZ91 (9K 4K)', element: '4K Laser Projector', total: 2, allocated: 1, balance: 1 },
-        ];
-        totalProj = projList.reduce((acc, p) => acc + p.total, 0);
-        allocProj = projList.reduce((acc, p) => acc + p.allocated, 0);
-        balProj = projList.reduce((acc, p) => acc + p.balance, 0);
-      }
+      const projList = Object.values(projGroupMap);
       setProjectorsList(projList);
 
       // 5. Calculate Yamaha Speakers (HS5, HS8, HS8S) Count & Balance
@@ -224,11 +212,6 @@ export default function DashboardPage() {
         }
       });
 
-      // Default baseline counts if not yet populated in database
-      if (hsMap.hs5.total === 0) hsMap.hs5 = { model: 'Yamaha HS5 (5" Active Monitor)', total: 16, allocated: 10, balance: 6 };
-      if (hsMap.hs8.total === 0) hsMap.hs8 = { model: 'Yamaha HS8 (8" Studio Monitor)', total: 24, allocated: 16, balance: 8 };
-      if (hsMap.hs8s.total === 0) hsMap.hs8s = { model: 'Yamaha HS8S (150W Powered Sub)', total: 10, allocated: 6, balance: 4 };
-
       setSpeakersBreakdown(hsMap);
 
       const totalHSSpeakersCount = hsMap.hs5.total + hsMap.hs8.total + hsMap.hs8s.total;
@@ -252,15 +235,15 @@ export default function DashboardPage() {
       });
       setVenueDistribution(vDist);
 
-      // Set Master Stats
+      // Set Master Stats accurately reflecting actual database counts (0 when empty)
       setStats({
-        totalArtists: artistList.length || 24,
-        confirmedArtists: confirmedCount || 22,
-        totalArtworks: artworkList.length || 38,
-        assignedArtworks: assignedArtworksCount || 30,
-        totalTechnicalInventory: totalTechQty || (techItems.length > 0 ? totalTechQty : 485),
-        allocatedTechnicalInventory: allocTechQty || 310,
-        availableTechnicalInventory: availTechQty || 175,
+        totalArtists: artistList.length,
+        confirmedArtists: confirmedCount,
+        totalArtworks: artworkList.length,
+        assignedArtworks: assignedArtworksCount,
+        totalTechnicalInventory: totalTechQty,
+        allocatedTechnicalInventory: allocTechQty,
+        availableTechnicalInventory: availTechQty,
         totalProjectors: totalProj,
         allocatedProjectors: allocProj,
         balanceProjectors: balProj,
@@ -296,7 +279,7 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      {/* SECTION 1: STAT CARDS & TILES (5 REQUESTED MASTER STAT TILES) */}
+      {/* SECTION 1: STAT CARDS & TILES (5 MASTER STAT TILES DIRECTLY FROM DATABASE) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
         
         {/* TILE 1: TOTAL ARTIST COUNT */}
@@ -434,39 +417,46 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-3">
-              {projectorsList.map((p, idx) => (
-                <div
-                  key={idx}
-                  className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316] font-bold text-xs shrink-0">
-                      {p.brand.slice(0, 3).toUpperCase()}
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
-                        {p.brand} {p.model}
-                      </h4>
-                      <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{p.total}</span>
-                    </div>
-                    <div className="text-center">
-                      <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{p.allocated}</span>
-                    </div>
-                    <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
-                      <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{p.balance}</span>
-                    </div>
-                  </div>
+              {projectorsList.length === 0 ? (
+                <div className="p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
+                  <p className="font-semibold text-white">No projectors in database</p>
+                  <p className="text-[11px]">Database is empty. Import or add new projector items to see model breakdown.</p>
                 </div>
-              ))}
+              ) : (
+                projectorsList.map((p, idx) => (
+                  <div
+                    key={idx}
+                    className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316] font-bold text-xs shrink-0">
+                        {p.brand.slice(0, 3).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
+                          {p.brand} {p.model}
+                        </h4>
+                        <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                      <div className="text-center">
+                        <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
+                        <span className="font-extrabold text-white">{p.total}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
+                        <span className="font-extrabold text-[#38bdf8]">{p.allocated}</span>
+                      </div>
+                      <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-3 py-1 rounded-xl">
+                        <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
+                        <span className="font-extrabold text-[#10b981]">{p.balance}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -608,64 +598,39 @@ export default function DashboardPage() {
                 <circle cx="50" cy="50" r="24" fill="none" stroke="#1c1c2a" strokeWidth="5" />
                 <circle cx="50" cy="50" r="15" fill="none" stroke="#1c1c2a" strokeWidth="5" />
 
-                {/* Ring 1: Projectors (Orange - 35%) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  stroke="#f97316"
-                  strokeWidth="5"
-                  strokeDasharray="263.89"
-                  strokeDashoffset={263.89 * (1 - 0.35)}
-                  strokeLinecap="round"
-                />
-
-                {/* Ring 2: Yamaha HS Speakers (Emerald - 28%) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="33"
-                  fill="none"
-                  stroke="#10b981"
-                  strokeWidth="5"
-                  strokeDasharray="207.34"
-                  strokeDashoffset={207.34 * (1 - 0.28)}
-                  strokeLinecap="round"
-                />
-
-                {/* Ring 3: Audio Systems & Cables (Cyan - 22%) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="24"
-                  fill="none"
-                  stroke="#38bdf8"
-                  strokeWidth="5"
-                  strokeDasharray="150.79"
-                  strokeDashoffset={150.79 * (1 - 0.22)}
-                  strokeLinecap="round"
-                />
-
-                {/* Ring 4: Lighting & Rigging (Purple - 15%) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="15"
-                  fill="none"
-                  stroke="#a855f7"
-                  strokeWidth="5"
-                  strokeDasharray="94.24"
-                  strokeDashoffset={94.24 * (1 - 0.15)}
-                  strokeLinecap="round"
-                />
+                {stats.totalTechnicalInventory > 0 && (
+                  <>
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="#f97316"
+                      strokeWidth="5"
+                      strokeDasharray="263.89"
+                      strokeDashoffset={263.89 * (1 - (stats.totalProjectors / Math.max(stats.totalTechnicalInventory, 1)))}
+                      strokeLinecap="round"
+                    />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="33"
+                      fill="none"
+                      stroke="#10b981"
+                      strokeWidth="5"
+                      strokeDasharray="207.34"
+                      strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
+                      strokeLinecap="round"
+                    />
+                  </>
+                )}
               </svg>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
                 <span className="text-2xl font-black text-white leading-none">
                   {stats.totalTechnicalInventory > 0
                     ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
-                    : 64}%
+                    : 0}%
                 </span>
                 <span className="text-[9px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
               </div>
@@ -673,7 +638,7 @@ export default function DashboardPage() {
 
             {/* Legends */}
             <div className="space-y-3 text-xs text-[#8a8d9b] w-full sm:w-auto">
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
                   <span className="font-semibold text-white">Projectors</span>
@@ -681,7 +646,7 @@ export default function DashboardPage() {
                 <span className="font-bold text-[#f97316]">{stats.totalProjectors} units</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
                   <span className="font-semibold text-white">Yamaha HS Speakers</span>
@@ -689,20 +654,12 @@ export default function DashboardPage() {
                 <span className="font-bold text-[#10b981]">{stats.totalHSSpeakers} units</span>
               </div>
 
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+              <div className="flex items-center justify-between gap-4 p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
-                  <span className="font-semibold text-white">Audio & Cables</span>
+                  <span className="font-semibold text-white">Available Balance</span>
                 </div>
-                <span className="font-bold text-[#38bdf8]">22%</span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#a855f7] shrink-0" />
-                  <span className="font-semibold text-white">Lighting & Rigging</span>
-                </div>
-                <span className="font-bold text-[#a855f7]">15%</span>
+                <span className="font-bold text-[#38bdf8]">{stats.availableTechnicalInventory} units</span>
               </div>
             </div>
           </div>
@@ -725,8 +682,9 @@ export default function DashboardPage() {
 
           <div className="space-y-4 py-1">
             {venueDistribution.length === 0 ? (
-              <div className="p-4 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5">
-                Loading venue distribution data...
+              <div className="p-6 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5 space-y-1">
+                <p className="font-semibold text-white">No venues in database</p>
+                <p className="text-[11px]">Database is empty. Add venues to view spatial artwork distribution.</p>
               </div>
             ) : (
               venueDistribution.slice(0, 4).map((v, idx) => {
@@ -744,7 +702,7 @@ export default function DashboardPage() {
                     <div className="w-full bg-[#1c1c2a] h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
                       <div
                         className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#38bdf8] h-full rounded-full transition-all duration-1000"
-                        style={{ width: `${Math.max(pct, 12)}%` }}
+                        style={{ width: `${Math.max(pct, 0)}%` }}
                       />
                     </div>
                   </div>
