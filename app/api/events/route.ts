@@ -25,24 +25,48 @@ export async function GET() {
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, code, year, description, startDate, endDate, status } = body;
+    const {
+      name,
+      code,
+      year,
+      description,
+      startDate,
+      endDate,
+      status,
+      logo,
+      coverPage,
+      location,
+      address,
+      email,
+      contact,
+    } = body;
+
+    if (!name || !code) {
+      return NextResponse.json({ success: false, error: 'Event name and code are required.' }, { status: 400 });
+    }
 
     const event = await prisma.event.create({
       data: {
         name,
         code,
-        year: parseInt(year) || 2026,
-        description,
-        startDate,
-        endDate,
+        year: parseInt(year) || new Date().getFullYear(),
+        description: description || null,
+        startDate: startDate || null,
+        endDate: endDate || null,
         status: status || 'Active',
+        logo: logo || null,
+        coverPage: coverPage || null,
+        location: location || null,
+        address: address || null,
+        email: email || null,
+        contact: contact || null,
       },
     });
 
     await prisma.auditLog.create({
       data: {
         eventId: event.id,
-        userName: 'Admin User',
+        userName: 'Super Admin',
         userRole: 'SUPER ADMIN',
         entityType: 'EVENT',
         entityId: event.id,

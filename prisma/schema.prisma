@@ -17,6 +17,12 @@ model Event {
   startDate   String?
   endDate     String?
   status      String   @default("Active") // Active, Planning, Completed, Archived
+  logo        String?
+  coverPage   String?
+  location    String?
+  address     String?
+  email       String?
+  contact     String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

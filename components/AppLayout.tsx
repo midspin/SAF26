@@ -522,16 +522,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
             <label className="text-[10px] font-bold text-[#8a8d9b] uppercase tracking-wider flex items-center gap-1">
               <Layers className="w-3 h-3 text-[#8b5cf6]" /> Active Event Context
             </label>
-            {(activeRole || '').trim().toUpperCase() === 'SUPER ADMIN' && (
-              <button
-                type="button"
-                onClick={() => setCreateEventModalOpen(true)}
-                className="text-[10px] font-bold text-[#38bdf8] hover:text-[#7dd3fc] hover:underline flex items-center gap-0.5 transition-colors"
-                title="Create a new event (Super Admin Only)"
-              >
-                <Plus className="w-3 h-3" /> New Event
-              </button>
-            )}
           </div>
 
           {(activeRole || '').trim().toUpperCase() === 'SUPER ADMIN' ? (
