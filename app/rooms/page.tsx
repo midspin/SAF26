@@ -476,73 +476,85 @@ export default function RoomsPage() {
                     <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block truncate">
                       📐 Tech & Production drawing
                     </span>
-                    <div
-                      onClick={() =>
-                        setFullViewModal({
-                          title: `Room ${r.roomNumber} - Technical & Production Layout`,
-                          url:
-                            r.techProdLayout ||
-                            r.roomImage ||
-                            r.floorplan ||
-                            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-                          type: (r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
-                        })
-                      }
-                      className="relative rounded-xl overflow-hidden border border-emerald-500/30 bg-slate-950 h-24 cursor-pointer group/thumb hover:border-emerald-400 transition-all shadow-md"
-                    >
-                      {(r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-emerald-400 p-2">
-                          <FileText className="w-6 h-6 mb-0.5" />
-                          <span className="text-[10px] font-bold">Layout PDF</span>
+                    {r.techProdLayout || r.roomImage ? (
+                      <div
+                        onClick={() =>
+                          setFullViewModal({
+                            title: `Room ${r.roomNumber} - Technical & Production Layout`,
+                            url: r.techProdLayout || r.roomImage,
+                            type: (r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
+                          })
+                        }
+                        className="relative rounded-xl overflow-hidden border border-emerald-500/30 bg-slate-950 h-24 cursor-pointer group/thumb hover:border-emerald-400 transition-all shadow-md"
+                      >
+                        {(r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-emerald-400 p-2">
+                            <FileText className="w-6 h-6 mb-0.5" />
+                            <span className="text-[10px] font-bold">Layout PDF</span>
+                          </div>
+                        ) : (
+                          <img
+                            src={r.techProdLayout || r.roomImage}
+                            alt="Technical & Production Layout"
+                            className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300 opacity-90 group-hover/thumb:opacity-100"
+                          />
+                        )}
+                        <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-slate-100 text-[10px] font-bold">
+                          <Maximize2 className="w-3.5 h-3.5 text-emerald-400 mr-1" /> View
                         </div>
-                      ) : (
-                        <img
-                          src={
-                            r.techProdLayout ||
-                            r.roomImage ||
-                            r.floorplan ||
-                            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80'
-                          }
-                          alt="Technical & Production Layout"
-                          className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300 opacity-90 group-hover/thumb:opacity-100"
-                        />
-                      )}
-                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-slate-100 text-[10px] font-bold">
-                        <Maximize2 className="w-3.5 h-3.5 text-emerald-400 mr-1" /> View
                       </div>
-                    </div>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 h-20 flex flex-col items-center justify-center text-slate-600 text-[10px]">
+                        <span>No drawing attached</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Interactive Buttons for Floorplan & Elevation Drawings */}
                   <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    <button
-                      onClick={() =>
-                        setFullViewModal({
-                          title: `Room ${r.roomNumber} - Floorplan Layout`,
-                          url:
-                            r.floorplan ||
-                            'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-                          type: r.floorplan?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
-                        })
-                      }
-                      className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-sky-500/30 text-sky-400 hover:text-sky-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <FileText className="w-3 h-3" /> Floorplan
-                    </button>
-                    <button
-                      onClick={() =>
-                        setFullViewModal({
-                          title: `Room ${r.roomNumber} - Elevation Drawing`,
-                          url:
-                            r.elevation ||
-                            'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800&auto=format&fit=crop&q=80',
-                          type: r.elevation?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
-                        })
-                      }
-                      className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-amber-500/30 text-amber-400 hover:text-amber-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
-                    >
-                      <FileText className="w-3 h-3" /> Elevation
-                    </button>
+                    {r.floorplan ? (
+                      <button
+                        onClick={() =>
+                          setFullViewModal({
+                            title: `Room ${r.roomNumber} - Floorplan Layout`,
+                            url: r.floorplan,
+                            type: r.floorplan?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
+                          })
+                        }
+                        className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-sky-500/30 text-sky-400 hover:text-sky-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      >
+                        <FileText className="w-3 h-3" /> Floorplan
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="p-1.5 rounded-lg bg-slate-950/40 border border-slate-800/50 text-slate-600 text-[10px] font-medium flex items-center justify-center gap-1 opacity-50 cursor-not-allowed"
+                      >
+                        <FileText className="w-3 h-3" /> Floorplan
+                      </button>
+                    )}
+
+                    {r.elevation ? (
+                      <button
+                        onClick={() =>
+                          setFullViewModal({
+                            title: `Room ${r.roomNumber} - Elevation Drawing`,
+                            url: r.elevation,
+                            type: r.elevation?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
+                          })
+                        }
+                        className="p-1.5 rounded-lg bg-slate-950 hover:bg-slate-900 border border-amber-500/30 text-amber-400 hover:text-amber-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      >
+                        <FileText className="w-3 h-3" /> Elevation
+                      </button>
+                    ) : (
+                      <button
+                        disabled
+                        className="p-1.5 rounded-lg bg-slate-950/40 border border-slate-800/50 text-slate-600 text-[10px] font-medium flex items-center justify-center gap-1 opacity-50 cursor-not-allowed"
+                      >
+                        <FileText className="w-3 h-3" /> Elevation
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
