@@ -59,12 +59,19 @@ export async function POST(req: Request) {
       const duplicatesMap: { [safCode: string]: any[] } = {};
       const processedRows: any[] = [];
 
-      // Check existing SAF Codes in DB for event
+      // Check existing SAF Codes in DB for event or global items
       const dbItems = await prisma.inventoryItem.findMany({
-        where: { eventId },
+        where: eventId && eventId !== 'ALL' ? { OR: [{ eventId }, { eventId: null }] } : {},
         select: { safCode: true, element: true, totalQuantity: true },
       });
-      const dbSafSet = new Set(dbItems.map((i) => i.safCode.toLowerCase()));
+      const dbSafSet = new Set<string>();
+      dbItems.forEach((i) => {
+        if (i.safCode) {
+          const lower = i.safCode.toLowerCase();
+          dbSafSet.add(lower);
+          dbSafSet.add(lower.trim().replace(/\s+/g, ''));
+        }
+      });
 
       for (let idx = 0; idx < rows.length; idx++) {
         const raw = rows[idx];
@@ -79,7 +86,9 @@ export async function POST(req: Request) {
           issues.push('MARKED RED / FAULTY (Cannot be allocated to any artist or project)');
         }
 
-        const isDbDuplicate = extracted.safCode ? dbSafSet.has(extracted.safCode.toLowerCase()) : false;
+        const safCodeLower = extracted.safCode ? extracted.safCode.toLowerCase() : '';
+        const safCodeNorm = safCodeLower.trim().replace(/\s+/g, '');
+        const isDbDuplicate = extracted.safCode ? (dbSafSet.has(safCodeLower) || dbSafSet.has(safCodeNorm)) : false;
 
         const rowItem = {
           ...extracted,
@@ -148,14 +157,17 @@ export async function POST(req: Request) {
             },
           });
 
-          // Pre-fetch all existing inventory items for this event to avoid 500+ N+1 queries
+          // Pre-fetch all existing inventory items for this event or global items
           const existingDbItems = await tx.inventoryItem.findMany({
-            where: { eventId },
+            where: eventId && eventId !== 'ALL' ? { OR: [{ eventId }, { eventId: null }] } : {},
           });
           const existingItemMap = new Map<string, any>();
           existingDbItems.forEach((item) => {
             if (item.safCode) {
-              existingItemMap.set(item.safCode.toLowerCase(), item);
+              const lower = item.safCode.toLowerCase();
+              const norm = lower.trim().replace(/\s+/g, '');
+              existingItemMap.set(lower, item);
+              existingItemMap.set(norm, item);
             }
           });
 
@@ -167,6 +179,7 @@ export async function POST(req: Request) {
             const itemData = extractRowFields(raw, idx);
             const safCode = itemData.safCode;
             const safCodeLower = safCode ? safCode.toLowerCase() : '';
+            const safCodeNorm = safCodeLower.trim().replace(/\s+/g, '');
             const userAction =
               resolutions[safCode] ||
               (safCode ? resolutions[safCode.toLowerCase()] : null) ||
@@ -179,12 +192,13 @@ export async function POST(req: Request) {
               continue;
             }
 
-            const existingItem = existingItemMap.get(safCodeLower);
+            const existingItem = existingItemMap.get(safCodeLower) || existingItemMap.get(safCodeNorm);
 
             if (existingItem) {
-              if (userAction === 'MERGE' || userAction === 'IMPORT') {
-                const newTotal = existingItem.totalQuantity + itemData.totalQuantity;
-                const newDamaged = isFaulty ? existingItem.damagedQuantity + itemData.totalQuantity : existingItem.damagedQuantity;
+              if (userAction === 'MERGE' || userAction === 'IMPORT' || userAction === 'UPDATE') {
+                const isOverwrite = userAction === 'UPDATE';
+                const newTotal = isOverwrite ? itemData.totalQuantity : Math.max(existingItem.totalQuantity, itemData.totalQuantity);
+                const newDamaged = isFaulty ? itemData.totalQuantity : existingItem.damagedQuantity;
                 const newAvailable = Math.max(
                   0,
                   newTotal - existingItem.reservedQuantity - existingItem.allocatedQuantity - newDamaged - existingItem.maintenanceQuantity
@@ -193,17 +207,30 @@ export async function POST(req: Request) {
                 const updatedItem = await tx.inventoryItem.update({
                   where: { id: existingItem.id },
                   data: {
+                    eventId: eventId || existingItem.eventId,
+                    inventoryCategory: itemData.inventoryCategory || existingItem.inventoryCategory,
+                    subCategory: itemData.subCategory || existingItem.subCategory,
+                    element: itemData.element || existingItem.element,
+                    yearOfPurchase: itemData.yearOfPurchase || existingItem.yearOfPurchase,
+                    brandProject: itemData.brandProject || existingItem.brandProject,
+                    model: itemData.model || existingItem.model,
+                    sizeLwh: itemData.sizeLwh || existingItem.sizeLwh,
+                    uom: itemData.uom || existingItem.uom,
+                    serialNo: itemData.serialNo || existingItem.serialNo,
                     totalQuantity: newTotal,
                     damagedQuantity: newDamaged,
                     availableQuantity: newAvailable,
+                    location: itemData.location || existingItem.location,
+                    condition: isFaulty ? 'Faulty (Red Flagged)' : (itemData.condition || existingItem.condition),
+                    throwRatio: itemData.throwRatio || existingItem.throwRatio,
+                    remarks: itemData.remarks ? itemData.remarks : existingItem.remarks,
                     isFaulty: existingItem.isFaulty || isFaulty,
-                    condition: isFaulty ? 'Faulty (Red Flagged)' : existingItem.condition,
-                    remarks: `${existingItem.remarks || ''} | Merged Row ${itemData.rowNum} Qty: +${itemData.totalQuantity} ${isFaulty ? '[FAULTY]' : ''}`,
                   },
                 });
 
-                // Update Map cache so duplicate rows within the same batch stack correctly
+                // Update Map cache
                 existingItemMap.set(safCodeLower, updatedItem);
+                existingItemMap.set(safCodeNorm, updatedItem);
 
                 if (isFaulty) faultyCount++;
                 mergedCount++;

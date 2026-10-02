@@ -8,13 +8,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('--- STARTING FAST TECHNICAL INVENTORY BATCH IMPORT ---');
 
-  // 1. Get Event
+  // 1. Get Event (Optional)
   const event = await prisma.event.findFirst();
-  if (!event) {
-    console.error('No Event found in database!');
-    process.exit(1);
-  }
-  console.log(`Target Event: ${event.name} (${event.id})`);
+  const eventId = event ? event.id : null;
+  console.log(`Target Event: ${event ? event.name : 'Master Inventory (Global)'}`);
 
   // 2. Read CSV
   const csvPath = path.join(__dirname, 'tech_inventory_input.csv');
@@ -28,7 +25,7 @@ async function main() {
   console.log('Clearing existing TECHNICAL inventory items...');
   const deleteResult = await prisma.inventoryItem.deleteMany({
     where: {
-      eventId: event.id,
+      ...(eventId ? { eventId } : {}),
       OR: [
         { inventoryCategory: { equals: 'Technical', mode: 'insensitive' } },
         { inventoryUsageType: 'TECHNICAL' }
@@ -79,7 +76,7 @@ async function main() {
 
     itemsToCreate.push({
       id: itemId,
-      eventId: event.id,
+      eventId,
       safCode: safCode || `SAF-TECH-${idx + 1}`,
       inventoryCategory: 'Technical',
       subCategory: subCategory || 'General',
@@ -110,7 +107,7 @@ async function main() {
 
     movementsToCreate.push({
       id: crypto.randomUUID(),
-      eventId: event.id,
+      eventId,
       inventoryItemId: itemId,
       movementType: isFaulty ? 'Damaged' : 'Stock Added',
       quantity: totalQuantity,

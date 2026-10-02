@@ -374,8 +374,8 @@ model ProductionRequirement {
 
 model InventoryItem {
   id                  String   @id @default(uuid())
-  eventId             String
-  event               Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId             String?
+  event               Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   
   // Legacy 15 Fields from Inventory TECH 2026.xlsx
   safCode             String   // e.g. "Ac-1"
@@ -425,8 +425,8 @@ model InventoryItem {
 
 model InventoryAllocation {
   id                String   @id @default(uuid())
-  eventId           String
-  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId           String?
+  event             Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   inventoryItemId   String
   inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   artistId          String?
@@ -459,8 +459,8 @@ model InventoryAllocation {
 
 model InventoryMovement {
   id                String   @id @default(uuid())
-  eventId           String
-  event             Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId           String?
+  event             Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   inventoryItemId   String
   inventoryItem     InventoryItem @relation(fields: [inventoryItemId], references: [id], onDelete: Cascade)
   movementType      String   // Opening Stock, Stock Added, Allocated, Issued, Returned, Damaged, Maintenance, Repaired, Lost, Transferred, Retired, Disposed, Stock Adjustment, Rental Received, Rental Returned
@@ -479,8 +479,8 @@ model InventoryMovement {
 
 model PurchaseRequest {
   id                 String   @id @default(uuid())
-  eventId            String
-  event              Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId            String?
+  event              Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   department         String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
   artistId           String?
   artist             Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
@@ -523,8 +523,8 @@ model PurchaseRequest {
 
 model RentalRecord {
   id               String   @id @default(uuid())
-  eventId          String
-  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId          String?
+  event            Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   department       String   @default("TECHNICAL") // TECHNICAL, PRODUCTION, OTHER
   artistId         String?
   artist           Artist?  @relation(fields: [artistId], references: [id], onDelete: SetNull)
@@ -609,8 +609,8 @@ model VendorQuote {
 
 model InventoryImportBatch {
   id            String   @id @default(uuid())
-  eventId       String
-  event         Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId       String?
+  event         Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   fileName      String
   uploadedBy    String
   uploadedAt    DateTime @default(now())
@@ -639,8 +639,8 @@ model InventoryImportRow {
 
 model GoogleSheetSyncLog {
   id           String   @id @default(uuid())
-  eventId      String
-  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId      String?
+  event        Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   workbookId   String
   tabName      String
   entityType   String   // INVENTORY, TECHNICAL_ALLOCATION, TECHNICAL_PROCUREMENT, PRODUCTION_ALLOCATION, PRODUCTION_PROCUREMENT
@@ -667,8 +667,8 @@ model GoogleSheetRowMapping {
 
 model AuditLog {
   id               String   @id @default(uuid())
-  eventId          String
-  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId          String?
+  event            Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   userName         String
   userRole         String
   entityType       String
@@ -681,8 +681,8 @@ model AuditLog {
 
 model Notification {
   id          String   @id @default(uuid())
-  eventId     String
-  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId          String?
+  event            Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   title       String
   message     String
   type        String   @default("info") // info, success, warning, error

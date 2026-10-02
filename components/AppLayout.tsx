@@ -332,11 +332,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     try {
       const res = await fetch('/api/events');
       const data = await res.json();
-      if (data.success && data.events.length > 0) {
-        setEvents(data.events);
-        const activeEvt = data.events.find((e: any) => e.code === 'SAF2026') || data.events[0];
-        setSelectedEventId(activeEvt.id);
-        setSelectedEvent(activeEvt);
+      if (data.success) {
+        setEvents(data.events || []);
+        if (data.events && data.events.length > 0) {
+          const activeEvt = data.events.find((e: any) => e.status === 'Active') || data.events[0];
+          setSelectedEventId(activeEvt.id);
+          setSelectedEvent(activeEvt);
+        } else {
+          setSelectedEventId('');
+          setSelectedEvent(null);
+        }
       }
     } catch (err) {
       console.error('Error fetching events:', err);

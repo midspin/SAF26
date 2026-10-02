@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -11,14 +13,16 @@ export async function GET(req: Request) {
     const condition = searchParams.get('condition');
 
     const where: any = {};
-    if (eventId) where.eventId = eventId;
+    if (eventId && eventId !== 'ALL') {
+      where.OR = [{ eventId }, { eventId: null }];
+    }
     if (usageType && usageType !== 'ALL') where.inventoryUsageType = usageType;
     if (category && category !== 'ALL') where.inventoryCategory = category;
     if (condition && condition !== 'ALL') where.condition = condition;
 
     if (search) {
       const q = search.trim();
-      where.OR = [
+      const searchConditions = [
         { safCode: { contains: q } },
         { element: { contains: q } },
         { inventoryCategory: { contains: q } },
@@ -29,6 +33,15 @@ export async function GET(req: Request) {
         { location: { contains: q } },
         { assetId: { contains: q } },
       ];
+      if (where.OR) {
+        where.AND = [
+          { OR: where.OR },
+          { OR: searchConditions },
+        ];
+        delete where.OR;
+      } else {
+        where.OR = searchConditions;
+      }
     }
 
     const items = await prisma.inventoryItem.findMany({

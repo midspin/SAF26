@@ -594,14 +594,10 @@ function parseCsvLine(line) {
 async function seedProductionInventory() {
   console.log('Seeding Production Inventory Items...');
   
-  // Get active event
+  // Get active event (Optional)
   let event = await prisma.event.findFirst({ where: { status: 'Active' } });
   if (!event) event = await prisma.event.findFirst();
-  if (!event) {
-    console.error('No active event found');
-    process.exit(1);
-  }
-  const eventId = event.id;
+  const eventId = event ? event.id : null;
 
   const lines = rawCsv.split('\n').filter(l => l.trim().length > 0);
   // Skip header line
