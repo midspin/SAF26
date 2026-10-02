@@ -581,8 +581,8 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              {/* Scrollable Container with max height matching adjacent cards */}
-              <div className="max-h-[460px] overflow-y-auto pr-1.5 space-y-5">
+              {/* Container for Audio Speakers & Media Players without scroll */}
+              <div className="space-y-5">
                 
                 {/* SECTION 1: YAMAHA HS SPEAKERS */}
                 <div className="space-y-2.5">
