@@ -23,6 +23,8 @@ import {
   Tv,
   Film,
 } from 'lucide-react';
+import AnimatedNumber from '@/components/AnimatedNumber';
+
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -362,14 +364,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="my-4">
-            <span className="text-4xl font-black text-white">{stats.totalArtists}</span>
+            <AnimatedNumber value={stats.totalArtists} className="text-4xl font-black text-white" />
             <p className="text-xs font-extrabold text-[#8b5cf6] tracking-tight mt-0.5">Registered Artists</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
             <span>Confirmed:</span>
             <span className="font-extrabold text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-md border border-[#10b981]/20">
-              {stats.confirmedArtists} Active
+              <AnimatedNumber value={stats.confirmedArtists} suffix=" Active" />
             </span>
           </div>
         </div>
@@ -384,14 +386,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="my-4">
-            <span className="text-4xl font-black text-white">{stats.totalArtworks}</span>
+            <AnimatedNumber value={stats.totalArtworks} className="text-4xl font-black text-white" />
             <p className="text-xs font-extrabold text-[#a855f7] tracking-tight mt-0.5">Cataloged Artworks</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
             <span>Venue Assigned:</span>
             <span className="font-extrabold text-white">
-              {stats.assignedArtworks} Space Allocated
+              <AnimatedNumber value={stats.assignedArtworks} suffix=" Space Allocated" />
             </span>
           </div>
         </div>
@@ -406,13 +408,13 @@ export default function DashboardPage() {
           </div>
 
           <div className="my-4">
-            <span className="text-4xl font-black text-[#38bdf8]">{stats.totalTechnicalInventory}</span>
+            <AnimatedNumber value={stats.totalTechnicalInventory} className="text-4xl font-black text-[#38bdf8]" />
             <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Technical Units</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white">{stats.allocatedTechnicalInventory}</strong></span>
-            <span>Balance: <strong className="text-[#10b981]">{stats.availableTechnicalInventory}</strong></span>
+            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedTechnicalInventory} /></strong></span>
+            <span>Balance: <strong className="text-[#10b981]"><AnimatedNumber value={stats.availableTechnicalInventory} /></strong></span>
           </div>
         </div>
 
@@ -427,15 +429,15 @@ export default function DashboardPage() {
 
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-white">{stats.totalProjectors}</span>
+              <AnimatedNumber value={stats.totalProjectors} className="text-4xl font-black text-white" />
               <span className="text-xs font-extrabold text-[#f97316] uppercase">Units</span>
             </div>
             <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Projectors</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white">{stats.allocatedProjectors}</strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold">{stats.balanceProjectors}</strong></span>
+            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedProjectors} /></strong></span>
+            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceProjectors} /></strong></span>
           </div>
         </div>
 
@@ -450,15 +452,15 @@ export default function DashboardPage() {
 
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-[#10b981]">{stats.totalHSSpeakers}</span>
+              <AnimatedNumber value={stats.totalHSSpeakers} className="text-4xl font-black text-[#10b981]" />
               <span className="text-xs font-extrabold text-[#10b981] uppercase">Units</span>
             </div>
             <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">HS5, HS8, HS8S Speakers</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white">{stats.allocatedHSSpeakers}</strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold">{stats.balanceHSSpeakers}</strong></span>
+            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedHSSpeakers} /></strong></span>
+            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceHSSpeakers} /></strong></span>
           </div>
         </div>
 
@@ -473,15 +475,15 @@ export default function DashboardPage() {
 
           <div className="my-4">
             <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-black text-[#38bdf8]">{stats.totalMediaPlayers}</span>
+              <AnimatedNumber value={stats.totalMediaPlayers} className="text-4xl font-black text-[#38bdf8]" />
               <span className="text-xs font-extrabold text-[#38bdf8] uppercase">Units</span>
             </div>
             <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">BrightSign & Cubetech</p>
           </div>
 
           <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white">{stats.allocatedMediaPlayers}</strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold">{stats.balanceMediaPlayers}</strong></span>
+            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedMediaPlayers} /></strong></span>
+            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceMediaPlayers} /></strong></span>
           </div>
         </div>
 
@@ -506,7 +508,7 @@ export default function DashboardPage() {
                 </div>
 
                 <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
-                  {stats.balanceProjectors} Balance
+                  <AnimatedNumber value={stats.balanceProjectors} suffix=" Balance" />
                 </span>
               </div>
 
@@ -537,15 +539,15 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                         <div className="text-center">
                           <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                          <span className="font-extrabold text-white">{p.total}</span>
+                          <span className="font-extrabold text-white"><AnimatedNumber value={p.total} /></span>
                         </div>
                         <div className="text-center">
                           <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8]">{p.allocated}</span>
+                          <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={p.allocated} /></span>
                         </div>
                         <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
                           <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981]">{p.balance}</span>
+                          <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={p.balance} /></span>
                         </div>
                       </div>
                     </div>
@@ -572,7 +574,7 @@ export default function DashboardPage() {
                 </div>
 
                 <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
-                  {stats.balanceHSSpeakers} Balance
+                  <AnimatedNumber value={stats.balanceHSSpeakers} suffix=" Balance" />
                 </span>
               </div>
 
@@ -592,15 +594,15 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{speakersBreakdown.hs5.total}</span>
+                      <span className="font-extrabold text-white"><AnimatedNumber value={speakersBreakdown.hs5.total} /></span>
                     </div>
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs5.allocated}</span>
+                      <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={speakersBreakdown.hs5.allocated} /></span>
                     </div>
                     <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
                       <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs5.balance}</span>
+                      <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={speakersBreakdown.hs5.balance} /></span>
                     </div>
                   </div>
                 </div>
@@ -620,15 +622,15 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{speakersBreakdown.hs8.total}</span>
+                      <span className="font-extrabold text-white"><AnimatedNumber value={speakersBreakdown.hs8.total} /></span>
                     </div>
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8.allocated}</span>
+                      <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={speakersBreakdown.hs8.allocated} /></span>
                     </div>
                     <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
                       <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8.balance}</span>
+                      <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={speakersBreakdown.hs8.balance} /></span>
                     </div>
                   </div>
                 </div>
@@ -648,15 +650,15 @@ export default function DashboardPage() {
                   <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                      <span className="font-extrabold text-white">{speakersBreakdown.hs8s.total}</span>
+                      <span className="font-extrabold text-white"><AnimatedNumber value={speakersBreakdown.hs8s.total} /></span>
                     </div>
                     <div className="text-center">
                       <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                      <span className="font-extrabold text-[#38bdf8]">{speakersBreakdown.hs8s.allocated}</span>
+                      <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={speakersBreakdown.hs8s.allocated} /></span>
                     </div>
                     <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
                       <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                      <span className="font-extrabold text-[#10b981]">{speakersBreakdown.hs8s.balance}</span>
+                      <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={speakersBreakdown.hs8s.balance} /></span>
                     </div>
                   </div>
                 </div>
@@ -681,7 +683,7 @@ export default function DashboardPage() {
                 </div>
 
                 <span className="text-xs font-mono font-extrabold text-[#10b981] bg-[#10b981]/10 px-2.5 py-1 rounded-xl border border-[#10b981]/20">
-                  {stats.balanceMediaPlayers} Balance
+                  <AnimatedNumber value={stats.balanceMediaPlayers} suffix=" Balance" />
                 </span>
               </div>
 
@@ -721,15 +723,15 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                           <div className="text-center">
                             <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                            <span className="font-extrabold text-white">{mp.total}</span>
+                            <span className="font-extrabold text-white"><AnimatedNumber value={mp.total} /></span>
                           </div>
                           <div className="text-center">
                             <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                            <span className="font-extrabold text-[#38bdf8]">{mp.allocated}</span>
+                            <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={mp.allocated} /></span>
                           </div>
                           <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
                             <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                            <span className="font-extrabold text-[#10b981]">{mp.balance}</span>
+                            <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={mp.balance} /></span>
                           </div>
                         </div>
                       </div>
@@ -757,7 +759,7 @@ export default function DashboardPage() {
             </div>
 
             <span className="text-xs font-mono font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2.5 py-1 rounded-lg border border-[#38bdf8]/20">
-              {stats.totalTechnicalInventory} Technical Pool Items
+              <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Technical Pool Items" />
             </span>
           </div>
 
@@ -811,11 +813,15 @@ export default function DashboardPage() {
               </svg>
 
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <span className="text-2xl font-black text-white leading-none">
-                  {stats.totalTechnicalInventory > 0
-                    ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
-                    : 0}%
-                </span>
+                <AnimatedNumber
+                  value={
+                    stats.totalTechnicalInventory > 0
+                      ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
+                      : 0
+                  }
+                  suffix="%"
+                  className="text-2xl font-black text-white leading-none"
+                />
                 <span className="text-[9px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
               </div>
             </div>
@@ -827,7 +833,7 @@ export default function DashboardPage() {
                   <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
                   <span className="font-semibold text-white">Projectors</span>
                 </div>
-                <span className="font-bold text-[#f97316]">{stats.totalProjectors} units</span>
+                <span className="font-bold text-[#f97316]"><AnimatedNumber value={stats.totalProjectors} suffix=" units" /></span>
               </div>
 
               <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
@@ -835,7 +841,7 @@ export default function DashboardPage() {
                   <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
                   <span className="font-semibold text-white">Yamaha HS Speakers</span>
                 </div>
-                <span className="font-bold text-[#10b981]">{stats.totalHSSpeakers} units</span>
+                <span className="font-bold text-[#10b981]"><AnimatedNumber value={stats.totalHSSpeakers} suffix=" units" /></span>
               </div>
 
               <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
@@ -843,7 +849,7 @@ export default function DashboardPage() {
                   <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
                   <span className="font-semibold text-white">Media Players</span>
                 </div>
-                <span className="font-bold text-[#38bdf8]">{stats.totalMediaPlayers} units</span>
+                <span className="font-bold text-[#38bdf8]"><AnimatedNumber value={stats.totalMediaPlayers} suffix=" units" /></span>
               </div>
             </div>
           </div>
@@ -880,7 +886,7 @@ export default function DashboardPage() {
                       <span className="font-extrabold text-white flex items-center gap-2">
                         <Building2 className="w-3.5 h-3.5 text-[#a855f7]" /> {v.name}
                       </span>
-                      <span className="font-mono font-bold text-[#a855f7]">{v.artworkCount} Artworks</span>
+                      <AnimatedNumber value={v.artworkCount} suffix=" Artworks" className="font-mono font-bold text-[#a855f7]" />
                     </div>
 
                     <div className="w-full bg-[#1c1c2a] h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
