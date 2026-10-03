@@ -42,7 +42,7 @@ import {
 export default function TeamsPage() {
   const [teams, setTeams] = useState<any>({ programming: [], technical: [], production: [], inventory: [] });
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'TECHNICAL' | 'PRODUCTION' | 'PROGRAMMING' | 'INVENTORY' | 'ROLES'>('TECHNICAL');
+  const [activeTab, setActiveTab] = useState<'TECHNICAL' | 'PRODUCTION' | 'PROGRAMMING' | 'INVENTORY' | 'SPATIAL' | 'ROLES'>('TECHNICAL');
   const [search, setSearch] = useState('');
 
   // User Role State
@@ -236,7 +236,7 @@ export default function TeamsPage() {
   // Modal States
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [formData, setFormData] = useState({
-    teamType: 'TECHNICAL' as 'TECHNICAL' | 'PRODUCTION' | 'PROGRAMMING' | 'INVENTORY',
+    teamType: 'TECHNICAL' as 'TECHNICAL' | 'PRODUCTION' | 'PROGRAMMING' | 'INVENTORY' | 'SPATIAL',
     name: '',
     role: '',
     systemRole: 'TECHNICAL TEAM',
@@ -320,6 +320,8 @@ export default function TeamsPage() {
         ? 'PRODUCTION TEAM'
         : defaultTeam === 'PROGRAMMING'
         ? 'PROGRAMMING TEAM'
+        : defaultTeam === 'SPATIAL'
+        ? 'SPATIAL DESIGNER'
         : 'INVENTORY TEAM';
 
     setFormData({
@@ -582,7 +584,7 @@ export default function TeamsPage() {
 
       {/* Tabs Bar */}
       <div className="flex border-b border-slate-800 gap-4 overflow-x-auto scrollbar-none">
-        {(['TECHNICAL', 'PRODUCTION', 'PROGRAMMING', 'INVENTORY'] as const).map((t) => (
+        {(['TECHNICAL', 'PRODUCTION', 'PROGRAMMING', 'INVENTORY', 'SPATIAL'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
@@ -590,7 +592,7 @@ export default function TeamsPage() {
               activeTab === t ? 'border-sky-500 text-sky-400' : 'border-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            {t} TEAM ({teams[t.toLowerCase()]?.length || 0})
+            {t === 'SPATIAL' ? 'SPATIAL DESIGNERS' : `${t} TEAM`} ({teams[t.toLowerCase()]?.length || 0})
           </button>
         ))}
 
@@ -1125,6 +1127,8 @@ export default function TeamsPage() {
                           ? 'PRODUCTION TEAM'
                           : newTeam === 'PROGRAMMING'
                           ? 'PROGRAMMING TEAM'
+                          : newTeam === 'SPATIAL'
+                          ? 'SPATIAL DESIGNER'
                           : 'INVENTORY TEAM';
                       setFormData({ ...formData, teamType: newTeam, systemRole: defaultRole });
                     }}
@@ -1134,6 +1138,7 @@ export default function TeamsPage() {
                     <option value="PRODUCTION">PRODUCTION TEAM</option>
                     <option value="PROGRAMMING">PROGRAMMING TEAM</option>
                     <option value="INVENTORY">INVENTORY TEAM</option>
+                    <option value="SPATIAL">SPATIAL DESIGNERS</option>
                   </select>
                 </div>
 

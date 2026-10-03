@@ -729,6 +729,14 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   const [allProgrammingPeople, setAllProgrammingPeople] = useState<any[]>([]);
   const [selectedProgrammingIds, setSelectedProgrammingIds] = useState<string[]>([]);
 
+  const [productionModalOpen, setProductionModalOpen] = useState(false);
+  const [allProductionPeople, setAllProductionPeople] = useState<any[]>([]);
+  const [selectedProductionIds, setSelectedProductionIds] = useState<string[]>([]);
+
+  const [spatialModalOpen, setSpatialModalOpen] = useState(false);
+  const [allSpatialDesigners, setAllSpatialDesigners] = useState<any[]>([]);
+  const [selectedSpatialDesignerIds, setSelectedSpatialDesignerIds] = useState<string[]>([]);
+
   const [pocModalOpen, setPocModalOpen] = useState(false);
   const [allPocs, setAllPocs] = useState<any[]>([]);
   const [selectedPocIds, setSelectedPocIds] = useState<string[]>([]);
@@ -939,6 +947,76 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (data.success) {
         setProgrammingModalOpen(false);
+        fetchArtistDetails();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const openProductionModal = async () => {
+    try {
+      const res = await fetch('/api/team');
+      const data = await res.json();
+      if (data.success) {
+        setAllProductionPeople(data.teams?.production || []);
+        const currentlyAssigned = artistData?.productionAssignments?.map((pa: any) => pa.productionPersonId) || [];
+        setSelectedProductionIds(currentlyAssigned);
+        setProductionModalOpen(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveProduction = async () => {
+    setSavingAssignment(true);
+    try {
+      const res = await fetch(`/api/artists/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productionIds: selectedProductionIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProductionModalOpen(false);
+        fetchArtistDetails();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
+  const openSpatialModal = async () => {
+    try {
+      const res = await fetch('/api/team');
+      const data = await res.json();
+      if (data.success) {
+        setAllSpatialDesigners(data.teams?.spatial || []);
+        const currentlyAssigned = artistData?.spatialAssignments?.map((sa: any) => sa.spatialDesignerId) || [];
+        setSelectedSpatialDesignerIds(currentlyAssigned);
+        setSpatialModalOpen(true);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSaveSpatial = async () => {
+    setSavingAssignment(true);
+    try {
+      const res = await fetch(`/api/artists/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ spatialDesignerIds: selectedSpatialDesignerIds }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSpatialModalOpen(false);
         fetchArtistDetails();
       }
     } catch (err) {
@@ -1504,40 +1582,39 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        {/* 2-COLUMN LAYOUT WITH VERTICAL SEPARATION LINE IN MIDDLE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 divide-y md:divide-y-0 md:divide-x divide-white/10">
+        {/* 4-COLUMN LAYOUT FOR TEAMS */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
-          {/* LEFT SIDE: CURATORIAL TEAM */}
-          <div className="space-y-3 md:pr-4">
+          {/* 1. CURATORIAL TEAM */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#1c1c2a]/60 border border-white/5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold text-[#a855f7] uppercase tracking-wider flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-[#a855f7]" /> Curatorial Team (Artist Curator)
+              <h3 className="text-xs font-extrabold text-[#a855f7] uppercase tracking-wider flex items-center gap-1.5">
+                <Briefcase className="w-3.5 h-3.5 text-[#a855f7]" /> Curator
               </h3>
               {canEditProgrammingCards && (
                 <button
                   onClick={openCuratorModal}
-                  className="bg-[#a855f7]/10 hover:bg-[#a855f7] hover:text-white text-[#a855f7] font-bold text-[11px] px-2.5 py-1 rounded-xl border border-[#a855f7]/30 transition-all shadow-sm"
+                  className="bg-[#a855f7]/10 hover:bg-[#a855f7] hover:text-white text-[#a855f7] font-bold text-[10px] px-2 py-0.5 rounded-lg border border-[#a855f7]/30 transition-all shadow-sm"
                 >
-                  + Assign Curator
+                  + Edit
                 </button>
               )}
             </div>
 
             {artistData.curatorAssignments?.length === 0 ? (
-              <p className="text-xs text-[#8a8d9b] py-4 text-center bg-[#1c1c2a] rounded-2xl border border-white/5">
+              <p className="text-xs text-[#8a8d9b] py-3 text-center bg-[#1c1c2a] rounded-xl border border-white/5">
                 No curator assigned yet.
               </p>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {artistData.curatorAssignments.map((ca: any) => (
-                  <div key={ca.id} className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center gap-3.5 text-xs">
-                    <div className="w-10 h-10 rounded-xl bg-[#a855f7]/20 border border-[#a855f7]/40 text-[#a855f7] font-extrabold flex items-center justify-center shrink-0">
+                  <div key={ca.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
+                    <div className="w-8 h-8 rounded-lg bg-[#a855f7]/20 border border-[#a855f7]/40 text-[#a855f7] font-extrabold flex items-center justify-center shrink-0">
                       {ca.curator?.name?.charAt(0) || 'C'}
                     </div>
                     <div className="overflow-hidden">
-                      <h4 className="font-extrabold text-white">{ca.curator?.name}</h4>
-                      <p className="text-[11px] text-[#8a8d9b]">{ca.curator?.organisation || 'Lead Curator'}</p>
-                      <p className="text-[10px] text-[#38bdf8] font-semibold">{ca.curator?.email || ca.curator?.phone}</p>
+                      <h4 className="font-extrabold text-white text-xs truncate">{ca.curator?.name}</h4>
+                      <p className="text-[10px] text-[#8a8d9b] truncate">{ca.curator?.organisation || 'Lead Curator'}</p>
                     </div>
                   </div>
                 ))}
@@ -1545,46 +1622,122 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
             )}
           </div>
 
-          {/* RIGHT SIDE: PROGRAMMING TEAM (ARTIST POC) */}
-          <div className="space-y-3 pt-4 md:pt-0 md:pl-6">
+          {/* 2. PROGRAMMING TEAM */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#1c1c2a]/60 border border-white/5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-extrabold text-[#6366f1] uppercase tracking-wider flex items-center gap-2">
-                <UserCheck className="w-4 h-4 text-[#6366f1]" /> Programming Team (Artist POC)
+              <h3 className="text-xs font-extrabold text-[#6366f1] uppercase tracking-wider flex items-center gap-1.5">
+                <UserCheck className="w-3.5 h-3.5 text-[#6366f1]" /> Programming Team
               </h3>
               {canEditProgrammingCards && (
                 <button
                   onClick={openProgrammingModal}
-                  className="bg-[#6366f1]/10 hover:bg-[#6366f1] hover:text-white text-[#6366f1] font-bold text-[11px] px-2.5 py-1 rounded-xl border border-[#6366f1]/30 transition-all shadow-sm"
+                  className="bg-[#6366f1]/10 hover:bg-[#6366f1] hover:text-white text-[#6366f1] font-bold text-[10px] px-2 py-0.5 rounded-lg border border-[#6366f1]/30 transition-all shadow-sm"
                 >
-                  + Assign Programming POC
+                  + Edit
                 </button>
               )}
             </div>
 
             {artistData.programmingAssignments?.length === 0 ? (
-              <p className="text-xs text-[#8a8d9b] py-4 text-center bg-[#1c1c2a] rounded-2xl border border-white/5">
-                No Programming Team POC assigned yet.
+              <p className="text-xs text-[#8a8d9b] py-3 text-center bg-[#1c1c2a] rounded-xl border border-white/5">
+                No Programming staff assigned yet.
               </p>
             ) : (
-              <div className="space-y-2.5">
+              <div className="space-y-2">
                 {artistData.programmingAssignments.map((pa: any) => (
-                  <div key={pa.id} className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center gap-3.5 text-xs">
+                  <div key={pa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
                     {pa.programmingPerson?.photo ? (
-                      <img src={pa.programmingPerson.photo} alt="" className="w-10 h-10 rounded-xl object-cover border border-white/10" />
+                      <img src={pa.programmingPerson.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
                     ) : (
-                      <div className="w-10 h-10 rounded-xl bg-[#6366f1]/20 border border-[#6366f1]/40 text-[#6366f1] font-extrabold flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-lg bg-[#6366f1]/20 border border-[#6366f1]/40 text-[#6366f1] font-extrabold flex items-center justify-center shrink-0">
                         {pa.programmingPerson?.name?.charAt(0) || 'P'}
                       </div>
                     )}
                     <div className="overflow-hidden flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-extrabold text-white">{pa.programmingPerson?.name}</h4>
-                        <span className="text-[9px] font-extrabold px-2 py-0.5 rounded bg-[#6366f1]/20 text-[#6366f1] border border-[#6366f1]/30">
-                          {pa.programmingPerson?.role || 'Programming POC'}
-                        </span>
+                      <h4 className="font-extrabold text-white text-xs truncate">{pa.programmingPerson?.name}</h4>
+                      <p className="text-[10px] text-[#8a8d9b] truncate">{pa.programmingPerson?.role || 'Programming'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 3. PRODUCTION TEAM */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#1c1c2a]/60 border border-white/5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                <Building2 className="w-3.5 h-3.5 text-purple-400" /> Production Team
+              </h3>
+              {canEditProgrammingCards && (
+                <button
+                  onClick={openProductionModal}
+                  className="bg-purple-500/10 hover:bg-purple-500 hover:text-white text-purple-300 font-bold text-[10px] px-2 py-0.5 rounded-lg border border-purple-500/30 transition-all shadow-sm"
+                >
+                  + Edit
+                </button>
+              )}
+            </div>
+
+            {artistData.productionAssignments?.length === 0 ? (
+              <p className="text-xs text-[#8a8d9b] py-3 text-center bg-[#1c1c2a] rounded-xl border border-white/5">
+                No Production team assigned yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {artistData.productionAssignments.map((pa: any) => (
+                  <div key={pa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
+                    {pa.productionPerson?.photo ? (
+                      <img src={pa.productionPerson.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold flex items-center justify-center shrink-0">
+                        {pa.productionPerson?.name?.charAt(0) || 'PR'}
                       </div>
-                      <p className="text-[11px] text-[#8a8d9b]">{pa.programmingPerson?.organisation || 'SAF Festival Team'}</p>
-                      <p className="text-[10px] text-[#38bdf8] font-semibold">{pa.programmingPerson?.email || pa.programmingPerson?.phone}</p>
+                    )}
+                    <div className="overflow-hidden flex-1">
+                      <h4 className="font-extrabold text-white text-xs truncate">{pa.productionPerson?.name}</h4>
+                      <p className="text-[10px] text-[#8a8d9b] truncate">{pa.productionPerson?.role || 'Production'}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 4. SPATIAL DESIGNERS */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#1c1c2a]/60 border border-white/5">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-extrabold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <DoorOpen className="w-3.5 h-3.5 text-emerald-400" /> Spatial Designers
+              </h3>
+              {canEditProgrammingCards && (
+                <button
+                  onClick={openSpatialModal}
+                  className="bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 text-emerald-300 font-bold text-[10px] px-2 py-0.5 rounded-lg border border-emerald-500/30 transition-all shadow-sm"
+                >
+                  + Edit
+                </button>
+              )}
+            </div>
+
+            {artistData.spatialAssignments?.length === 0 ? (
+              <p className="text-xs text-[#8a8d9b] py-3 text-center bg-[#1c1c2a] rounded-xl border border-white/5">
+                No Spatial Designer assigned yet.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {artistData.spatialAssignments.map((sa: any) => (
+                  <div key={sa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
+                    {sa.spatialDesigner?.photo ? (
+                      <img src={sa.spatialDesigner.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold flex items-center justify-center shrink-0">
+                        {sa.spatialDesigner?.name?.charAt(0) || 'S'}
+                      </div>
+                    )}
+                    <div className="overflow-hidden flex-1">
+                      <h4 className="font-extrabold text-white text-xs truncate">{sa.spatialDesigner?.name}</h4>
+                      <p className="text-[10px] text-[#8a8d9b] truncate">{sa.spatialDesigner?.role || 'Spatial Designer'}</p>
                     </div>
                   </div>
                 ))}
@@ -2903,6 +3056,92 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
               </button>
               <button onClick={handleSaveProgramming} disabled={savingAssignment} className="px-4 py-2 rounded-xl bg-[#6366f1] text-white font-extrabold text-xs shadow-md">
                 {savingAssignment ? 'Saving...' : 'Save POC Assignments'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN PRODUCTION TEAM MODAL */}
+      {productionModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#232334] border border-white/10 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Assign Production Team</h3>
+              <button onClick={() => setProductionModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {allProductionPeople.map((pr) => (
+                <label key={pr.id} className="p-3 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between text-xs cursor-pointer hover:border-purple-500/40">
+                  <div>
+                    <span className="font-bold text-white block">{pr.name}</span>
+                    <span className="text-[10px] text-[#8a8d9b]">{pr.role || 'Production'}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={selectedProductionIds.includes(pr.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedProductionIds([...selectedProductionIds, pr.id]);
+                      else setSelectedProductionIds(selectedProductionIds.filter((pid) => pid !== pr.id));
+                    }}
+                    className="w-4 h-4 accent-purple-500"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+              <button onClick={() => setProductionModalOpen(false)} className="px-4 py-2 rounded-xl bg-[#1c1c2a] text-[#8a8d9b] font-bold text-xs">
+                Cancel
+              </button>
+              <button onClick={handleSaveProduction} disabled={savingAssignment} className="px-4 py-2 rounded-xl bg-purple-600 text-white font-extrabold text-xs shadow-md">
+                {savingAssignment ? 'Saving...' : 'Save Production Assignments'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ASSIGN SPATIAL DESIGNERS MODAL */}
+      {spatialModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#232334] border border-white/10 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider">Assign Spatial Designers</h3>
+              <button onClick={() => setSpatialModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+              {allSpatialDesigners.map((sd) => (
+                <label key={sd.id} className="p-3 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between text-xs cursor-pointer hover:border-emerald-500/40">
+                  <div>
+                    <span className="font-bold text-white block">{sd.name}</span>
+                    <span className="text-[10px] text-[#8a8d9b]">{sd.role || 'Spatial Designer'}</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={selectedSpatialDesignerIds.includes(sd.id)}
+                    onChange={(e) => {
+                      if (e.target.checked) setSelectedSpatialDesignerIds([...selectedSpatialDesignerIds, sd.id]);
+                      else setSelectedSpatialDesignerIds(selectedSpatialDesignerIds.filter((sid) => sid !== sd.id));
+                    }}
+                    className="w-4 h-4 accent-emerald-500"
+                  />
+                </label>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+              <button onClick={() => setSpatialModalOpen(false)} className="px-4 py-2 rounded-xl bg-[#1c1c2a] text-[#8a8d9b] font-bold text-xs">
+                Cancel
+              </button>
+              <button onClick={handleSaveSpatial} disabled={savingAssignment} className="px-4 py-2 rounded-xl bg-emerald-500 text-slate-950 font-extrabold text-xs shadow-md">
+                {savingAssignment ? 'Saving...' : 'Save Spatial Assignments'}
               </button>
             </div>
           </div>

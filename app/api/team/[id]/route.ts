@@ -14,6 +14,9 @@ async function findPersonInTeams(id: string) {
   const inventory = await prisma.inventoryPerson.findUnique({ where: { id } });
   if (inventory) return { person: inventory, teamType: 'INVENTORY' };
 
+  const spatial = await prisma.spatialDesigner.findUnique({ where: { id } });
+  if (spatial) return { person: spatial, teamType: 'SPATIAL' };
+
   return null;
 }
 
@@ -132,6 +135,23 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
           ...(primaryEventId ? { eventId: primaryEventId } : {}),
         },
       });
+    } else if (teamType === 'SPATIAL') {
+      updatedPerson = await prisma.spatialDesigner.update({
+        where: { id },
+        data: {
+          name: name.trim(),
+          photo: photo || null,
+          role: role || 'Spatial Designer',
+          organisation: organisation || null,
+          email: email || null,
+          phone: phone || null,
+          whatsapp: whatsapp || null,
+          responsibilities: responsibilities || null,
+          notes: notes || null,
+          ...(eventIdsJson ? { eventIdsJson } : {}),
+          ...(primaryEventId ? { eventId: primaryEventId } : {}),
+        },
+      });
     }
 
     // Sync updated role & eventIds to linked User profile
@@ -190,6 +210,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       await prisma.productionPerson.delete({ where: { id } });
     } else if (teamType === 'INVENTORY') {
       await prisma.inventoryPerson.delete({ where: { id } });
+    } else if (teamType === 'SPATIAL') {
+      await prisma.spatialDesigner.delete({ where: { id } });
     }
 
     await prisma.auditLog.create({

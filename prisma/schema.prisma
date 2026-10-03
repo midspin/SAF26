@@ -33,6 +33,7 @@ model Event {
   programmingPeople        ProgrammingPerson[]
   technicalPeople          TechnicalPerson[]
   productionPeople         ProductionPerson[]
+  spatialDesigners         SpatialDesigner[]
   inventoryPeople          InventoryPerson[]
   venues                   Venue[]
   rooms                    Room[]
@@ -75,6 +76,8 @@ model Artist {
   curatorAssignments       ArtistCuratorAssignment[]
   pocAssignments           ArtistPocAssignment[]
   programmingAssignments   ArtistProgrammingAssignment[]
+  productionAssignments    ArtistProductionAssignment[]
+  spatialAssignments        ArtistSpatialAssignment[]
   installations            ArtistInstallation[]
   technicalRequirements    TechnicalRequirement[]
   productionRequirements   ProductionRequirement[]
@@ -237,6 +240,50 @@ model ProductionPerson {
   notes            String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  artistAssignments ArtistProductionAssignment[]
+}
+
+model ArtistProductionAssignment {
+  id                 String           @id @default(uuid())
+  artistId           String
+  artist             Artist           @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  productionPersonId String
+  productionPerson   ProductionPerson @relation(fields: [productionPersonId], references: [id], onDelete: Cascade)
+  createdAt          DateTime         @default(now())
+
+  @@unique([artistId, productionPersonId])
+}
+
+model SpatialDesigner {
+  id               String   @id @default(uuid())
+  eventId          String
+  eventIdsJson     String?
+  event            Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name             String
+  photo            String?
+  role             String?
+  organisation     String?
+  email            String?
+  phone            String?
+  whatsapp         String?
+  responsibilities String?
+  notes            String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  artistAssignments ArtistSpatialAssignment[]
+}
+
+model ArtistSpatialAssignment {
+  id                String          @id @default(uuid())
+  artistId          String
+  artist            Artist          @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  spatialDesignerId String
+  spatialDesigner   SpatialDesigner @relation(fields: [spatialDesignerId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+
+  @@unique([artistId, spatialDesignerId])
 }
 
 model InventoryPerson {
@@ -709,7 +756,7 @@ model User {
   password           String?  @default("password")
   email              String   @unique
   phone              String?
-  role               String   @default("SUPER ADMIN") // SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION & LAYOUT, TECHNICAL INSTALLATION, TECH INSTALL TEAM, INVENTORY MANAGER, PROCUREMENT MANAGER, VENUE MANAGER, VIEWER
+  role               String   @default("SUPER ADMIN") // SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION & LAYOUT, SPATIAL DESIGNER, TECHNICAL INSTALLATION, TECH INSTALL TEAM, INVENTORY MANAGER, PROCUREMENT MANAGER, VENUE MANAGER, VIEWER
   department         String?  // Technical, Production, Inventory, Programming, Curatorial, Management
   avatar             String?
   mustChangePassword Boolean  @default(false)

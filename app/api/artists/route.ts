@@ -40,6 +40,8 @@ export async function GET(req: Request) {
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
+        productionAssignments: { include: { productionPerson: true } },
+        spatialAssignments: { include: { spatialDesigner: true } },
         installations: {
           include: {
             artwork: true,
@@ -88,6 +90,8 @@ export async function POST(req: Request) {
       curatorIds = [],
       pocIds = [],
       programmingIds = [],
+      productionIds = [],
+      spatialDesignerIds = [],
       artworks = [],
     } = body;
 
@@ -124,6 +128,8 @@ export async function POST(req: Request) {
     const safeCuratorIds = Array.isArray(curatorIds) ? curatorIds : [];
     const safePocIds = Array.isArray(pocIds) ? pocIds : [];
     const safeProgrammingIds = Array.isArray(programmingIds) ? programmingIds : [];
+    const safeProductionIds = Array.isArray(productionIds) ? productionIds : [];
+    const safeSpatialDesignerIds = Array.isArray(spatialDesignerIds) ? spatialDesignerIds : [];
 
     // Create Artist record with Travel & Lodging fields
     const artist = await prisma.artist.create({
@@ -151,6 +157,12 @@ export async function POST(req: Request) {
         },
         programmingAssignments: {
           create: safeProgrammingIds.map((prId: string) => ({ programmingPersonId: prId })),
+        },
+        productionAssignments: {
+          create: safeProductionIds.map((pId: string) => ({ productionPersonId: pId })),
+        },
+        spatialAssignments: {
+          create: safeSpatialDesignerIds.map((sId: string) => ({ spatialDesignerId: sId })),
         },
       },
     });
@@ -198,6 +210,8 @@ export async function POST(req: Request) {
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
+        productionAssignments: { include: { productionPerson: true } },
+        spatialAssignments: { include: { spatialDesigner: true } },
         installations: { include: { venue: true, room: true } },
       },
     });

@@ -101,6 +101,18 @@ const invTeamPermissions = (): Record<string, ModulePermission> => {
   return perm;
 };
 
+const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
+  const perm = readOnlyPermissions();
+  ['dashboard', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations'].forEach((id) => {
+    if (perm[id]) {
+      perm[id].canView = true;
+      perm[id].canEdit = true;
+      perm[id].canDelete = false;
+    }
+  });
+  return perm;
+};
+
 export const DEFAULT_ROLES: RoleDefinition[] = [
   {
     id: 'SUPER ADMIN',
@@ -133,6 +145,14 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     badgeColor: 'amber',
     isSystem: true,
     permissions: progTeamPermissions(),
+  },
+  {
+    id: 'SPATIAL DESIGNER',
+    name: 'SPATIAL DESIGNER',
+    description: 'Spatial & exhibition design focus: room space planning, 3D layouts, venues & artist installations.',
+    badgeColor: 'purple',
+    isSystem: true,
+    permissions: spatialDesignerPermissions(),
   },
   {
     id: 'INVENTORY TEAM',

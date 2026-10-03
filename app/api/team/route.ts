@@ -25,6 +25,11 @@ export async function GET(req: Request) {
     const technical = await prisma.technicalPerson.findMany({ where, orderBy: { name: 'asc' } });
     const production = await prisma.productionPerson.findMany({ where, orderBy: { name: 'asc' } });
     const inventory = await prisma.inventoryPerson.findMany({ where, orderBy: { name: 'asc' } });
+    const spatial = await prisma.spatialDesigner.findMany({
+      where,
+      orderBy: { name: 'asc' },
+      include: { artistAssignments: { include: { artist: true } } },
+    });
 
     return NextResponse.json({
       success: true,
@@ -33,6 +38,7 @@ export async function GET(req: Request) {
         technical,
         production,
         inventory,
+        spatial,
       },
     });
   } catch (error: any) {
@@ -49,7 +55,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: 'Member name is required.' }, { status: 400 });
     }
 
-    if (!teamType || !['TECHNICAL', 'PRODUCTION', 'PROGRAMMING', 'INVENTORY'].includes(teamType.toUpperCase())) {
+    if (!teamType || !['TECHNICAL', 'PRODUCTION', 'PROGRAMMING', 'INVENTORY', 'SPATIAL', 'SPATIAL DESIGNER', 'SPATIAL DESIGNERS'].includes(teamType.toUpperCase())) {
       return NextResponse.json({ success: false, error: 'Valid teamType is required.' }, { status: 400 });
     }
 
@@ -139,6 +145,22 @@ export async function POST(req: Request) {
           notes: notes || null,
         },
       });
+    } else if (['SPATIAL', 'SPATIAL DESIGNER', 'SPATIAL DESIGNERS'].includes(upperTeam)) {
+      person = await prisma.spatialDesigner.create({
+        data: {
+          eventId: primaryEventId,
+          eventIdsJson,
+          name: name.trim(),
+          photo: photo || null,
+          role: role || 'Spatial Designer',
+          organisation: organisation || null,
+          email: email || null,
+          phone: phone || null,
+          whatsapp: whatsapp || null,
+          responsibilities: responsibilities || null,
+          notes: notes || null,
+        },
+      });
     }
 
     // Determine mapped User Role based on designation or explicit systemRole
@@ -152,6 +174,8 @@ export async function POST(req: Request) {
         mappedRole = 'PROGRAMMING TEAM';
       } else if (upperTeam === 'INVENTORY') {
         mappedRole = 'INVENTORY TEAM';
+      } else if (['SPATIAL', 'SPATIAL DESIGNER', 'SPATIAL DESIGNERS'].includes(upperTeam)) {
+        mappedRole = 'SPATIAL DESIGNER';
       }
     }
 

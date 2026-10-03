@@ -33,6 +33,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
+        productionAssignments: { include: { productionPerson: true } },
+        spatialAssignments: { include: { spatialDesigner: true } },
         installations: {
           include: {
             artwork: true,
@@ -156,6 +158,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       curatorIds,
       pocIds,
       programmingIds,
+      productionIds,
+      spatialDesignerIds,
       artworks,
     } = body;
 
@@ -213,6 +217,26 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       if (programmingIds.length > 0) {
         await prisma.artistProgrammingAssignment.createMany({
           data: programmingIds.map((prId: string) => ({ artistId: id, programmingPersonId: prId })),
+        });
+      }
+    }
+
+    // Update Production assignments if provided
+    if (Array.isArray(productionIds)) {
+      await prisma.artistProductionAssignment.deleteMany({ where: { artistId: id } });
+      if (productionIds.length > 0) {
+        await prisma.artistProductionAssignment.createMany({
+          data: productionIds.map((pId: string) => ({ artistId: id, productionPersonId: pId })),
+        });
+      }
+    }
+
+    // Update Spatial Designer assignments if provided
+    if (Array.isArray(spatialDesignerIds)) {
+      await prisma.artistSpatialAssignment.deleteMany({ where: { artistId: id } });
+      if (spatialDesignerIds.length > 0) {
+        await prisma.artistSpatialAssignment.createMany({
+          data: spatialDesignerIds.map((sId: string) => ({ artistId: id, spatialDesignerId: sId })),
         });
       }
     }
@@ -300,6 +324,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
+        productionAssignments: { include: { productionPerson: true } },
+        spatialAssignments: { include: { spatialDesigner: true } },
         installations: { include: { venue: true, room: true } },
       },
     });

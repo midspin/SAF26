@@ -65,7 +65,9 @@ export default function ArtistsPage() {
   const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
 
   // Modal active tab
-  const [modalTab, setModalTab] = useState<'PROFILE' | 'ARTWORKS' | 'TRAVEL'>('PROFILE');
+  const [modalTab, setModalTab] = useState<'PROFILE' | 'ARTWORKS' | 'TRAVEL' | 'TEAM'>('PROFILE');
+  const [curatorsList, setCuratorsList] = useState<any[]>([]);
+  const [teamsData, setTeamsData] = useState<{ programming?: any[]; production?: any[]; spatial?: any[] }>({});
 
   // Advanced Filter & Sort States
   const [selectedVenue, setSelectedVenue] = useState<string>('ALL');
@@ -187,6 +189,10 @@ export default function ArtistsPage() {
     departureDate: '',
     travelNotes: '',
     lodgingDetails: '',
+    curatorIds: [] as string[],
+    programmingIds: [] as string[],
+    productionIds: [] as string[],
+    spatialDesignerIds: [] as string[],
     artworks: [emptyArtworkRow()] as ArtworkFormItem[],
   });
 
@@ -207,6 +213,10 @@ export default function ArtistsPage() {
     departureDate: '',
     travelNotes: '',
     lodgingDetails: '',
+    curatorIds: [] as string[],
+    programmingIds: [] as string[],
+    productionIds: [] as string[],
+    spatialDesignerIds: [] as string[],
     artworks: [] as ArtworkFormItem[],
   });
 
@@ -233,6 +243,10 @@ export default function ArtistsPage() {
       departureDate: '',
       travelNotes: '',
       lodgingDetails: '',
+      curatorIds: [],
+      programmingIds: [],
+      productionIds: [],
+      spatialDesignerIds: [],
       artworks: [emptyArtworkRow()],
     });
     setFormError(null);
@@ -256,16 +270,22 @@ export default function ArtistsPage() {
   const fetchArtistsAndVenues = async () => {
     setLoading(true);
     try {
-      const [artistsRes, venuesRes] = await Promise.all([
+      const [artistsRes, venuesRes, curatorsRes, teamsRes] = await Promise.all([
         fetch('/api/artists'),
         fetch('/api/venues'),
+        fetch('/api/curators'),
+        fetch('/api/team'),
       ]);
 
       const artistsData = await artistsRes.json();
       const venuesData = await venuesRes.json();
+      const curatorsData = await curatorsRes.json();
+      const teamsDataRes = await teamsRes.json();
 
       if (artistsData.success) setArtists(artistsData.artists);
       if (venuesData.success) setVenuesList(venuesData.venues);
+      if (curatorsData.success) setCuratorsList(curatorsData.curators || []);
+      if (teamsDataRes.success) setTeamsData(teamsDataRes.teams || {});
     } catch (err) {
       console.error(err);
     } finally {
@@ -412,6 +432,10 @@ export default function ArtistsPage() {
       departureDate: art.departureDate || '',
       travelNotes: art.travelNotes || '',
       lodgingDetails: art.lodgingDetails || '',
+      curatorIds: (art.curatorAssignments || []).map((ca: any) => ca.curatorId),
+      programmingIds: (art.programmingAssignments || []).map((pa: any) => pa.programmingPersonId),
+      productionIds: (art.productionAssignments || []).map((pa: any) => pa.productionPersonId),
+      spatialDesignerIds: (art.spatialAssignments || []).map((sa: any) => sa.spatialDesignerId),
       artworks: (art.artworks || []).map((aw: any) => ({
         id: aw.id,
         artworkName: aw.artworkName || '',
@@ -883,6 +907,30 @@ export default function ArtistsPage() {
                     </div>
                   )}
 
+                  {/* Team & Curatorial Assignment Badges */}
+                  <div className="mt-2.5 flex flex-wrap gap-1 text-[10px]">
+                    {art.curatorAssignments?.map((ca: any) => (
+                      <span key={ca.id} className="px-2 py-0.5 rounded-full bg-amber-950/70 text-amber-300 border border-amber-800/60 font-semibold flex items-center gap-1">
+                        👑 {ca.curator?.name}
+                      </span>
+                    ))}
+                    {art.programmingAssignments?.map((pa: any) => (
+                      <span key={pa.id} className="px-2 py-0.5 rounded-full bg-sky-950/70 text-sky-300 border border-sky-800/60 font-semibold flex items-center gap-1">
+                        🎯 {pa.programmingPerson?.name}
+                      </span>
+                    ))}
+                    {art.productionAssignments?.map((pa: any) => (
+                      <span key={pa.id} className="px-2 py-0.5 rounded-full bg-purple-950/70 text-purple-300 border border-purple-800/60 font-semibold flex items-center gap-1">
+                        🛠️ {pa.productionPerson?.name}
+                      </span>
+                    ))}
+                    {art.spatialAssignments?.map((sa: any) => (
+                      <span key={sa.id} className="px-2 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-800/60 font-semibold flex items-center gap-1">
+                        📐 {sa.spatialDesigner?.name}
+                      </span>
+                    ))}
+                  </div>
+
                   <p className="text-xs text-slate-300 line-clamp-2 mt-3 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80">
                     {art.biography || 'No bio recorded yet.'}
                   </p>
@@ -1024,6 +1072,17 @@ export default function ArtistsPage() {
                 }`}
               >
                 <Plane className="w-3.5 h-3.5" /> 3. Travel & Lodging
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('TEAM')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'TEAM'
+                    ? 'bg-emerald-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" /> 4. Team & Curators
               </button>
             </div>
 
@@ -1321,6 +1380,173 @@ export default function ArtistsPage() {
               </div>
             )}
 
+            {/* TAB 4: TEAM & CURATORS (ADD) */}
+            {modalTab === 'TEAM' && (
+              <div className="space-y-4 text-xs animate-in fade-in max-h-[60vh] overflow-y-auto pr-1">
+                {/* Curator Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-amber-300 font-bold flex items-center gap-1.5 text-xs">
+                      👑 Select Curator ({formData.curatorIds.length} selected)
+                    </label>
+                  </div>
+                  {curatorsList.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">No curators found in database.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {curatorsList.map((c) => {
+                        const isChecked = formData.curatorIds.includes(c.id);
+                        return (
+                          <label
+                            key={c.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-amber-950/40 border-amber-500/60 text-amber-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{c.name}</span>
+                              {c.category && <span className="block text-[10px] text-slate-400 truncate">{c.category}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFormData({ ...formData, curatorIds: [...formData.curatorIds, c.id] });
+                                else setFormData({ ...formData, curatorIds: formData.curatorIds.filter((id) => id !== c.id) });
+                              }}
+                              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Programming Team Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-sky-300 font-bold flex items-center gap-1.5 text-xs">
+                    🎯 Programming Team (Multiple: {formData.programmingIds.length} selected)
+                  </label>
+                  {(!teamsData.programming || teamsData.programming.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Programming team members found.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.programming.map((p) => {
+                        const isChecked = formData.programmingIds.includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-sky-950/40 border-sky-500/60 text-sky-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{p.name}</span>
+                              {p.role && <span className="block text-[10px] text-slate-400 truncate">{p.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFormData({ ...formData, programmingIds: [...formData.programmingIds, p.id] });
+                                else setFormData({ ...formData, programmingIds: formData.programmingIds.filter((id) => id !== p.id) });
+                              }}
+                              className="w-4 h-4 accent-sky-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Production Team Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-purple-300 font-bold flex items-center gap-1.5 text-xs">
+                    🛠️ Production Team (Multiple: {formData.productionIds.length} selected)
+                  </label>
+                  {(!teamsData.production || teamsData.production.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Production team members found.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.production.map((pr) => {
+                        const isChecked = formData.productionIds.includes(pr.id);
+                        return (
+                          <label
+                            key={pr.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-purple-950/40 border-purple-500/60 text-purple-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{pr.name}</span>
+                              {pr.role && <span className="block text-[10px] text-slate-400 truncate">{pr.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFormData({ ...formData, productionIds: [...formData.productionIds, pr.id] });
+                                else setFormData({ ...formData, productionIds: formData.productionIds.filter((id) => id !== pr.id) });
+                              }}
+                              className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Spatial Designers Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-emerald-300 font-bold flex items-center gap-1.5 text-xs">
+                    📐 Spatial Designers (Multiple: {formData.spatialDesignerIds.length} selected)
+                  </label>
+                  {(!teamsData.spatial || teamsData.spatial.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Spatial Designers registered yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.spatial.map((sd) => {
+                        const isChecked = formData.spatialDesignerIds.includes(sd.id);
+                        return (
+                          <label
+                            key={sd.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{sd.name}</span>
+                              {sd.role && <span className="block text-[10px] text-slate-400 truncate">{sd.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setFormData({ ...formData, spatialDesignerIds: [...formData.spatialDesignerIds, sd.id] });
+                                else setFormData({ ...formData, spatialDesignerIds: formData.spatialDesignerIds.filter((id) => id !== sd.id) });
+                              }}
+                              className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* MODAL FOOTER */}
             <div className="flex items-center justify-between pt-3 border-t border-slate-800">
               <div className="flex items-center gap-2">
@@ -1423,6 +1649,17 @@ export default function ArtistsPage() {
                 }`}
               >
                 <Plane className="w-3.5 h-3.5" /> 3. Travel & Lodging
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('TEAM')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'TEAM'
+                    ? 'bg-emerald-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Users className="w-3.5 h-3.5" /> 4. Team & Curators
               </button>
             </div>
 
@@ -1710,6 +1947,171 @@ export default function ArtistsPage() {
                     placeholder="Hotel name, room booking confirmation, check-in instructions..."
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-indigo-500 focus:outline-none"
                   />
+                </div>
+              </div>
+            )}
+
+            {/* TAB 4: TEAM & CURATORS (EDIT) */}
+            {modalTab === 'TEAM' && (
+              <div className="space-y-4 text-xs animate-in fade-in max-h-[60vh] overflow-y-auto pr-1">
+                {/* Curator Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-amber-300 font-bold flex items-center gap-1.5 text-xs">
+                    👑 Select Curator ({editFormData.curatorIds.length} selected)
+                  </label>
+                  {curatorsList.length === 0 ? (
+                    <p className="text-[11px] text-slate-500">No curators found in database.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {curatorsList.map((c) => {
+                        const isChecked = editFormData.curatorIds.includes(c.id);
+                        return (
+                          <label
+                            key={c.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-amber-950/40 border-amber-500/60 text-amber-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{c.name}</span>
+                              {c.category && <span className="block text-[10px] text-slate-400 truncate">{c.category}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setEditFormData({ ...editFormData, curatorIds: [...editFormData.curatorIds, c.id] });
+                                else setEditFormData({ ...editFormData, curatorIds: editFormData.curatorIds.filter((id) => id !== c.id) });
+                              }}
+                              className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Programming Team Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-sky-300 font-bold flex items-center gap-1.5 text-xs">
+                    🎯 Programming Team (Multiple: {editFormData.programmingIds.length} selected)
+                  </label>
+                  {(!teamsData.programming || teamsData.programming.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Programming team members found.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.programming.map((p) => {
+                        const isChecked = editFormData.programmingIds.includes(p.id);
+                        return (
+                          <label
+                            key={p.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-sky-950/40 border-sky-500/60 text-sky-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{p.name}</span>
+                              {p.role && <span className="block text-[10px] text-slate-400 truncate">{p.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setEditFormData({ ...editFormData, programmingIds: [...editFormData.programmingIds, p.id] });
+                                else setEditFormData({ ...editFormData, programmingIds: editFormData.programmingIds.filter((id) => id !== p.id) });
+                              }}
+                              className="w-4 h-4 accent-sky-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Production Team Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-purple-300 font-bold flex items-center gap-1.5 text-xs">
+                    🛠️ Production Team (Multiple: {editFormData.productionIds.length} selected)
+                  </label>
+                  {(!teamsData.production || teamsData.production.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Production team members found.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.production.map((pr) => {
+                        const isChecked = editFormData.productionIds.includes(pr.id);
+                        return (
+                          <label
+                            key={pr.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-purple-950/40 border-purple-500/60 text-purple-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{pr.name}</span>
+                              {pr.role && <span className="block text-[10px] text-slate-400 truncate">{pr.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setEditFormData({ ...editFormData, productionIds: [...editFormData.productionIds, pr.id] });
+                                else setEditFormData({ ...editFormData, productionIds: editFormData.productionIds.filter((id) => id !== pr.id) });
+                              }}
+                              className="w-4 h-4 accent-purple-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Spatial Designers Selection */}
+                <div className="p-3 bg-slate-950 rounded-2xl border border-slate-800 space-y-2">
+                  <label className="text-emerald-300 font-bold flex items-center gap-1.5 text-xs">
+                    📐 Spatial Designers (Multiple: {editFormData.spatialDesignerIds.length} selected)
+                  </label>
+                  {(!teamsData.spatial || teamsData.spatial.length === 0) ? (
+                    <p className="text-[11px] text-slate-500">No Spatial Designers registered yet.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-36 overflow-y-auto p-1">
+                      {teamsData.spatial.map((sd) => {
+                        const isChecked = editFormData.spatialDesignerIds.includes(sd.id);
+                        return (
+                          <label
+                            key={sd.id}
+                            className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                              isChecked
+                                ? 'bg-emerald-950/40 border-emerald-500/60 text-emerald-200'
+                                : 'bg-slate-900 border-slate-800 text-slate-300 hover:border-slate-700'
+                            }`}
+                          >
+                            <div className="truncate font-semibold">
+                              <span>{sd.name}</span>
+                              {sd.role && <span className="block text-[10px] text-slate-400 truncate">{sd.role}</span>}
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) setEditFormData({ ...editFormData, spatialDesignerIds: [...editFormData.spatialDesignerIds, sd.id] });
+                                else setEditFormData({ ...editFormData, spatialDesignerIds: editFormData.spatialDesignerIds.filter((id) => id !== sd.id) });
+                              }}
+                              className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
