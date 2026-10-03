@@ -26,7 +26,33 @@ import {
   SlidersHorizontal,
   RotateCcw,
   FileText,
+  Plane,
+  Hotel,
+  Calendar,
+  MapPin,
+  ShieldAlert,
 } from 'lucide-react';
+
+interface ArtworkFormItem {
+  id?: string;
+  artworkName: string;
+  medium: string;
+  dimensions: string;
+  installationType: string;
+  venueId: string;
+  roomId: string;
+  notes: string;
+}
+
+const emptyArtworkRow = (): ArtworkFormItem => ({
+  artworkName: '',
+  medium: '',
+  dimensions: '',
+  installationType: 'Projection',
+  venueId: '',
+  roomId: '',
+  notes: '',
+});
 
 export default function ArtistsPage() {
   const [artists, setArtists] = useState<any[]>([]);
@@ -37,6 +63,9 @@ export default function ArtistsPage() {
 
   // User Role State
   const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
+
+  // Modal active tab
+  const [modalTab, setModalTab] = useState<'PROFILE' | 'ARTWORKS' | 'TRAVEL'>('PROFILE');
 
   // Advanced Filter & Sort States
   const [selectedVenue, setSelectedVenue] = useState<string>('ALL');
@@ -82,13 +111,16 @@ export default function ArtistsPage() {
 
   const normalizedRole = (userRole || '').trim().toUpperCase();
 
+  // Strict restriction: Only Super Admin and Programming Team can Add, Edit, Delete artists & details
   const canEditOrDelete = [
     'SUPER ADMIN',
     'SUPERADMIN',
+    'ADMIN',
     'PROGRAMMING TEAM',
     'PROGRAMMING',
     'PROGRAMMER',
     'PROGRAMMERS',
+    'PROGRAMMING HEAD',
   ].includes(normalizedRole);
 
   // Export PDF permission: Super admin, Technical team, Inventory team
@@ -109,7 +141,7 @@ export default function ArtistsPage() {
   const [pdfExportArtistId, setPdfExportArtistId] = useState<string | null>(null);
   const [pdfExportArtistData, setPdfExportArtistData] = useState<any | null>(null);
 
-  // Allowed Roles for Advanced Sorting & Filtering Controls:
+  // Allowed Roles for Advanced Sorting & Filtering Controls
   const allowedFilterRoles = [
     'SUPER ADMIN',
     'SUPERADMIN',
@@ -151,6 +183,11 @@ export default function ArtistsPage() {
     website: '',
     biography: '',
     status: 'Confirmed',
+    arrivalDate: '',
+    departureDate: '',
+    travelNotes: '',
+    lodgingDetails: '',
+    artworks: [emptyArtworkRow()] as ArtworkFormItem[],
   });
 
   // Edit Artist Form State
@@ -166,6 +203,11 @@ export default function ArtistsPage() {
     website: '',
     biography: '',
     status: 'Confirmed',
+    arrivalDate: '',
+    departureDate: '',
+    travelNotes: '',
+    lodgingDetails: '',
+    artworks: [] as ArtworkFormItem[],
   });
 
   // Delete Confirmation Modal State
@@ -187,8 +229,14 @@ export default function ArtistsPage() {
       website: '',
       biography: '',
       status: 'Confirmed',
+      arrivalDate: '',
+      departureDate: '',
+      travelNotes: '',
+      lodgingDetails: '',
+      artworks: [emptyArtworkRow()],
     });
     setFormError(null);
+    setModalTab('PROFILE');
   };
 
   const clearAllFilters = () => {
@@ -227,7 +275,63 @@ export default function ArtistsPage() {
 
   const fetchArtists = fetchArtistsAndVenues;
 
+  // Artwork Rows Helper Functions
+  const addArtworkRow = (isEdit: boolean = false) => {
+    if (isEdit) {
+      setEditFormData((prev) => ({
+        ...prev,
+        artworks: [...prev.artworks, emptyArtworkRow()],
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        artworks: [...prev.artworks, emptyArtworkRow()],
+      }));
+    }
+  };
+
+  const updateArtworkRow = (
+    index: number,
+    field: keyof ArtworkFormItem,
+    value: string,
+    isEdit: boolean = false
+  ) => {
+    if (isEdit) {
+      setEditFormData((prev) => {
+        const updated = [...prev.artworks];
+        updated[index] = { ...updated[index], [field]: value };
+        if (field === 'venueId') updated[index].roomId = '';
+        return { ...prev, artworks: updated };
+      });
+    } else {
+      setFormData((prev) => {
+        const updated = [...prev.artworks];
+        updated[index] = { ...updated[index], [field]: value };
+        if (field === 'venueId') updated[index].roomId = '';
+        return { ...prev, artworks: updated };
+      });
+    }
+  };
+
+  const removeArtworkRow = (index: number, isEdit: boolean = false) => {
+    if (isEdit) {
+      setEditFormData((prev) => ({
+        ...prev,
+        artworks: prev.artworks.filter((_, i) => i !== index),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        artworks: prev.artworks.filter((_, i) => i !== index),
+      }));
+    }
+  };
+
   const handleCreateArtist = async () => {
+    if (!canEditOrDelete) {
+      setFormError('Access Restricted: Only Super Admin and Programming Team can create artists.');
+      return;
+    }
     if (!formData.artistName.trim()) {
       setFormError('Artist Name is required.');
       return;
@@ -259,13 +363,11 @@ export default function ArtistsPage() {
         setNewModalOpen(false);
         resetForm();
 
-        // Immediately insert new artist card into local list
         setArtists((prev) => {
           const exists = prev.some((a) => a.id === newArtist.id);
           return exists ? prev : [newArtist, ...prev];
         });
 
-        // Trigger center screen tick success animation
         setAddedArtistName(newArtist.artistName);
         setNewlyAddedId(newArtist.id);
         setShowSuccessAnimation(true);
@@ -291,6 +393,10 @@ export default function ArtistsPage() {
   };
 
   const openEditModal = (art: any) => {
+    if (!canEditOrDelete) {
+      alert('Access Restricted: Only Super Admin and Programming Team can edit artists.');
+      return;
+    }
     setEditingArtist(art);
     setEditFormData({
       artistName: art.artistName || '',
@@ -302,13 +408,35 @@ export default function ArtistsPage() {
       website: art.website || '',
       biography: art.biography || '',
       status: art.status || 'Confirmed',
+      arrivalDate: art.arrivalDate || '',
+      departureDate: art.departureDate || '',
+      travelNotes: art.travelNotes || '',
+      lodgingDetails: art.lodgingDetails || '',
+      artworks: (art.artworks || []).map((aw: any) => ({
+        id: aw.id,
+        artworkName: aw.artworkName || '',
+        medium: aw.medium || '',
+        dimensions: aw.dimensions || '',
+        installationType: aw.installationType || 'Projection',
+        venueId: aw.venueId || '',
+        roomId: aw.roomId || '',
+        notes: aw.notes || aw.description || '',
+      })),
     });
+    if ((art.artworks || []).length === 0) {
+      setEditFormData((prev) => ({ ...prev, artworks: [emptyArtworkRow()] }));
+    }
     setFormError(null);
+    setModalTab('PROFILE');
     setEditModalOpen(true);
   };
 
   const handleUpdateArtist = async () => {
     if (!editingArtist) return;
+    if (!canEditOrDelete) {
+      setFormError('Access Restricted: Only Super Admin and Programming Team can edit artists.');
+      return;
+    }
     if (!editFormData.artistName.trim()) {
       setFormError('Artist Name is required.');
       return;
@@ -321,7 +449,7 @@ export default function ArtistsPage() {
       const res = await fetch(`/api/artists/${editingArtist.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify({ userRole, ...editFormData }),
       });
       const data = await res.json();
       if (data.success) {
@@ -340,6 +468,10 @@ export default function ArtistsPage() {
   };
 
   const openDeleteModal = (art: any) => {
+    if (!canEditOrDelete) {
+      alert('Access Restricted: Only Super Admin and Programming Team can delete artists.');
+      return;
+    }
     setDeletingArtist(art);
     setDeleteModalOpen(true);
   };
@@ -348,7 +480,7 @@ export default function ArtistsPage() {
     if (!deletingArtist) return;
     setIsDeleting(true);
     try {
-      const res = await fetch(`/api/artists/${deletingArtist.id}`, {
+      const res = await fetch(`/api/artists/${deletingArtist.id}?userRole=${encodeURIComponent(userRole)}`, {
         method: 'DELETE',
       });
       const data = await res.json();
@@ -398,166 +530,141 @@ export default function ArtistsPage() {
   ) as string[];
 
   const availableArtworks = Array.from(
-    new Set(artists.flatMap((a) => a.artworks?.map((aw: any) => aw.artworkName)).filter(Boolean))
-  ).sort() as string[];
+    new Set([
+      ...artists.flatMap((a) => a.artworks?.map((aw: any) => aw.artworkName)).filter(Boolean),
+    ])
+  ).filter(Boolean).sort() as string[];
 
-  const matchingArtworkSuggestions =
-    artworkInput.trim().length >= 3
-      ? availableArtworks.filter((name) =>
-          name.toLowerCase().includes(artworkInput.toLowerCase())
-        )
-      : [];
+  const filteredArtworkSuggestions = availableArtworks.filter((awName) =>
+    awName.toLowerCase().includes(artworkInput.toLowerCase().trim())
+  );
 
+  // Filter & Sort Logic
   const filteredArtists = artists
     .filter((a) => {
-      // General Search Query Filter
+      // Search Bar Filter
+      const q = search.toLowerCase().trim();
       const matchesSearch =
-        !search ||
-        a.artistName.toLowerCase().includes(search.toLowerCase()) ||
-        (a.country && a.country.toLowerCase().includes(search.toLowerCase())) ||
-        (a.email && a.email.toLowerCase().includes(search.toLowerCase()));
+        !q ||
+        a.artistName?.toLowerCase().includes(q) ||
+        a.city?.toLowerCase().includes(q) ||
+        a.country?.toLowerCase().includes(q) ||
+        a.biography?.toLowerCase().includes(q) ||
+        a.email?.toLowerCase().includes(q);
 
-      if (!matchesSearch) return false;
+      // Artist Filter
+      const matchesArtist = selectedArtist === 'ALL' || a.artistName === selectedArtist;
 
-      if (!showAdvancedSorting) return true;
+      // Venue Filter
+      const matchesVenue =
+        selectedVenue === 'ALL' ||
+        a.installations?.some((i: any) => i.venue?.venueName === selectedVenue) ||
+        a.artworks?.some((aw: any) => aw.venue?.venueName === selectedVenue);
 
-      // 1. Artist Name Filter
-      if (selectedArtist !== 'ALL' && a.artistName !== selectedArtist) {
-        return false;
-      }
-
-      // 2. Venue Filter
-      if (selectedVenue !== 'ALL') {
-        const hasVenue = a.installations?.some(
-          (inst: any) => inst.venue?.venueName === selectedVenue
+      // Room Filter
+      const matchesRoom =
+        selectedRoom === 'ALL' ||
+        a.installations?.some(
+          (i: any) => i.room?.roomNumber === selectedRoom || i.room?.roomName === selectedRoom
+        ) ||
+        a.artworks?.some(
+          (aw: any) => aw.room?.roomNumber === selectedRoom || aw.room?.roomName === selectedRoom
         );
-        if (!hasVenue) return false;
-      }
 
-      // 3. Room Number Filter
-      if (selectedRoom !== 'ALL') {
-        const hasRoom = a.installations?.some(
-          (inst: any) =>
-            inst.room?.roomNumber === selectedRoom || inst.room?.roomName === selectedRoom
+      // Artwork Filter
+      const activeArtworkFilter = selectedArtwork || artworkInput.trim();
+      const matchesArtwork =
+        !activeArtworkFilter ||
+        a.artworks?.some((aw: any) =>
+          aw.artworkName?.toLowerCase().includes(activeArtworkFilter.toLowerCase())
         );
-        if (!hasRoom) return false;
-      }
 
-      // 4. Artwork Name Filter (3-letter autofill / exact selection)
-      const queryArtwork = (selectedArtwork || artworkInput).trim();
-      if (queryArtwork.length >= 3) {
-        const hasArtwork = a.artworks?.some((aw: any) =>
-          aw.artworkName.toLowerCase().includes(queryArtwork.toLowerCase())
-        );
-        if (!hasArtwork) return false;
-      }
-
-      return true;
+      return matchesSearch && matchesArtist && matchesVenue && matchesRoom && matchesArtwork;
     })
     .sort((a, b) => {
-      if (!showAdvancedSorting) return 0;
-
-      if (sortBy === 'ARTIST_ASC') {
-        return a.artistName.localeCompare(b.artistName);
-      }
-      if (sortBy === 'ARTIST_DESC') {
-        return b.artistName.localeCompare(a.artistName);
-      }
-      if (sortBy === 'VENUE_ASC') {
-        const vA = a.installations?.[0]?.venue?.venueName || 'ZZZ';
-        const vB = b.installations?.[0]?.venue?.venueName || 'ZZZ';
-        return vA.localeCompare(vB);
-      }
-      if (sortBy === 'ROOM_ASC') {
-        const rA = a.installations?.[0]?.room?.roomNumber || a.installations?.[0]?.room?.roomName || 'ZZZ';
-        const rB = b.installations?.[0]?.room?.roomNumber || b.installations?.[0]?.room?.roomName || 'ZZZ';
-        return rA.localeCompare(rB, undefined, { numeric: true });
-      }
-      if (sortBy === 'ARTWORK_ASC') {
-        const artA = a.artworks?.[0]?.artworkName || 'ZZZ';
-        const artB = b.artworks?.[0]?.artworkName || 'ZZZ';
-        return artA.localeCompare(artB);
-      }
+      if (sortBy === 'ARTIST_ASC') return a.artistName.localeCompare(b.artistName);
+      if (sortBy === 'ARTIST_DESC') return b.artistName.localeCompare(a.artistName);
+      if (sortBy === 'NEWEST') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
       return 0;
     });
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      {/* PAGE HEADER & TOP CONTROLS */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-50 flex items-center gap-2.5">
-            <Users className="w-7 h-7 text-sky-400" /> Artists Directory & 360° Management
+          <h1 className="text-xl font-extrabold text-slate-100 flex items-center gap-2">
+            <Users className="w-6 h-6 text-sky-400" /> Artists Directory
           </h1>
-          <p className="text-xs text-slate-400 mt-1 flex items-center gap-2">
-            <span>Manage artists, artworks, curator links, technical & production requirements</span>
-            <span className="px-2 py-0.5 rounded-full bg-slate-800 text-[10px] font-bold text-sky-400 border border-slate-700">
-              Role: {userRole}
-            </span>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Manage festival artists, artworks with venue & room allocation, and travel & lodging details.
           </p>
         </div>
-        <button
-          onClick={() => {
-            resetForm();
-            setNewModalOpen(true);
-          }}
-          className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg shadow-sky-500/20 flex items-center gap-2 self-start sm:self-auto"
-        >
-          <Plus className="w-4 h-4" /> Add New Artist
-        </button>
-      </div>
 
-      {/* Basic Search Bar */}
-      <div className="glass-card p-4 rounded-2xl border border-slate-800 flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-3.5 py-2 flex-1 focus-within:border-sky-500">
-          <Search className="w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by artist name, country, or email..."
-            className="bg-transparent text-xs text-slate-100 placeholder-slate-500 focus:outline-none w-full"
-          />
-        </div>
-      </div>
-
-      {/* Advanced Filter & Sorting Toolbar (Role-Restricted) */}
-      {showAdvancedSorting && (
-        <div className="glass-card p-4 rounded-2xl border border-sky-500/30 space-y-3 bg-slate-900/60 shadow-xl">
-          <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-            <div className="flex items-center gap-2">
-              <SlidersHorizontal className="w-4 h-4 text-sky-400" />
-              <h3 className="text-xs font-bold text-slate-200 tracking-wide uppercase">
-                Role Management Filters & Sorting
-              </h3>
-              <span className="text-[10px] bg-sky-950 text-sky-300 px-2 py-0.5 rounded-full border border-sky-800/60 font-semibold">
-                Active Role Privileges Enabled
-              </span>
-            </div>
-            {(selectedArtist !== 'ALL' ||
-              selectedVenue !== 'ALL' ||
-              selectedRoom !== 'ALL' ||
-              artworkInput !== '' ||
-              sortBy !== 'ARTIST_ASC') && (
+        <div className="flex items-center gap-3">
+          {/* SEARCH INPUT */}
+          <div className="relative w-64">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search artists by name, city..."
+              className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+            />
+            {search && (
               <button
-                onClick={clearAllFilters}
-                className="text-[11px] text-slate-400 hover:text-sky-300 flex items-center gap-1 font-medium transition-colors"
+                onClick={() => setSearch('')}
+                className="absolute right-2.5 top-2.5 text-slate-500 hover:text-slate-300"
               >
-                <RotateCcw className="w-3 h-3 text-sky-400" /> Reset Filters
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {/* 1. Artist Name Dropdown */}
+          {/* REGISTER NEW ARTIST BUTTON (Restricted to Super Admin & Programming Team) */}
+          {canEditOrDelete ? (
+            <button
+              onClick={() => {
+                resetForm();
+                setNewModalOpen(true);
+              }}
+              className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Register New Artist
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-800 rounded-xl text-[11px] text-slate-400">
+              <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
+              <span>Add/Edit Restricted (Super Admin & Programming)</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ADVANCED FILTERING & SORTING CONTROLS */}
+      {showAdvancedSorting && (
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" /> Advanced Artist Directory Filters
+            </span>
+            <button
+              onClick={clearAllFilters}
+              className="text-[11px] font-semibold text-sky-400 hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <RotateCcw className="w-3 h-3" /> Reset Filters
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+            {/* 1. Artist Select */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <User className="w-3.5 h-3.5 text-sky-400" /> Artist Name
-              </label>
+              <label className="text-slate-400 block mb-1">Artist Name</label>
               <select
                 value={selectedArtist}
                 onChange={(e) => setSelectedArtist(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-100 focus:border-sky-500 focus:outline-none"
               >
                 <option value="ALL">All Artists ({availableArtistNames.length})</option>
                 {availableArtistNames.map((name) => (
@@ -568,134 +675,96 @@ export default function ArtistsPage() {
               </select>
             </div>
 
-            {/* 2. Venue Dropdown */}
+            {/* 2. Venue Select */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5 text-amber-400" /> Venue
-              </label>
+              <label className="text-slate-400 block mb-1">Exhibition Venue</label>
               <select
                 value={selectedVenue}
                 onChange={(e) => {
                   setSelectedVenue(e.target.value);
                   setSelectedRoom('ALL');
                 }}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-100 focus:border-sky-500 focus:outline-none"
               >
-                <option value="ALL">All Venues ({availableVenues.length})</option>
-                {availableVenues.map((vName) => (
-                  <option key={vName} value={vName}>
-                    {vName}
+                <option value="ALL">All Venues</option>
+                {availableVenues.map((v) => (
+                  <option key={v} value={v}>
+                    {v}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* 3. Room Number Dropdown */}
+            {/* 3. Room Select */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <DoorOpen className="w-3.5 h-3.5 text-emerald-400" /> Room Number
-              </label>
+              <label className="text-slate-400 block mb-1">Room / Gallery</label>
               <select
                 value={selectedRoom}
                 onChange={(e) => setSelectedRoom(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-sky-500 focus:outline-none"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-100 focus:border-sky-500 focus:outline-none"
               >
-                <option value="ALL">All Rooms ({availableRooms.length})</option>
-                {availableRooms.map((rName) => (
-                  <option key={rName} value={rName}>
-                    Room {rName}
+                <option value="ALL">All Rooms</option>
+                {availableRooms.map((r) => (
+                  <option key={r} value={r}>
+                    Room {r}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* 4. Artwork Name (3-letter Auto-fill) */}
+            {/* 4. Artwork Title Filter */}
             <div className="relative" ref={artworkContainerRef}>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <Palette className="w-3.5 h-3.5 text-purple-400" /> Artwork Name{' '}
-                <span className="text-[9px] text-slate-400 font-normal">(3+ letters autofill)</span>
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  value={artworkInput}
-                  onChange={(e) => {
-                    setArtworkInput(e.target.value);
-                    setSelectedArtwork(e.target.value);
-                    setShowArtworkSuggestions(true);
-                  }}
-                  onFocus={() => setShowArtworkSuggestions(true)}
-                  placeholder="Type 3+ letters..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3 pr-8 py-2 text-xs text-slate-100 focus:border-purple-500 focus:outline-none"
-                />
-                {artworkInput && (
-                  <button
-                    onClick={() => {
-                      setArtworkInput('');
-                      setSelectedArtwork('');
-                      setShowArtworkSuggestions(false);
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {/* 3-letter Auto-fill Suggestion Box */}
-              {showArtworkSuggestions && artworkInput.trim().length >= 3 && (
-                <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl max-h-48 overflow-y-auto divide-y divide-slate-800/80">
-                  {matchingArtworkSuggestions.length > 0 ? (
-                    matchingArtworkSuggestions.map((artName) => (
-                      <button
-                        key={artName}
-                        type="button"
-                        onClick={() => {
-                          setArtworkInput(artName);
-                          setSelectedArtwork(artName);
-                          setShowArtworkSuggestions(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-xs text-slate-200 hover:bg-purple-950/80 hover:text-purple-300 transition-colors flex items-center justify-between"
-                      >
-                        <span className="truncate flex items-center gap-1.5">
-                          <Palette className="w-3 h-3 text-purple-400 shrink-0" /> {artName}
-                        </span>
-                        <span className="text-[9px] bg-purple-950 text-purple-300 px-1.5 py-0.5 rounded font-bold border border-purple-800 shrink-0">
-                          Auto-fill
-                        </span>
-                      </button>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2.5 text-[11px] text-slate-500 italic">
-                      No matching artwork found
+              <label className="text-slate-400 block mb-1">Artwork Title</label>
+              <input
+                type="text"
+                value={artworkInput}
+                onFocus={() => setShowArtworkSuggestions(true)}
+                onChange={(e) => {
+                  setArtworkInput(e.target.value);
+                  setSelectedArtwork('');
+                  setShowArtworkSuggestions(true);
+                }}
+                placeholder="Search artwork title..."
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-100 focus:border-sky-500 focus:outline-none"
+              />
+              {showArtworkSuggestions && filteredArtworkSuggestions.length > 0 && (
+                <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl max-h-40 overflow-y-auto py-1">
+                  {filteredArtworkSuggestions.map((awName) => (
+                    <div
+                      key={awName}
+                      onClick={() => {
+                        setArtworkInput(awName);
+                        setSelectedArtwork(awName);
+                        setShowArtworkSuggestions(false);
+                      }}
+                      className="px-3 py-1.5 hover:bg-slate-800 text-slate-200 cursor-pointer text-xs flex items-center justify-between"
+                    >
+                      <span>{awName}</span>
+                      <Palette className="w-3 h-3 text-purple-400" />
                     </div>
-                  )}
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* 5. Sort Order */}
+            {/* 5. Sort By */}
             <div>
-              <label className="text-[11px] font-semibold text-slate-300 block mb-1 flex items-center gap-1">
-                <ArrowUpDown className="w-3.5 h-3.5 text-cyan-400" /> Sort Order
-              </label>
+              <label className="text-slate-400 block mb-1">Sort Alphabetically / Date</label>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none"
+                className="w-full bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-100 focus:border-sky-500 focus:outline-none font-semibold"
               >
-                <option value="ARTIST_ASC">Artist Name (A-Z)</option>
-                <option value="ARTIST_DESC">Artist Name (Z-A)</option>
-                <option value="VENUE_ASC">Venue Name</option>
-                <option value="ROOM_ASC">Room Number</option>
-                <option value="ARTWORK_ASC">Artwork Name</option>
+                <option value="ARTIST_ASC">Artist Name (A → Z)</option>
+                <option value="ARTIST_DESC">Artist Name (Z → A)</option>
+                <option value="NEWEST">Recently Added First</option>
               </select>
             </div>
           </div>
         </div>
       )}
 
-      {/* Artists Directory Grid */}
+      {/* ARTIST CARDS DIRECTORY GRID */}
       {loading ? (
         <div className="p-12 text-center text-slate-500">
           <Sparkles className="w-6 h-6 text-sky-400 animate-spin mx-auto mb-2" />
@@ -707,7 +776,7 @@ export default function ArtistsPage() {
           {showAdvancedSorting && (
             <button
               onClick={clearAllFilters}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs text-sky-400 bg-sky-950/60 px-3 py-1.5 rounded-xl border border-sky-800 hover:bg-sky-900 transition-all font-semibold"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs text-sky-400 bg-sky-950/60 px-3 py-1.5 rounded-xl border border-sky-800 hover:bg-sky-900 transition-all font-semibold cursor-pointer"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Clear All Filters
             </button>
@@ -761,6 +830,17 @@ export default function ArtistsPage() {
                     </span>
                   </div>
 
+                  {/* Travel & Lodging Badge */}
+                  {(art.arrivalDate || art.departureDate) && (
+                    <div className="mt-3 p-2 rounded-xl bg-[#1e1b4b]/50 border border-[#4338ca]/40 text-[11px] text-indigo-300 flex items-center gap-2">
+                      <Plane className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                      <div className="flex flex-wrap items-center gap-2">
+                        {art.arrivalDate && <span>Arr: <strong className="text-white">{art.arrivalDate}</strong></span>}
+                        {art.departureDate && <span>Dep: <strong className="text-white">{art.departureDate}</strong></span>}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Venue & Room Tags */}
                   {art.installations && art.installations.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-1.5 text-[10px]">
@@ -782,17 +862,23 @@ export default function ArtistsPage() {
                     </div>
                   )}
 
-                  {/* Artwork Tags */}
+                  {/* Artwork Tags with Assigned Venue */}
                   {art.artworks && art.artworks.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1 text-[10px]">
+                    <div className="mt-2.5 space-y-1">
                       {art.artworks.map((aw: any) => (
-                        <span
+                        <div
                           key={aw.id}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-purple-950/40 text-purple-300 border border-purple-800/50"
+                          className="p-1.5 rounded-lg bg-purple-950/30 border border-purple-800/40 text-[10px] text-purple-200 flex items-center justify-between gap-2"
                         >
-                          <Palette className="w-3 h-3 text-purple-400 shrink-0" />{' '}
-                          <span className="truncate max-w-[150px]">{aw.artworkName}</span>
-                        </span>
+                          <span className="font-bold flex items-center gap-1 truncate">
+                            <Palette className="w-3 h-3 text-purple-400 shrink-0" /> {aw.artworkName}
+                          </span>
+                          {(aw.venue || aw.room) && (
+                            <span className="text-[9px] text-amber-300 bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-800/60 shrink-0 flex items-center gap-1">
+                              <Building2 className="w-2.5 h-2.5" /> {aw.venue?.venueName || ''} {aw.room ? `(${aw.room.roomNumber || aw.room.roomName})` : ''}
+                            </span>
+                          )}
+                        </div>
                       ))}
                     </div>
                   )}
@@ -825,7 +911,7 @@ export default function ArtistsPage() {
                     Open Artist 360° View <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
 
-                  {/* EXPORT PDF BUTTON (Visible to Super admin, Technical Head, Inventory manager) */}
+                  {/* EXPORT PDF BUTTON */}
                   {canExportPDF && (
                     <button
                       onClick={() => {
@@ -839,19 +925,19 @@ export default function ArtistsPage() {
                     </button>
                   )}
 
-                  {/* EDIT & DELETE BUTTONS */}
+                  {/* EDIT & DELETE BUTTONS (Restricted to Super Admin & Programming Team) */}
                   {canEditOrDelete && (
                     <div className="flex items-center gap-2 pt-1">
                       <button
                         onClick={() => openEditModal(art)}
-                        className="flex-1 bg-slate-800/90 hover:bg-sky-600 hover:text-white text-sky-400 text-xs font-semibold py-1.5 px-3 rounded-xl border border-sky-500/30 transition-all flex items-center justify-center gap-1.5"
+                        className="flex-1 bg-slate-800/90 hover:bg-sky-600 hover:text-white text-sky-400 text-xs font-semibold py-1.5 px-3 rounded-xl border border-sky-500/30 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         title="Edit Artist Information"
                       >
                         <Edit3 className="w-3.5 h-3.5" /> Edit
                       </button>
                       <button
                         onClick={() => openDeleteModal(art)}
-                        className="bg-red-950/80 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl border border-red-800/60 transition-all flex items-center justify-center gap-1.5"
+                        className="bg-red-950/80 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl border border-red-800/60 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                         title="Delete Artist"
                       >
                         <Trash2 className="w-3.5 h-3.5" /> Delete
@@ -888,14 +974,56 @@ export default function ArtistsPage() {
         </div>
       )}
 
-      {/* MODAL: ADD NEW ARTIST */}
+      {/* MODAL: ADD NEW ARTIST (TABBED / COMPREHENSIVE) */}
       {newModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-3xl p-6 space-y-4 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100">Register New Artist</h3>
-              <button onClick={() => setNewModalOpen(false)} className="text-slate-400 hover:text-white">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                  <User className="w-5 h-5 text-sky-400" /> Register New Artist
+                </h3>
+                <p className="text-[11px] text-slate-400">Capture artist profile, artwork details with venue/room, and travel dates.</p>
+              </div>
+              <button onClick={() => setNewModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* TAB NAVIGATION */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setModalTab('PROFILE')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'PROFILE'
+                    ? 'bg-sky-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" /> 1. Artist Profile
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('ARTWORKS')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'ARTWORKS'
+                    ? 'bg-purple-500 text-white font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" /> 2. Artworks ({formData.artworks.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('TRAVEL')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'TRAVEL'
+                    ? 'bg-indigo-500 text-white font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Plane className="w-3.5 h-3.5" /> 3. Travel & Lodging
               </button>
             </div>
 
@@ -905,103 +1033,396 @@ export default function ArtistsPage() {
               </div>
             )}
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Artist Name *</label>
-                <input
-                  type="text"
-                  value={formData.artistName}
-                  onChange={(e) => setFormData({ ...formData, artistName: e.target.value })}
-                  placeholder="e.g. Marina Abramović"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-
-              <ImageUploadInput
-                label="Artist Photo Image"
-                value={formData.artistPhoto}
-                onChange={(url) => setFormData({ ...formData, artistPhoto: url })}
-                placeholder="https://... or upload local image file"
-              />
-              <div className="grid grid-cols-2 gap-2">
+            {/* TAB 1: ARTIST PROFILE */}
+            {modalTab === 'PROFILE' && (
+              <div className="space-y-3.5 text-xs animate-in fade-in">
                 <div>
-                  <label className="text-slate-400 block mb-1">Country</label>
+                  <label className="text-slate-400 block mb-1">Artist Name *</label>
                   <input
                     type="text"
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    placeholder="e.g. Serbia"
+                    value={formData.artistName}
+                    onChange={(e) => setFormData({ ...formData, artistName: e.target.value })}
+                    placeholder="e.g. Marina Abramović"
                     className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
                   />
                 </div>
+
+                <ImageUploadInput
+                  label="Artist Photo Image"
+                  value={formData.artistPhoto}
+                  onChange={(url) => setFormData({ ...formData, artistPhoto: url })}
+                  placeholder="https://... or upload local image file"
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Country</label>
+                    <input
+                      type="text"
+                      value={formData.country}
+                      onChange={(e) => setFormData({ ...formData, country: e.target.value })}
+                      placeholder="e.g. Serbia"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1">City</label>
+                    <input
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                      placeholder="e.g. Belgrade"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="artist@studio.art"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1">Phone / WhatsApp</label>
+                    <input
+                      type="text"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      placeholder="+381 61 234 5678"
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="text-slate-400 block mb-1">City</label>
-                  <input
-                    type="text"
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    placeholder="e.g. Belgrade"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                  <label className="text-slate-400 block mb-1">Biography</label>
+                  <textarea
+                    value={formData.biography}
+                    onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
+                    placeholder="Short bio and artistic statement..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-20 focus:border-sky-500 focus:outline-none"
                   />
                 </div>
               </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Email</label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="artist@studio.art"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Biography</label>
-                <textarea
-                  value={formData.biography}
-                  onChange={(e) => setFormData({ ...formData, biography: e.target.value })}
-                  placeholder="Short bio and artistic focus..."
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-            </div>
+            )}
 
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-              <button
-                onClick={() => setNewModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleCreateArtist}
-                disabled={submitting}
-                className="bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
-              >
-                {submitting ? (
-                  <>
-                    <Sparkles className="w-3.5 h-3.5 animate-spin" /> Registering...
-                  </>
-                ) : (
-                  'Create Artist Profile'
+            {/* TAB 2: ARTWORK DETAILS & VENUE/ROOM ASSIGNMENT */}
+            {modalTab === 'ARTWORKS' && (
+              <div className="space-y-4 text-xs max-h-[380px] overflow-y-auto pr-1 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-purple-400" /> Artworks by {formData.artistName || 'Artist'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => addArtworkRow(false)}
+                    className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Another Artwork
+                  </button>
+                </div>
+
+                {formData.artworks.map((aw, idx) => {
+                  const selectedVenueObj = venuesList.find((v) => v.id === aw.venueId);
+                  const roomOptions = selectedVenueObj?.rooms || [];
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3 relative group"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="font-extrabold text-purple-300 text-xs flex items-center gap-1.5">
+                          Artwork #{idx + 1}
+                        </span>
+                        {formData.artworks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeArtworkRow(idx, false)}
+                            className="text-red-400 hover:text-red-300 cursor-pointer p-1"
+                            title="Remove Artwork"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-slate-400 block mb-1">Artwork Title *</label>
+                          <input
+                            type="text"
+                            value={aw.artworkName}
+                            onChange={(e) => updateArtworkRow(idx, 'artworkName', e.target.value, false)}
+                            placeholder="e.g. Echoes of Light"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 block mb-1">Medium / Material</label>
+                          <input
+                            type="text"
+                            value={aw.medium}
+                            onChange={(e) => updateArtworkRow(idx, 'medium', e.target.value, false)}
+                            placeholder="e.g. 4K Projection, Kinetic Sound"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-slate-400 block mb-1">Dimensions / Scale</label>
+                          <input
+                            type="text"
+                            value={aw.dimensions}
+                            onChange={(e) => updateArtworkRow(idx, 'dimensions', e.target.value, false)}
+                            placeholder="e.g. 5m x 3m x 2m"
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 block mb-1">Installation Type</label>
+                          <select
+                            value={aw.installationType}
+                            onChange={(e) => updateArtworkRow(idx, 'installationType', e.target.value, false)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          >
+                            <option value="Projection">Projection</option>
+                            <option value="Hanging">Hanging</option>
+                            <option value="Floor">Floor / Sculpture</option>
+                            <option value="Interactive">Interactive / Digital</option>
+                            <option value="Sound">Sound Installation</option>
+                            <option value="Outdoor Pavilion">Outdoor Pavilion</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* VENUE AND ROOM ASSIGNMENT */}
+                      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-800/60">
+                        <div>
+                          <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                            <Building2 className="w-3.5 h-3.5 text-amber-400" /> Assign Exhibition Venue
+                          </label>
+                          <select
+                            value={aw.venueId}
+                            onChange={(e) => updateArtworkRow(idx, 'venueId', e.target.value, false)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-amber-500 focus:outline-none"
+                          >
+                            <option value="">Unassigned Venue</option>
+                            {venuesList.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.venueName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                            <DoorOpen className="w-3.5 h-3.5 text-emerald-400" /> Assign Room / Space
+                          </label>
+                          <select
+                            value={aw.roomId}
+                            disabled={!aw.venueId}
+                            onChange={(e) => updateArtworkRow(idx, 'roomId', e.target.value, false)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-40"
+                          >
+                            <option value="">Unassigned Room</option>
+                            {roomOptions.map((r: any) => (
+                              <option key={r.id} value={r.id}>
+                                Room {r.roomNumber} ({r.roomName})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 block mb-1">Description / Technical Notes</label>
+                        <input
+                          type="text"
+                          value={aw.notes}
+                          onChange={(e) => updateArtworkRow(idx, 'notes', e.target.value, false)}
+                          placeholder="Special installation instructions..."
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 3: TRAVEL & LODGING DETAILS */}
+            {modalTab === 'TRAVEL' && (
+              <div className="space-y-4 text-xs animate-in fade-in">
+                <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-900/50 space-y-3">
+                  <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Plane className="w-4 h-4 text-indigo-400" /> Travel Dates
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Arrival
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.arrivalDate}
+                        onChange={(e) => setFormData({ ...formData, arrivalDate: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Departure
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.departureDate}
+                        onChange={(e) => setFormData({ ...formData, departureDate: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                    <Plane className="w-3.5 h-3.5 text-indigo-400" /> Flight & Travel Details
+                  </label>
+                  <textarea
+                    value={formData.travelNotes}
+                    onChange={(e) => setFormData({ ...formData, travelNotes: e.target.value })}
+                    placeholder="Flight numbers, arrival terminal, airport transfer notes..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                    <Hotel className="w-3.5 h-3.5 text-indigo-400" /> Hotel & Lodging Details
+                  </label>
+                  <textarea
+                    value={formData.lodgingDetails}
+                    onChange={(e) => setFormData({ ...formData, lodgingDetails: e.target.value })}
+                    placeholder="Hotel name, room booking confirmation, check-in instructions..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* MODAL FOOTER */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                {modalTab !== 'PROFILE' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab(modalTab === 'TRAVEL' ? 'ARTWORKS' : 'PROFILE')}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold"
+                  >
+                    Back
+                  </button>
                 )}
-              </button>
+                {modalTab !== 'TRAVEL' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab(modalTab === 'PROFILE' ? 'ARTWORKS' : 'TRAVEL')}
+                    className="px-3.5 py-1.5 rounded-xl bg-sky-950 text-sky-400 hover:bg-sky-900 border border-sky-800 text-xs font-bold"
+                  >
+                    Next Step →
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNewModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCreateArtist}
+                  disabled={submitting}
+                  className="bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs px-5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  {submitting ? (
+                    <>
+                      <Sparkles className="w-3.5 h-3.5 animate-spin" /> Registering...
+                    </>
+                  ) : (
+                    'Create Artist Profile'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* MODAL: EDIT ARTIST */}
+      {/* MODAL: EDIT ARTIST (TABBED / COMPREHENSIVE) */}
       {editModalOpen && editingArtist && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-md rounded-2xl p-6 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-2xl rounded-3xl p-6 space-y-4 shadow-2xl my-8">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-sky-400" /> Edit Artist: {editingArtist.artistName}
-              </h3>
-              <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-white">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-sky-400" /> Edit Artist: {editingArtist.artistName}
+                </h3>
+                <p className="text-[11px] text-slate-400">Update artist profile, artwork venue & room assignments, and travel dates.</p>
+              </div>
+              <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-white cursor-pointer">
                 <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* TAB NAVIGATION */}
+            <div className="flex items-center gap-2 border-b border-slate-800 pb-2 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setModalTab('PROFILE')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'PROFILE'
+                    ? 'bg-sky-500 text-slate-950 font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <User className="w-3.5 h-3.5" /> 1. Profile Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('ARTWORKS')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'ARTWORKS'
+                    ? 'bg-purple-500 text-white font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Palette className="w-3.5 h-3.5" /> 2. Artworks ({editFormData.artworks.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setModalTab('TRAVEL')}
+                className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                  modalTab === 'TRAVEL'
+                    ? 'bg-indigo-500 text-white font-black'
+                    : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                }`}
+              >
+                <Plane className="w-3.5 h-3.5" /> 3. Travel & Lodging
               </button>
             </div>
 
@@ -1011,90 +1432,329 @@ export default function ArtistsPage() {
               </div>
             )}
 
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="text-slate-400 block mb-1">Artist Name *</label>
-                <input
-                  type="text"
-                  value={editFormData.artistName}
-                  onChange={(e) => setEditFormData({ ...editFormData, artistName: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+            {/* TAB 1: ARTIST PROFILE */}
+            {modalTab === 'PROFILE' && (
+              <div className="space-y-3.5 text-xs animate-in fade-in">
+                <div>
+                  <label className="text-slate-400 block mb-1">Artist Name *</label>
+                  <input
+                    type="text"
+                    value={editFormData.artistName}
+                    onChange={(e) => setEditFormData({ ...editFormData, artistName: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+
+                <ImageUploadInput
+                  label="Artist Photo Image"
+                  value={editFormData.artistPhoto}
+                  onChange={(url) => setEditFormData({ ...editFormData, artistPhoto: url })}
+                  placeholder="https://... or upload local image file"
                 />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Country</label>
+                    <input
+                      type="text"
+                      value={editFormData.country}
+                      onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1">City</label>
+                    <input
+                      type="text"
+                      value={editFormData.city}
+                      onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-slate-400 block mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={editFormData.email}
+                      onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-slate-400 block mb-1">Status</label>
+                    <select
+                      value={editFormData.status}
+                      onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                      className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Pending">Pending</option>
+                      <option value="In Discussion">In Discussion</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1">Biography</label>
+                  <textarea
+                    value={editFormData.biography}
+                    onChange={(e) => setEditFormData({ ...editFormData, biography: e.target.value })}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-20 focus:border-sky-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* TAB 2: ARTWORK DETAILS & VENUE/ROOM ASSIGNMENT */}
+            {modalTab === 'ARTWORKS' && (
+              <div className="space-y-4 text-xs max-h-[380px] overflow-y-auto pr-1 animate-in fade-in">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-300 font-bold flex items-center gap-1.5">
+                    <Palette className="w-4 h-4 text-purple-400" /> Artworks by {editFormData.artistName}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => addArtworkRow(true)}
+                    className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 px-3 py-1.5 rounded-xl font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Another Artwork
+                  </button>
+                </div>
+
+                {editFormData.artworks.map((aw, idx) => {
+                  const selectedVenueObj = venuesList.find((v) => v.id === aw.venueId);
+                  const roomOptions = selectedVenueObj?.rooms || [];
+
+                  return (
+                    <div
+                      key={idx}
+                      className="p-4 rounded-2xl bg-slate-950 border border-purple-900/40 space-y-3 relative group"
+                    >
+                      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                        <span className="font-extrabold text-purple-300 text-xs flex items-center gap-1.5">
+                          Artwork #{idx + 1}
+                        </span>
+                        {editFormData.artworks.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removeArtworkRow(idx, true)}
+                            className="text-red-400 hover:text-red-300 cursor-pointer p-1"
+                            title="Remove Artwork"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-slate-400 block mb-1">Artwork Title *</label>
+                          <input
+                            type="text"
+                            value={aw.artworkName}
+                            onChange={(e) => updateArtworkRow(idx, 'artworkName', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 block mb-1">Medium / Material</label>
+                          <input
+                            type="text"
+                            value={aw.medium}
+                            onChange={(e) => updateArtworkRow(idx, 'medium', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-slate-400 block mb-1">Dimensions / Scale</label>
+                          <input
+                            type="text"
+                            value={aw.dimensions}
+                            onChange={(e) => updateArtworkRow(idx, 'dimensions', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-slate-400 block mb-1">Installation Type</label>
+                          <select
+                            value={aw.installationType}
+                            onChange={(e) => updateArtworkRow(idx, 'installationType', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                          >
+                            <option value="Projection">Projection</option>
+                            <option value="Hanging">Hanging</option>
+                            <option value="Floor">Floor / Sculpture</option>
+                            <option value="Interactive">Interactive / Digital</option>
+                            <option value="Sound">Sound Installation</option>
+                            <option value="Outdoor Pavilion">Outdoor Pavilion</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* VENUE AND ROOM ASSIGNMENT */}
+                      <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-800/60">
+                        <div>
+                          <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                            <Building2 className="w-3.5 h-3.5 text-amber-400" /> Assign Exhibition Venue
+                          </label>
+                          <select
+                            value={aw.venueId}
+                            onChange={(e) => updateArtworkRow(idx, 'venueId', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-amber-500 focus:outline-none"
+                          >
+                            <option value="">Unassigned Venue</option>
+                            {venuesList.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.venueName}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                            <DoorOpen className="w-3.5 h-3.5 text-emerald-400" /> Assign Room / Space
+                          </label>
+                          <select
+                            value={aw.roomId}
+                            disabled={!aw.venueId}
+                            onChange={(e) => updateArtworkRow(idx, 'roomId', e.target.value, true)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-emerald-500 focus:outline-none disabled:opacity-40"
+                          >
+                            <option value="">Unassigned Room</option>
+                            {roomOptions.map((r: any) => (
+                              <option key={r.id} value={r.id}>
+                                Room {r.roomNumber} ({r.roomName})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-slate-400 block mb-1">Description / Technical Notes</label>
+                        <input
+                          type="text"
+                          value={aw.notes}
+                          onChange={(e) => updateArtworkRow(idx, 'notes', e.target.value, true)}
+                          className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-1.5 text-slate-100 focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* TAB 3: TRAVEL & LODGING DETAILS */}
+            {modalTab === 'TRAVEL' && (
+              <div className="space-y-4 text-xs animate-in fade-in">
+                <div className="p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-900/50 space-y-3">
+                  <span className="font-bold text-indigo-300 flex items-center gap-1.5">
+                    <Plane className="w-4 h-4 text-indigo-400" /> Travel Dates
+                  </span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Arrival
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.arrivalDate}
+                        onChange={(e) => setEditFormData({ ...editFormData, arrivalDate: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-indigo-400" /> Date of Departure
+                      </label>
+                      <input
+                        type="date"
+                        value={editFormData.departureDate}
+                        onChange={(e) => setEditFormData({ ...editFormData, departureDate: e.target.value })}
+                        className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                    <Plane className="w-3.5 h-3.5 text-indigo-400" /> Flight & Travel Details
+                  </label>
+                  <textarea
+                    value={editFormData.travelNotes}
+                    onChange={(e) => setEditFormData({ ...editFormData, travelNotes: e.target.value })}
+                    placeholder="Flight numbers, arrival terminal, airport transfer notes..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-slate-400 block mb-1 flex items-center gap-1">
+                    <Hotel className="w-3.5 h-3.5 text-indigo-400" /> Hotel & Lodging Details
+                  </label>
+                  <textarea
+                    value={editFormData.lodgingDetails}
+                    onChange={(e) => setEditFormData({ ...editFormData, lodgingDetails: e.target.value })}
+                    placeholder="Hotel name, room booking confirmation, check-in instructions..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-indigo-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* MODAL FOOTER */}
+            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+              <div className="flex items-center gap-2">
+                {modalTab !== 'PROFILE' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab(modalTab === 'TRAVEL' ? 'ARTWORKS' : 'PROFILE')}
+                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold"
+                  >
+                    Back
+                  </button>
+                )}
+                {modalTab !== 'TRAVEL' && (
+                  <button
+                    type="button"
+                    onClick={() => setModalTab(modalTab === 'PROFILE' ? 'ARTWORKS' : 'TRAVEL')}
+                    className="px-3.5 py-1.5 rounded-xl bg-sky-950 text-sky-400 hover:bg-sky-900 border border-sky-800 text-xs font-bold"
+                  >
+                    Next Step →
+                  </button>
+                )}
               </div>
 
-              <ImageUploadInput
-                label="Artist Photo Image"
-                value={editFormData.artistPhoto}
-                onChange={(url) => setEditFormData({ ...editFormData, artistPhoto: url })}
-                placeholder="https://... or upload local image file"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="text-slate-400 block mb-1">Country</label>
-                  <input
-                    type="text"
-                    value={editFormData.country}
-                    onChange={(e) => setEditFormData({ ...editFormData, country: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1">City</label>
-                  <input
-                    type="text"
-                    value={editFormData.city}
-                    onChange={(e) => setEditFormData({ ...editFormData, city: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Email</label>
-                <input
-                  type="email"
-                  value={editFormData.email}
-                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Status</label>
-                <select
-                  value={editFormData.status}
-                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditModalOpen(false)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
+                  disabled={submitting}
                 >
-                  <option value="Confirmed">Confirmed</option>
-                  <option value="Pending">Pending</option>
-                  <option value="In Discussion">In Discussion</option>
-                  <option value="Cancelled">Cancelled</option>
-                </select>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdateArtist}
+                  disabled={submitting}
+                  className="bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs px-5 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+                >
+                  {submitting ? <Sparkles className="w-3.5 h-3.5 animate-spin" /> : 'Save Changes'}
+                </button>
               </div>
-              <div>
-                <label className="text-slate-400 block mb-1">Biography</label>
-                <textarea
-                  value={editFormData.biography}
-                  onChange={(e) => setEditFormData({ ...editFormData, biography: e.target.value })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 h-16 focus:border-sky-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-              <button
-                onClick={() => setEditModalOpen(false)}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
-                disabled={submitting}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdateArtist}
-                disabled={submitting}
-                className="bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
-              >
-                {submitting ? <Sparkles className="w-3.5 h-3.5 animate-spin" /> : 'Save Changes'}
-              </button>
             </div>
           </div>
         </div>
@@ -1118,14 +1778,14 @@ export default function ArtistsPage() {
               <button
                 onClick={() => setDeleteModalOpen(false)}
                 disabled={isDeleting}
-                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeleteArtist}
                 disabled={isDeleting}
-                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5"
+                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 {isDeleting ? <Sparkles className="w-3.5 h-3.5 animate-spin" /> : 'Yes, Delete Artist'}
               </button>

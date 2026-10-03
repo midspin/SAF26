@@ -3,6 +3,22 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+const ALLOWED_MUTATION_ROLES = [
+  'SUPER ADMIN',
+  'SUPERADMIN',
+  'ADMIN',
+  'PROGRAMMING',
+  'PROGRAMMER',
+  'PROGRAMMERS',
+  'PROGRAMMING TEAM',
+  'PROGRAMMING HEAD',
+];
+
+function isAuthorized(role?: string): boolean {
+  if (!role) return true;
+  return ALLOWED_MUTATION_ROLES.includes(role.trim().toUpperCase());
+}
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
@@ -15,12 +31,18 @@ export async function GET(req: Request) {
       where,
       orderBy: { artistName: 'asc' },
       include: {
-        artworks: true,
+        artworks: {
+          include: {
+            venue: true,
+            room: true,
+          },
+        },
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
         installations: {
           include: {
+            artwork: true,
             venue: true,
             room: true,
           },
@@ -48,6 +70,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const {
       eventId,
+      userRole,
       artistName,
       artistPhoto,
       biography,
@@ -57,11 +80,24 @@ export async function POST(req: Request) {
       phone,
       website,
       notes,
+      arrivalDate,
+      departureDate,
+      travelNotes,
+      lodgingDetails,
       status,
       curatorIds = [],
       pocIds = [],
       programmingIds = [],
+      artworks = [],
     } = body;
+
+    // Enforce role restriction for Super Admin & Programming Team
+    if (userRole && !isAuthorized(userRole)) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied: Only Super Admin and Programming Team can create artists.' },
+        { status: 403 }
+      );
+    }
 
     if (!artistName || !artistName.trim()) {
       return NextResponse.json(
@@ -89,6 +125,7 @@ export async function POST(req: Request) {
     const safePocIds = Array.isArray(pocIds) ? pocIds : [];
     const safeProgrammingIds = Array.isArray(programmingIds) ? programmingIds : [];
 
+    // Create Artist record with Travel & Lodging fields
     const artist = await prisma.artist.create({
       data: {
         eventId: targetEventId,
@@ -101,6 +138,10 @@ export async function POST(req: Request) {
         phone: phone || null,
         website: website || null,
         notes: notes || null,
+        arrivalDate: arrivalDate || null,
+        departureDate: departureDate || null,
+        travelNotes: travelNotes || null,
+        lodgingDetails: lodgingDetails || null,
         status: status || 'Confirmed',
         curatorAssignments: {
           create: safeCuratorIds.map((cId: string) => ({ curatorId: cId })),
@@ -114,6 +155,53 @@ export async function POST(req: Request) {
       },
     });
 
+    // Create Artworks & Installations if provided
+    if (Array.isArray(artworks) && artworks.length > 0) {
+      for (const item of artworks) {
+        if (!item.artworkName || !item.artworkName.trim()) continue;
+
+        const createdArtwork = await prisma.artwork.create({
+          data: {
+            eventId: targetEventId,
+            artistId: artist.id,
+            artworkName: item.artworkName.trim(),
+            medium: item.medium || null,
+            dimensions: item.dimensions || null,
+            installationType: item.installationType || null,
+            notes: item.notes || item.description || null,
+            venueId: item.venueId || null,
+            roomId: item.roomId || null,
+          },
+        });
+
+        // If venue or room is assigned, create/sync installation record
+        if (item.venueId || item.roomId) {
+          await prisma.artistInstallation.create({
+            data: {
+              eventId: targetEventId,
+              artistId: artist.id,
+              artworkId: createdArtwork.id,
+              venueId: item.venueId || null,
+              roomId: item.roomId || null,
+              installationStatus: 'Planned',
+            },
+          });
+        }
+      }
+    }
+
+    // Fetch full created artist object including relations
+    const fullArtist = await prisma.artist.findUnique({
+      where: { id: artist.id },
+      include: {
+        artworks: { include: { venue: true, room: true } },
+        curatorAssignments: { include: { curator: true } },
+        pocAssignments: { include: { poc: true } },
+        programmingAssignments: { include: { programmingPerson: true } },
+        installations: { include: { venue: true, room: true } },
+      },
+    });
+
     await prisma.auditLog.create({
       data: {
         eventId: targetEventId,
@@ -122,25 +210,13 @@ export async function POST(req: Request) {
         entityType: 'ARTIST',
         entityId: artist.id,
         action: 'CREATE',
-        newValueJson: JSON.stringify(artist),
+        newValueJson: JSON.stringify(fullArtist),
       },
     });
 
-    // Notification trigger for recipient roles: Technical head, Production & layout, Inventory manager, Procurement manager
+    // Notification trigger
     const creatorRoleNorm = (body.userRole || 'SUPER ADMIN').trim().toUpperCase();
-    const allowedCreators = [
-      'SUPER ADMIN',
-      'SUPERADMIN',
-      'PROGRAMMING',
-      'PROGRAMMER',
-      'PROGRAMMERS',
-      'PROGRAMMING TEAM',
-      'PRODUCTION & LAYOUT',
-      'PRODUCTION AND LAYOUT',
-      'PRODUCTION & LAYOUT TEAM',
-    ];
-
-    if (allowedCreators.includes(creatorRoleNorm)) {
+    if (isAuthorized(creatorRoleNorm)) {
       try {
         await prisma.notification.create({
           data: {
@@ -157,7 +233,7 @@ export async function POST(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, artist });
+    return NextResponse.json({ success: true, artist: fullArtist });
   } catch (error: any) {
     console.error('Error creating artist:', error);
     return NextResponse.json({ success: false, error: error.message || 'Failed to create artist.' }, { status: 500 });

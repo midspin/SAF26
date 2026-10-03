@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const ALLOWED_MUTATION_ROLES = [
+  'SUPER ADMIN',
+  'SUPERADMIN',
+  'ADMIN',
+  'PROGRAMMING',
+  'PROGRAMMER',
+  'PROGRAMMERS',
+  'PROGRAMMING TEAM',
+  'PROGRAMMING HEAD',
+];
+
+function isAuthorized(role?: string): boolean {
+  if (!role) return true;
+  return ALLOWED_MUTATION_ROLES.includes(role.trim().toUpperCase());
+}
+
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
@@ -8,7 +24,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const artist = await prisma.artist.findUnique({
       where: { id },
       include: {
-        artworks: true,
+        artworks: {
+          include: {
+            venue: true,
+            room: true,
+          },
+        },
         curatorAssignments: { include: { curator: true } },
         pocAssignments: { include: { poc: true } },
         programmingAssignments: { include: { programmingPerson: true } },
@@ -117,6 +138,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     if (!existing) return NextResponse.json({ success: false, error: 'Artist not found' }, { status: 404 });
 
     const {
+      userRole,
       artistName,
       artistPhoto,
       biography,
@@ -126,11 +148,24 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       phone,
       website,
       notes,
+      arrivalDate,
+      departureDate,
+      travelNotes,
+      lodgingDetails,
       status,
       curatorIds,
       pocIds,
       programmingIds,
+      artworks,
     } = body;
+
+    // Enforce role restriction for Super Admin & Programming Team
+    if (userRole && !isAuthorized(userRole)) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied: Only Super Admin and Programming Team can edit artists.' },
+        { status: 403 }
+      );
+    }
 
     const artist = await prisma.artist.update({
       where: { id },
@@ -144,6 +179,10 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         phone,
         website,
         notes,
+        arrivalDate: arrivalDate !== undefined ? arrivalDate : existing.arrivalDate,
+        departureDate: departureDate !== undefined ? departureDate : existing.departureDate,
+        travelNotes: travelNotes !== undefined ? travelNotes : existing.travelNotes,
+        lodgingDetails: lodgingDetails !== undefined ? lodgingDetails : existing.lodgingDetails,
         status,
       },
     });
@@ -178,20 +217,107 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       }
     }
 
+    // Handle Artworks update & venue/room assignment if provided
+    if (Array.isArray(artworks)) {
+      const existingArtworks = await prisma.artwork.findMany({ where: { artistId: id } });
+      const existingIds = existingArtworks.map((a) => a.id);
+      const incomingIds = artworks.map((a: any) => a.id).filter(Boolean);
+
+      // Artworks to delete
+      const toDeleteIds = existingIds.filter((existingId) => !incomingIds.includes(existingId));
+      if (toDeleteIds.length > 0) {
+        await prisma.artwork.deleteMany({ where: { id: { in: toDeleteIds } } });
+      }
+
+      // Upsert incoming artworks
+      for (const item of artworks) {
+        if (!item.artworkName || !item.artworkName.trim()) continue;
+
+        let artworkRecord;
+        if (item.id && existingIds.includes(item.id)) {
+          artworkRecord = await prisma.artwork.update({
+            where: { id: item.id },
+            data: {
+              artworkName: item.artworkName.trim(),
+              medium: item.medium || null,
+              dimensions: item.dimensions || null,
+              installationType: item.installationType || null,
+              notes: item.notes || item.description || null,
+              venueId: item.venueId || null,
+              roomId: item.roomId || null,
+            },
+          });
+        } else {
+          artworkRecord = await prisma.artwork.create({
+            data: {
+              eventId: artist.eventId,
+              artistId: artist.id,
+              artworkName: item.artworkName.trim(),
+              medium: item.medium || null,
+              dimensions: item.dimensions || null,
+              installationType: item.installationType || null,
+              notes: item.notes || item.description || null,
+              venueId: item.venueId || null,
+              roomId: item.roomId || null,
+            },
+          });
+        }
+
+        // Sync ArtistInstallation if venueId/roomId is set
+        if (item.venueId || item.roomId) {
+          const existingInst = await prisma.artistInstallation.findFirst({
+            where: { artistId: artist.id, artworkId: artworkRecord.id },
+          });
+
+          if (existingInst) {
+            await prisma.artistInstallation.update({
+              where: { id: existingInst.id },
+              data: {
+                venueId: item.venueId || null,
+                roomId: item.roomId || null,
+              },
+            });
+          } else {
+            await prisma.artistInstallation.create({
+              data: {
+                eventId: artist.eventId,
+                artistId: artist.id,
+                artworkId: artworkRecord.id,
+                venueId: item.venueId || null,
+                roomId: item.roomId || null,
+                installationStatus: 'Planned',
+              },
+            });
+          }
+        }
+      }
+    }
+
+    const fullArtist = await prisma.artist.findUnique({
+      where: { id: artist.id },
+      include: {
+        artworks: { include: { venue: true, room: true } },
+        curatorAssignments: { include: { curator: true } },
+        pocAssignments: { include: { poc: true } },
+        programmingAssignments: { include: { programmingPerson: true } },
+        installations: { include: { venue: true, room: true } },
+      },
+    });
+
     await prisma.auditLog.create({
       data: {
         eventId: artist.eventId,
-        userName: 'Admin User',
-        userRole: 'SUPER ADMIN',
+        userName: body.userName || 'Admin User',
+        userRole: body.userRole || 'SUPER ADMIN',
         entityType: 'ARTIST',
         entityId: artist.id,
         action: 'UPDATE',
         previousValueJson: JSON.stringify(existing),
-        newValueJson: JSON.stringify(artist),
+        newValueJson: JSON.stringify(fullArtist),
       },
     });
 
-    return NextResponse.json({ success: true, artist });
+    return NextResponse.json({ success: true, artist: fullArtist });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -200,6 +326,16 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(req.url);
+    const userRole = searchParams.get('userRole');
+
+    // Enforce role restriction for Super Admin & Programming Team
+    if (userRole && !isAuthorized(userRole)) {
+      return NextResponse.json(
+        { success: false, error: 'Access denied: Only Super Admin and Programming Team can delete artists.' },
+        { status: 403 }
+      );
+    }
 
     const existing = await prisma.artist.findUnique({ where: { id } });
     if (!existing) return NextResponse.json({ success: false, error: 'Artist not found' }, { status: 404 });
@@ -210,7 +346,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       data: {
         eventId: existing.eventId,
         userName: 'Admin User',
-        userRole: 'SUPER ADMIN',
+        userRole: userRole || 'SUPER ADMIN',
         entityType: 'ARTIST',
         entityId: id,
         action: 'DELETE',

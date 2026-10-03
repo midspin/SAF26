@@ -631,6 +631,10 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     phone: '',
     website: '',
     biography: '',
+    arrivalDate: '',
+    departureDate: '',
+    travelNotes: '',
+    lodgingDetails: '',
     status: 'Confirmed',
   });
   const [submittingEdit, setSubmittingEdit] = useState(false);
@@ -649,6 +653,10 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       phone: artistData.phone || '',
       website: artistData.website || '',
       biography: artistData.biography || '',
+      arrivalDate: artistData.arrivalDate || '',
+      departureDate: artistData.departureDate || '',
+      travelNotes: artistData.travelNotes || '',
+      lodgingDetails: artistData.lodgingDetails || '',
       status: artistData.status || 'Confirmed',
     });
     setEditError(null);
@@ -667,7 +675,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       const res = await fetch(`/api/artists/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editFormData),
+        body: JSON.stringify({ userRole, ...editFormData }),
       });
       const data = await res.json();
       if (data.success) {
