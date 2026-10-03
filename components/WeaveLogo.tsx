@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useId } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface WeaveLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -43,8 +43,6 @@ export default function WeaveLogo({
 }: WeaveLogoProps) {
   const pathRefs = useRef<(SVGPathElement | null)[]>([]);
   const animFrameRef = useRef<number | null>(null);
-  const rawGradId = useId();
-  const gradientId = `sphereGrad_${rawGradId.replace(/:/g, '_')}`;
 
   useEffect(() => {
     let startTime = performance.now();
@@ -55,7 +53,7 @@ export default function WeaveLogo({
         if (!path) return;
         // Breathing scale loop per path with phase delay (Julian Garnier math)
         const percent = (1 - Math.sin(i * 0.35 + 0.0022 * elapsed)) / 2;
-        const scale = 1 + percent * 0.26;
+        const scale = 1 + percent * 0.28;
         path.style.transform = `scale(${scale})`;
         path.style.transformOrigin = '220px 220px';
       });
@@ -89,17 +87,16 @@ export default function WeaveLogo({
       : 'h-11 max-w-[190px]';
 
   return (
-    <div className={`inline-flex items-center gap-2.5 group select-none ${className}`}>
-      {/* 3D Animated Sphere SVG Logo */}
+    <div className={`inline-flex items-center gap-3 group select-none ${className}`}>
+      {/* 3D Wireframe Animated Sphere SVG */}
       <div className={`relative ${sphereSizeClass} shrink-0 flex items-center justify-center`}>
         <svg
-          className="w-full h-full drop-shadow-[0_0_12px_rgba(168,85,247,0.5)] transition-transform duration-300 group-hover:scale-110"
+          className="w-full h-full overflow-visible drop-shadow-[0_0_12px_rgba(168,85,247,0.7)] transition-transform duration-300 group-hover:scale-110"
           viewBox="0 0 440 440"
-          fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <linearGradient id={gradientId} x1="5%" y1="0%" x2="95%" y2="100%">
+            <linearGradient id="weaveSphereGradient" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stopColor="#a855f7" />
               <stop offset="50%" stopColor="#6366f1" />
               <stop offset="100%" stopColor="#38bdf8" />
@@ -112,13 +109,13 @@ export default function WeaveLogo({
                 pathRefs.current[i] = el;
               }}
               d={d}
-              fill={`url(#${gradientId})`}
-              fillOpacity={0.85}
-              stroke="rgba(255, 255, 255, 0.4)"
-              strokeWidth="0.8px"
+              fill="none"
+              stroke="url(#weaveSphereGradient)"
+              strokeWidth="4px"
+              strokeLinecap="round"
+              strokeLinejoin="round"
               style={{
                 transformOrigin: '220px 220px',
-                transition: 'stroke 0.3s ease',
               }}
             />
           ))}
@@ -134,5 +131,6 @@ export default function WeaveLogo({
     </div>
   );
 }
+
 
 
