@@ -187,35 +187,43 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     type: string;
   } | null>(null);
 
-  // Card #2 Document Attachments State (PDF, Excel, Word, Images)
+  // Card #2 Document Attachments State (PDF, Excel, Word, Images) - Starts EMPTY with no pre-attached dummy files
   const [uploadedFiles, setUploadedFiles] = useState<
-    { id: string; name: string; size: string; type: string; url: string; date: string; isDefault?: boolean }[]
-  >([
-    {
-      id: 'doc-1',
-      name: 'Technical_Rider_Spatial_Layout_2026.pdf',
-      size: '2.4 MB',
-      type: 'pdf',
-      url: '#',
-      date: '22 Sep 2026',
-      isDefault: true,
-    },
-    {
-      id: 'doc-2',
-      name: 'Equipment_Requirements_Projection_Specs.xlsx',
-      size: '840 KB',
-      type: 'excel',
-      url: '#',
-      date: '20 Sep 2026',
-      isDefault: true,
-    },
-  ]);
+    { id: string; name: string; size: string; type: string; url: string; date: string }[]
+  >([]);
+
+  // Load saved artist reference files from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && id) {
+      try {
+        const saved = localStorage.getItem(`saf_artist_docs_${id}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) setUploadedFiles(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to load artist documents:', e);
+      }
+    }
+  }, [id]);
+
+  const updateAndSaveFiles = (newFiles: any[]) => {
+    setUploadedFiles(newFiles);
+    if (typeof window !== 'undefined' && id) {
+      localStorage.setItem(`saf_artist_docs_${id}`, JSON.stringify(newFiles));
+    }
+  };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!canEditProgrammingCards) {
+      alert('Access Restricted: Only Programming Team & Super Admin can upload reference documents.');
+      return;
+    }
+
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    const newDocs: { id: string; name: string; size: string; type: string; url: string; date: string; isDefault?: boolean }[] = [];
+    const newDocs: { id: string; name: string; size: string; type: string; url: string; date: string }[] = [];
 
     Array.from(files).forEach((file) => {
       const ext = file.name.split('.').pop()?.toLowerCase() || '';
@@ -232,21 +240,22 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
         type: fileType,
         url: URL.createObjectURL(file),
         date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        isDefault: false,
       });
     });
 
-    setUploadedFiles((prev) => {
-      // Automatically remove default sample documents whenever new files are uploaded by Programming Team or Super Admin
-      const realUploadedFilesOnly = prev.filter((f) => !f.isDefault);
-      return [...newDocs, ...realUploadedFilesOnly];
-    });
+    const updated = [...newDocs, ...uploadedFiles];
+    updateAndSaveFiles(updated);
 
     e.target.value = '';
   };
 
   const handleRemoveFile = (fileId: string) => {
-    setUploadedFiles((prev) => prev.filter((f) => f.id !== fileId));
+    if (!canEditProgrammingCards) {
+      alert('Access Restricted: Only Programming Team & Super Admin can delete reference documents.');
+      return;
+    }
+    const updated = uploadedFiles.filter((f) => f.id !== fileId);
+    updateAndSaveFiles(updated);
   };
 
   // Live Technical Specs Inventory Search & Pool Filter State
@@ -1426,46 +1435,57 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
             </div>
 
             {/* Document Attachments List */}
-            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-              {uploadedFiles.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between text-xs hover:border-[#38bdf8]/40 transition-colors"
-                >
-                  <div className="flex items-center gap-2.5 overflow-hidden">
-                    {doc.type === 'pdf' && <FileText className="w-4 h-4 text-rose-400 shrink-0" />}
-                    {doc.type === 'excel' && <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />}
-                    {doc.type === 'word' && <FileCode className="w-4 h-4 text-blue-400 shrink-0" />}
-                    {doc.type === 'image' && <ImageIcon className="w-4 h-4 text-purple-400 shrink-0" />}
+            {uploadedFiles.length === 0 ? (
+              <div className="p-4 rounded-xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
+                <p className="font-semibold text-slate-300">No reference documents attached</p>
+                <p className="text-[10px] text-[#8a8d9b]">
+                  {canEditProgrammingCards
+                    ? 'Use the "Select Files" button to attach artist reference riders, projection specs, or documents.'
+                    : 'Programming Team can upload reference documents for artist.'}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {uploadedFiles.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between text-xs hover:border-[#38bdf8]/40 transition-colors"
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      {doc.type === 'pdf' && <FileText className="w-4 h-4 text-rose-400 shrink-0" />}
+                      {doc.type === 'excel' && <FileSpreadsheet className="w-4 h-4 text-emerald-400 shrink-0" />}
+                      {doc.type === 'word' && <FileCode className="w-4 h-4 text-blue-400 shrink-0" />}
+                      {doc.type === 'image' && <ImageIcon className="w-4 h-4 text-purple-400 shrink-0" />}
 
-                    <div className="overflow-hidden">
-                      <span className="font-bold text-white truncate block text-[11px]">{doc.name}</span>
-                      <span className="text-[9px] text-[#8a8d9b]">{doc.size} • {doc.date}</span>
+                      <div className="overflow-hidden">
+                        <span className="font-bold text-white truncate block text-[11px]">{doc.name}</span>
+                        <span className="text-[9px] text-[#8a8d9b]">{doc.size} • {doc.date}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <a
+                        href={doc.url}
+                        download={doc.name}
+                        className="p-1 rounded-lg bg-[#232334] text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 transition-all cursor-pointer"
+                        title="Download document"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                      {canEditProgrammingCards && (
+                        <button
+                          onClick={() => handleRemoveFile(doc.id)}
+                          className="p-1 rounded-lg bg-rose-950/40 text-rose-400 hover:bg-rose-600 hover:text-white transition-all cursor-pointer"
+                          title="Delete document"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <a
-                      href={doc.url}
-                      download={doc.name}
-                      className="p-1 rounded-lg bg-[#232334] text-[#38bdf8] hover:bg-[#38bdf8] hover:text-slate-950 transition-all"
-                      title="Download document"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                    </a>
-                    {canEditProgrammingCards && (
-                      <button
-                        onClick={() => handleRemoveFile(doc.id)}
-                        className="p-1 rounded-lg bg-rose-950/40 text-rose-400 hover:bg-rose-600 hover:text-white transition-all"
-                        title="Delete document"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
