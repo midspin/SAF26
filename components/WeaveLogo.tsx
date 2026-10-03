@@ -111,7 +111,7 @@ export default function WeaveLogo({
               d={d}
               fill="none"
               stroke="url(#weaveSphereGradient)"
-              strokeWidth="4px"
+              strokeWidth="1px"
               strokeLinecap="round"
               strokeLinejoin="round"
               style={{
