@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import ImageUploadInput from '@/components/ImageUploadInput';
-import OrbitaLogo from '@/components/OrbitaLogo';
+import WeaveLogo from '@/components/WeaveLogo';
 import NotificationToast from '@/components/NotificationToast';
 import {
   LayoutDashboard,
@@ -476,7 +476,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         {/* Brand Header */}
         <div className="p-6 border-b border-[#2a2a3e] flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-3">
-            <OrbitaLogo size="md" showTagline={true} />
+            <WeaveLogo size="md" showTagline={true} />
           </Link>
         </div>
 
@@ -608,7 +608,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
               <div className="w-10 h-10 rounded-2xl bg-[#6366f1]/20 border border-[#6366f1]/30 flex items-center justify-center mx-auto mb-2.5 shadow-lg shadow-indigo-500/20">
                 <Rocket className="w-5 h-5 text-[#38bdf8]" />
               </div>
-              <h4 className="text-xs font-bold text-white leading-tight">ORBITA Operations Engine</h4>
+              <h4 className="text-xs font-bold text-white leading-tight">WEAVE Operations Engine</h4>
               <p className="text-[10px] text-[#8a8d9b] mt-0.5 mb-3">Active Profile: <strong className="text-white">{activeRole}</strong></p>
               <button
                 onClick={handleLogout}

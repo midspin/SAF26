@@ -2,8 +2,8 @@ import './globals.css';
 import AppLayout from '@/components/AppLayout';
 
 export const metadata = {
-  title: 'ORBITA - connecting people, tasks and resources',
-  description: 'ORBITA Platform - connecting people, tasks and resources',
+  title: 'WEAVE - People. Tasks. Resources. Connected.',
+  description: 'WEAVE Platform - People. Tasks. Resources. Connected.',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

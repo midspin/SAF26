@@ -117,15 +117,18 @@
   }
 }
 
-.animate-orbita-circle {
+.animate-orbita-circle,
+.animate-weave-circle {
   animation: orbita-circle-bounce 2.6s ease-in-out infinite;
 }
 
-.animate-orbita-triangle {
+.animate-orbita-triangle,
+.animate-weave-triangle {
   animation: orbita-triangle-bounce 3.2s ease-in-out infinite;
 }
 
-.animate-orbita-square {
+.animate-orbita-square,
+.animate-weave-square {
   animation: orbita-square-bounce 2.8s ease-in-out infinite;
 }
 

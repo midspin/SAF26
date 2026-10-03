@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import OrbitaLogo from '@/components/OrbitaLogo';
+import WeaveLogo from '@/components/WeaveLogo';
 import {
   User,
   Sparkles,
@@ -96,7 +96,7 @@ export default function LoginPage() {
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 relative mb-2">
         {/* Centered Large Animated Logo with Tagline below (No ORBITA text or extra headers) */}
         <div className="flex justify-center">
-          <OrbitaLogo size="xl" layout="vertical" showTitle={false} showTagline={true} />
+          <WeaveLogo size="xl" layout="vertical" showTitle={true} showTagline={true} />
         </div>
       </div>
 
