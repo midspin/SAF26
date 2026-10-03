@@ -43,6 +43,7 @@ import {
   PieChart,
   Clock,
   Lock,
+  Menu,
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('');
   const [selectedEvent, setSelectedEvent] = useState<any>(null);
@@ -250,6 +252,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
       window.removeEventListener('storage', syncAuth);
     };
   }, [pathname, router]);
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleRoleChange = (newRole: string) => {
     setActiveRole(newRole);
@@ -470,14 +476,33 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen flex bg-[#161622] text-white selection:bg-[#8b5cf6] selection:text-white">
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-72 bg-[#161622] border-r border-[#2a2a3e] flex flex-col fixed inset-y-0 z-30 shadow-2xl">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#161622] text-white selection:bg-[#8b5cf6] selection:text-white relative">
+      {/* MOBILE BACKDROP OVERLAY */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black/70 backdrop-blur-md z-40 lg:hidden animate-in fade-in duration-200"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* CASCADING SIDEBAR NAVIGATION (Desktop & Mobile Drawer) */}
+      <aside
+        className={`w-72 bg-[#161622] border-r border-[#2a2a3e] flex flex-col fixed inset-y-0 left-0 z-50 shadow-2xl transition-transform duration-300 ease-in-out ${
+          mobileMenuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
         {/* Brand Header */}
-        <div className="p-6 border-b border-[#2a2a3e] flex items-center justify-between">
-          <Link href="/dashboard" className="flex items-center gap-3">
+        <div className="p-5 sm:p-6 border-b border-[#2a2a3e] flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-3" onClick={() => setMobileMenuOpen(false)}>
             <WeaveLogo size="md" showTagline={true} />
           </Link>
+          <button
+            onClick={() => setMobileMenuOpen(false)}
+            className="p-2 rounded-xl text-[#8a8d9b] hover:text-white hover:bg-[#232334] lg:hidden transition-all"
+            title="Close Menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* User Profile Section (Below Logo SAF) */}
@@ -572,6 +597,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                           isActive
                             ? 'bg-gradient-to-r from-[#6366f1] to-[#8b5cf6] text-white shadow-lg shadow-indigo-500/30'
@@ -622,25 +648,32 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col pl-72">
+      <div className="flex-1 flex flex-col lg:pl-72 pl-0 min-w-0">
         {/* TOP HEADER UTILITY BAR */}
-        <header className="h-16 bg-[#161622]/90 backdrop-blur-md border-b border-[#2a2a3e] px-8 flex items-center justify-between sticky top-0 z-20">
-          {/* Left: Welcome message with name of the user */}
+        <header className="h-16 bg-[#161622]/90 backdrop-blur-md border-b border-[#2a2a3e] px-4 sm:px-8 flex items-center justify-between sticky top-0 z-20">
+          {/* Left: Mobile Menu Toggle Button + Welcome Message */}
           <div className="flex items-center gap-3">
-            <h1 className="text-xl font-normal text-white tracking-tight">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="p-2.5 rounded-2xl bg-[#232334] border border-white/10 text-white hover:bg-[#2c2c40] lg:hidden transition-all cursor-pointer flex items-center justify-center shadow-md active:scale-95"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="w-5 h-5 text-[#38bdf8]" />
+            </button>
+            <h1 className="text-sm sm:text-xl font-normal text-white tracking-tight truncate">
               Hi {userSession?.name || userSession?.username || 'User'}
             </h1>
           </div>
 
           {/* Right Utilities (Notifications + Role Dropdown) */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Notifications Pill Button */}
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="w-10 h-10 rounded-2xl bg-[#232334]/80 border border-white/10 hover:border-[#8b5cf6]/50 flex items-center justify-center text-[#8a8d9b] hover:text-white transition-all relative shadow-sm cursor-pointer"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-[#232334]/80 border border-white/10 hover:border-[#8b5cf6]/50 flex items-center justify-center text-[#8a8d9b] hover:text-white transition-all relative shadow-sm cursor-pointer"
               >
-                <Bell className="w-4.5 h-4.5 text-[#8a8d9b]" />
+                <Bell className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-[#8a8d9b]" />
                 {notifications.some((n) => !n.isRead) && (
                   <span className="w-2.5 h-2.5 rounded-full bg-[#ff85a1] absolute top-2 right-2 ring-2 ring-[#161622] animate-pulse" />
                 )}
@@ -648,7 +681,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
               {/* Notifications Dropdown Drawer */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-80 bg-[#232334] border border-white/10 rounded-3xl shadow-2xl z-50 p-4 space-y-3">
+                <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-[#232334] border border-white/10 rounded-3xl shadow-2xl z-50 p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
                     <h4 className="text-xs font-bold text-white flex items-center gap-2">
                       <Bell className="w-4 h-4 text-[#8b5cf6]" /> Operational Notifications
@@ -679,15 +712,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
             </div>
 
             {/* Role Switcher Dropdown (Matching Reference Image) */}
-            <div className="flex items-center gap-2 bg-[#20202e] border border-white/10 rounded-2xl px-4 py-2 text-xs shadow-inner">
-              <ShieldCheck className="w-4 h-4 text-[#8b5cf6]" />
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">ROLE:</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 bg-[#20202e] border border-white/10 rounded-2xl px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs shadow-inner">
+              <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#8b5cf6] shrink-0" />
+              <span className="text-[10px] sm:text-[11px] font-bold text-slate-400 uppercase tracking-wider hidden xs:inline">ROLE:</span>
               {userSession?.role === 'SUPER ADMIN' || activeRole === 'SUPER ADMIN' ? (
                 <div className="relative flex items-center">
                   <select
                     value={activeRole}
                     onChange={(e) => handleRoleChange(e.target.value)}
-                    className="bg-transparent text-xs font-black text-[#00d2ff] focus:outline-none cursor-pointer pr-5 appearance-none tracking-wider uppercase"
+                    className="bg-transparent text-[11px] sm:text-xs font-black text-[#00d2ff] focus:outline-none cursor-pointer pr-4 sm:pr-5 appearance-none tracking-wider uppercase max-w-[110px] sm:max-w-none truncate"
                   >
                     {rolesList.map((r) => (
                       <option key={r} value={r} className="bg-[#161622] text-white font-semibold">
@@ -695,17 +728,17 @@ export default function AppLayout({ children }: AppLayoutProps) {
                       </option>
                     ))}
                   </select>
-                  <ChevronDown className="w-3.5 h-3.5 text-[#00d2ff] absolute right-0 pointer-events-none" />
+                  <ChevronDown className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#00d2ff] absolute right-0 pointer-events-none" />
                 </div>
               ) : (
-                <span className="text-xs font-black text-[#00d2ff] tracking-wider uppercase">{activeRole}</span>
+                <span className="text-[11px] sm:text-xs font-black text-[#00d2ff] tracking-wider uppercase truncate max-w-[110px] sm:max-w-none">{activeRole}</span>
               )}
             </div>
           </div>
         </header>
 
         {/* PAGE CONTENT CONTAINER */}
-        <main className="flex-1 p-8 overflow-x-hidden">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 overflow-x-hidden">{children}</main>
       </div>
 
       {/* GLOBAL SEARCH MODAL */}

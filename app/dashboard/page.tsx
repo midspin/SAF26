@@ -1154,7 +1154,7 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 1: DYNAMIC REORDERABLE STAT TILES */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-5">
         {statOrder
           .filter((key) => !hiddenCards.includes(key))
           .map((tileKey, index) => (
