@@ -84,6 +84,9 @@ model Artist {
   allocations              InventoryAllocation[]
   purchaseRequests         PurchaseRequest[]
   rentalRecords            RentalRecord[]
+
+  @@index([eventId])
+  @@index([status])
 }
 
 model Artwork {
@@ -113,6 +116,11 @@ model Artwork {
   allocations            InventoryAllocation[]
   purchaseRequests       PurchaseRequest[]
   rentalRecords          RentalRecord[]
+
+  @@index([eventId])
+  @@index([artistId])
+  @@index([venueId])
+  @@index([roomId])
 }
 
 model Curator {
@@ -132,6 +140,8 @@ model Curator {
   updatedAt    DateTime @updatedAt
 
   artistAssignments ArtistCuratorAssignment[]
+
+  @@index([eventId])
 }
 
 model ArtistCuratorAssignment {
@@ -333,6 +343,8 @@ model Venue {
   allocations   InventoryAllocation[]
   purchaseReqs  PurchaseRequest[]
   rentalRecords RentalRecord[]
+
+  @@index([eventId])
 }
 
 model Room {
@@ -369,6 +381,9 @@ model Room {
   allocations   InventoryAllocation[]
   purchaseReqs  PurchaseRequest[]
   rentalRecords RentalRecord[]
+
+  @@index([eventId])
+  @@index([venueId])
 }
 
 model ArtistInstallation {
@@ -389,6 +404,12 @@ model ArtistInstallation {
   endDate           String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([artistId])
+  @@index([artworkId])
+  @@index([venueId])
+  @@index([roomId])
 }
 
 model TechnicalRequirement {
@@ -408,6 +429,11 @@ model TechnicalRequirement {
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([artistId])
+  @@index([artworkId])
+  @@index([status])
 }
 
 model ProductionRequirement {
@@ -427,6 +453,11 @@ model ProductionRequirement {
   notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([artistId])
+  @@index([artworkId])
+  @@index([status])
 }
 
 model InventoryItem {
@@ -478,6 +509,13 @@ model InventoryItem {
 
   allocations InventoryAllocation[]
   movements   InventoryMovement[]
+
+  @@index([eventId])
+  @@index([safCode])
+  @@index([inventoryUsageType])
+  @@index([inventoryCategory])
+  @@index([inventoryStatus])
+  @@index([vendorId])
 }
 
 model InventoryAllocation {
@@ -512,6 +550,14 @@ model InventoryAllocation {
   updatedAt         DateTime @updatedAt
 
   movements InventoryMovement[]
+
+  @@index([eventId])
+  @@index([inventoryItemId])
+  @@index([artistId])
+  @@index([artworkId])
+  @@index([venueId])
+  @@index([roomId])
+  @@index([status])
 }
 
 model InventoryMovement {
@@ -532,6 +578,10 @@ model InventoryMovement {
   allocationId      String?
   allocation        InventoryAllocation? @relation(fields: [allocationId], references: [id], onDelete: SetNull)
   createdAt         DateTime @default(now())
+
+  @@index([eventId])
+  @@index([inventoryItemId])
+  @@index([allocationId])
 }
 
 model PurchaseRequest {
