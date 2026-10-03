@@ -155,6 +155,7 @@ export async function POST(req: Request) {
         inventoryUsageType: inventoryUsageType || 'TECHNICAL',
         inventorySource: inventorySource || 'Owned',
         ownershipType: ownershipType || 'SAF',
+        isFaulty: body.isFaulty !== undefined ? Boolean(body.isFaulty) : Boolean(/faulty|damaged|red/i.test(condition || '')),
         assetId,
         vendorId: vendorId || null,
         purchaseDate,

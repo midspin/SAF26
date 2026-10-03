@@ -23,6 +23,7 @@ import {
   Wrench,
   Layers,
   UserCheck,
+  Edit3,
 } from 'lucide-react';
 
 export default function InventoryPage() {
@@ -30,6 +31,9 @@ export default function InventoryPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEventId, setSelectedEventId] = useState<string>('ALL');
   const [loading, setLoading] = useState(true);
+
+  // User Role State & Edit Provision
+  const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
 
   // Filters
   const [search, setSearch] = useState('');
@@ -43,6 +47,32 @@ export default function InventoryPage() {
   const [selectedItemForRetire, setSelectedItemForRetire] = useState<any>(null);
   const [retireQty, setRetireQty] = useState(1);
   const [retireReason, setRetireReason] = useState('Damaged');
+
+  // Edit Modal State for Super Admin & Inventory Manager
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    safCode: '',
+    inventoryCategory: 'Technical',
+    subCategory: 'General',
+    element: '',
+    yearOfPurchase: '2026',
+    brandProject: 'Na',
+    model: 'Na',
+    sizeLwh: 'Na',
+    uom: 'Nos',
+    serialNo: 'Na',
+    totalQuantity: 1,
+    location: 'Central Warehouse',
+    condition: 'OK',
+    throwRatio: 'Na',
+    remarks: '',
+    inventoryUsageType: 'TECHNICAL',
+    inventorySource: 'Owned',
+    ownershipType: 'SAF',
+    isFaulty: false,
+  });
 
   // Allocation modal state (Production / Technical Team)
   const [allocateModalOpen, setAllocateModalOpen] = useState(false);
@@ -68,49 +98,63 @@ export default function InventoryPage() {
   const [faultyDetectedCount, setFaultyDetectedCount] = useState(0);
   const [isProcessingUpload, setIsProcessingUpload] = useState(false);
 
-  // Form State for manual add
+  // Form State for manual add - Complete table parameters
   const [formData, setFormData] = useState({
     safCode: '',
-    inventoryCategory: 'Production',
+    inventoryCategory: 'Technical',
     subCategory: 'General',
     element: '',
     yearOfPurchase: '2026',
-    brandProject: '',
-    model: '',
-    sizeLwh: '',
+    brandProject: 'Na',
+    model: 'Na',
+    sizeLwh: 'Na',
     uom: 'Nos',
-    serialNo: '',
+    serialNo: 'Na',
     totalQuantity: 1,
     location: 'Central Warehouse',
     condition: 'OK',
     throwRatio: 'Na',
     remarks: '',
-    inventoryUsageType: 'PRODUCTION',
+    inventoryUsageType: 'TECHNICAL',
+    inventorySource: 'Owned',
+    ownershipType: 'SAF',
     isFaulty: false,
   });
 
-  // Read URL query tab parameter
+  // Sync user role for Super Admin & Inventory Manager privileges
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const tabParam = params.get('tab');
-      if (tabParam) {
-        const u = tabParam.toUpperCase();
-        if (u === 'PRODUCTION') {
-          setUsageFilter('PRODUCTION');
-          setFormData((prev) => ({ ...prev, inventoryUsageType: 'PRODUCTION', inventoryCategory: 'Production' }));
-        } else if (u === 'TECHNICAL') {
-          setUsageFilter('TECHNICAL');
-          setFormData((prev) => ({ ...prev, inventoryUsageType: 'TECHNICAL', inventoryCategory: 'Technical' }));
-        } else if (u === 'FAULTY') {
-          setFaultyOnlyFilter(true);
-        } else if (u === 'ALL') {
-          setUsageFilter('ALL');
-          setFaultyOnlyFilter(false);
+    const readRole = () => {
+      if (typeof window !== 'undefined') {
+        const session = localStorage.getItem('saf_user_session');
+        let role = localStorage.getItem('saf_user_role');
+        if (session) {
+          try {
+            const parsed = JSON.parse(session);
+            if (parsed.role) role = parsed.role;
+          } catch (e) {}
         }
+        setUserRole(role || 'SUPER ADMIN');
       }
-    }
+    };
+    readRole();
+    window.addEventListener('saf-role-changed', readRole);
+    window.addEventListener('storage', readRole);
+    return () => {
+      window.removeEventListener('saf-role-changed', readRole);
+      window.removeEventListener('storage', readRole);
+    };
   }, []);
+
+  const normalizedRole = (userRole || '').trim().toUpperCase();
+  const canEditInventory = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+    'INVENTORY MANAGER',
+    'INVENTORY HEAD',
+    'INVENTORY TEAM',
+    'INVENTORY',
+  ].includes(normalizedRole);
 
   useEffect(() => {
     fetchEvents();
@@ -305,7 +349,40 @@ export default function InventoryPage() {
     }
   };
 
+  const resetFormData = () => {
+    setFormData({
+      safCode: '',
+      inventoryCategory: usageFilter === 'PRODUCTION' ? 'Production' : 'Technical',
+      subCategory: 'General',
+      element: '',
+      yearOfPurchase: '2026',
+      brandProject: 'Na',
+      model: 'Na',
+      sizeLwh: 'Na',
+      uom: 'Nos',
+      serialNo: 'Na',
+      totalQuantity: 1,
+      location: 'Central Warehouse',
+      condition: 'OK',
+      throwRatio: 'Na',
+      remarks: '',
+      inventoryUsageType: usageFilter === 'PRODUCTION' ? 'PRODUCTION' : 'TECHNICAL',
+      inventorySource: 'Owned',
+      ownershipType: 'SAF',
+      isFaulty: false,
+    });
+  };
+
   const handleAddItem = async () => {
+    if (!formData.safCode.trim()) {
+      alert('SAF Code is required.');
+      return;
+    }
+    if (!formData.element.trim()) {
+      alert('Element / Product Name is required.');
+      return;
+    }
+
     try {
       const eventId = await getActiveEventId();
 
@@ -313,6 +390,7 @@ export default function InventoryPage() {
         eventId,
         ...formData,
         condition: formData.isFaulty ? 'Faulty (Red Flagged)' : formData.condition,
+        createdBy: userRole || 'Admin User',
       };
 
       const res = await fetch('/api/inventory', {
@@ -326,10 +404,87 @@ export default function InventoryPage() {
         alert(data.error || 'Error creating inventory item');
       } else {
         setAddModalOpen(false);
+        resetFormData();
         fetchInventory();
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  // Open Edit Modal for Super Admin & Inventory Manager
+  const handleOpenEditModal = (item: any) => {
+    if (!canEditInventory) {
+      alert('Access Restricted: Only Super Admin and Inventory Manager can edit items.');
+      return;
+    }
+    setEditingItem(item);
+    setEditFormData({
+      safCode: item.safCode || '',
+      inventoryCategory: item.inventoryCategory || (usageFilter === 'PRODUCTION' ? 'Production' : 'Technical'),
+      subCategory: item.subCategory || 'General',
+      element: item.element || '',
+      yearOfPurchase: item.yearOfPurchase || '2026',
+      brandProject: item.brandProject || 'Na',
+      model: item.model || 'Na',
+      sizeLwh: item.sizeLwh || 'Na',
+      uom: item.uom || 'Nos',
+      serialNo: item.serialNo || 'Na',
+      totalQuantity: item.totalQuantity || 1,
+      location: item.location || 'Central Warehouse',
+      condition: item.condition || 'OK',
+      throwRatio: item.throwRatio || 'Na',
+      remarks: item.remarks || '',
+      inventoryUsageType: item.inventoryUsageType || (usageFilter === 'PRODUCTION' ? 'PRODUCTION' : 'TECHNICAL'),
+      inventorySource: item.inventorySource || 'Owned',
+      ownershipType: item.ownershipType || 'SAF',
+      isFaulty: item.isFaulty || /faulty|damaged|red/i.test(item.condition || ''),
+    });
+    setEditModalOpen(true);
+  };
+
+  // Submit Product Edits
+  const handleConfirmEditItem = async () => {
+    if (!editingItem) return;
+    if (!canEditInventory) {
+      alert('Access Restricted: Only Super Admin and Inventory Manager can edit items.');
+      return;
+    }
+    if (!editFormData.safCode.trim()) {
+      alert('SAF Code is required.');
+      return;
+    }
+    if (!editFormData.element.trim()) {
+      alert('Element / Product Name is required.');
+      return;
+    }
+
+    setIsSubmittingEdit(true);
+    try {
+      const payload = {
+        ...editFormData,
+        condition: editFormData.isFaulty ? 'Faulty (Red Flagged)' : editFormData.condition,
+        updatedBy: userRole || 'Admin User',
+      };
+
+      const res = await fetch(`/api/inventory/${editingItem.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditModalOpen(false);
+        setEditingItem(null);
+        fetchInventory();
+      } else {
+        alert(data.error || 'Failed to update inventory item.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error updating inventory item.');
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -847,6 +1002,15 @@ export default function InventoryPage() {
                           >
                             <ArrowUpRight className="w-3.5 h-3.5" />
                           </Link>
+                          {canEditInventory && (
+                            <button
+                              onClick={() => handleOpenEditModal(item)}
+                              className="p-1.5 rounded bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 transition-colors cursor-pointer"
+                              title="Edit Product Details (Super Admin & Inventory Manager)"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => {
                               setSelectedItemForRetire(item);
@@ -1134,83 +1298,290 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* MODAL: ADD MANUAL INVENTORY ITEM */}
+      {/* MODAL: ADD MANUAL INVENTORY ITEM (ALL TABLE PARAMETERS) */}
       {addModalOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 w-full max-w-xl rounded-2xl p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="text-sm font-bold text-slate-100">
-                Add New {formData.inventoryUsageType} Inventory Item
-              </h3>
-              <button onClick={() => setAddModalOpen(false)} className="text-slate-400 hover:text-white">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-sky-400" /> Add New {formData.inventoryUsageType} Inventory Item
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Enter all 19 inventory parameters to catalog a new product into the master database.
+                </p>
+              </div>
+              <button onClick={() => setAddModalOpen(false)} className="text-slate-400 hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="space-y-4 text-xs">
+              {/* SECTION 1: CORE PRODUCT IDENTIFICATION */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-sky-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  1. Core Product Identification
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">SAF Code *</label>
+                    <input
+                      type="text"
+                      value={formData.safCode}
+                      onChange={(e) => setFormData({ ...formData, safCode: e.target.value })}
+                      placeholder="e.g. PRD-0001 or Ac-15"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono font-bold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Element / Product Name *</label>
+                    <input
+                      type="text"
+                      value={formData.element}
+                      onChange={(e) => setFormData({ ...formData, element: e.target.value })}
+                      placeholder="e.g. Laser Projector 10K / Easel Stand"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-bold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={formData.inventoryCategory}
+                      onChange={(e) => setFormData({ ...formData, inventoryCategory: e.target.value })}
+                      placeholder="e.g. Technical / Production / Furniture"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Sub Category</label>
+                    <input
+                      type="text"
+                      value={formData.subCategory}
+                      onChange={(e) => setFormData({ ...formData, subCategory: e.target.value })}
+                      placeholder="e.g. Cables / Lighting / Stand"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: TECHNICAL & PHYSICAL SPECIFICATIONS */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-indigo-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  2. Technical & Physical Specifications
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-slate-300 block mb-1">Brand / Project</label>
+                    <input
+                      type="text"
+                      value={formData.brandProject}
+                      onChange={(e) => setFormData({ ...formData, brandProject: e.target.value })}
+                      placeholder="e.g. Sony / Epson / Na"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Model</label>
+                    <input
+                      type="text"
+                      value={formData.model}
+                      onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                      placeholder="e.g. VPL-FHZ85 / Na"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Serial Number</label>
+                    <input
+                      type="text"
+                      value={formData.serialNo}
+                      onChange={(e) => setFormData({ ...formData, serialNo: e.target.value })}
+                      placeholder="e.g. SN-88421 / Na"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Size (LxWxH)</label>
+                    <input
+                      type="text"
+                      value={formData.sizeLwh}
+                      onChange={(e) => setFormData({ ...formData, sizeLwh: e.target.value })}
+                      placeholder="e.g. 10M / 100x50cm"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Throw Ratio</label>
+                    <input
+                      type="text"
+                      value={formData.throwRatio}
+                      onChange={(e) => setFormData({ ...formData, throwRatio: e.target.value })}
+                      placeholder="e.g. 1.2 - 1.8 / Na"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: QUANTITY, UNIT & STORAGE */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-emerald-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  3. Stock Quantity, Unit & Location
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Total Quantity *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.totalQuantity}
+                      onChange={(e) => setFormData({ ...formData, totalQuantity: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-extrabold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Unit of Measure (UOM)</label>
+                    <select
+                      value={formData.uom}
+                      onChange={(e) => setFormData({ ...formData, uom: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="Nos">Nos (Numbers)</option>
+                      <option value="Pcs">Pcs (Pieces)</option>
+                      <option value="Mtr">Mtr (Meters)</option>
+                      <option value="Set">Set</option>
+                      <option value="Box">Box</option>
+                      <option value="Pair">Pair</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Year of Purchase</label>
+                    <input
+                      type="text"
+                      value={formData.yearOfPurchase}
+                      onChange={(e) => setFormData({ ...formData, yearOfPurchase: e.target.value })}
+                      placeholder="e.g. 2026 / 2023 / Na"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Storage Location / Warehouse</label>
+                    <input
+                      type="text"
+                      value={formData.location}
+                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                      placeholder="e.g. Central Warehouse / Delhi Warehouse"
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: OPERATIONAL STATUS & OWNERSHIP */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-amber-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  4. Department, Ownership & Faulty Flag
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Department / Usage</label>
+                    <select
+                      value={formData.inventoryUsageType}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          inventoryUsageType: e.target.value,
+                          inventoryCategory: e.target.value === 'PRODUCTION' ? 'Production' : 'Technical',
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-semibold focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="TECHNICAL">TECHNICAL</option>
+                      <option value="PRODUCTION">PRODUCTION</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Source</label>
+                    <select
+                      value={formData.inventorySource}
+                      onChange={(e) => setFormData({ ...formData, inventorySource: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="Owned">Owned</option>
+                      <option value="Rental">Rental</option>
+                      <option value="Purchased">Purchased</option>
+                      <option value="Transferred">Transferred</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Ownership Type</label>
+                    <select
+                      value={formData.ownershipType}
+                      onChange={(e) => setFormData({ ...formData, ownershipType: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="SAF">SAF (Internal)</option>
+                      <option value="Sponsor">Sponsor</option>
+                      <option value="Vendor">Vendor</option>
+                      <option value="Loaned">Loaned</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Item Condition</label>
+                    <select
+                      value={formData.condition}
+                      onChange={(e) => setFormData({ ...formData, condition: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="OK">OK / Operational</option>
+                      <option value="Good">Good Condition</option>
+                      <option value="Fair">Fair / Minor Wear</option>
+                      <option value="Damaged">Damaged</option>
+                      <option value="Faulty (Red Flagged)">Faulty (Red Flagged)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Faulty Status Flag</label>
+                    <label className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-rose-300 cursor-pointer hover:border-rose-500 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={formData.isFaulty}
+                        onChange={(e) => setFormData({ ...formData, isFaulty: e.target.checked })}
+                        className="accent-rose-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="font-bold text-[11px]">Red Flagged (Faulty)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 5: REMARKS & NOTES */}
               <div>
-                <label className="text-slate-400 block mb-1">SAF Code *</label>
-                <input
-                  type="text"
-                  value={formData.safCode}
-                  onChange={(e) => setFormData({ ...formData, safCode: e.target.value })}
-                  placeholder="e.g. PRD-0001 or Ac-15"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
+                <label className="text-slate-300 block font-bold mb-1">Remarks & Operational Notes</label>
+                <textarea
+                  rows={2}
+                  value={formData.remarks}
+                  onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
+                  placeholder="Additional remarks, power specifications, or maintenance notes..."
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
                 />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Element Name *</label>
-                <input
-                  type="text"
-                  value={formData.element}
-                  onChange={(e) => setFormData({ ...formData, element: e.target.value })}
-                  placeholder="e.g. Easel Stand or Light Box"
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Total Quantity *</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.totalQuantity}
-                  onChange={(e) => setFormData({ ...formData, totalQuantity: parseInt(e.target.value) || 0 })}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-bold"
-                />
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Usage Type / Department</label>
-                <select
-                  value={formData.inventoryUsageType}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      inventoryUsageType: e.target.value,
-                      inventoryCategory: e.target.value === 'PRODUCTION' ? 'Production' : 'Technical',
-                    })
-                  }
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 font-medium"
-                >
-                  <option value="PRODUCTION">PRODUCTION</option>
-                  <option value="TECHNICAL">TECHNICAL</option>
-                  <option value="OTHER">OTHER</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-slate-400 block mb-1">Mark as Faulty / Red Flagged?</label>
-                <label className="flex items-center gap-2 bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-rose-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={formData.isFaulty}
-                    onChange={(e) => setFormData({ ...formData, isFaulty: e.target.checked })}
-                    className="accent-rose-500"
-                  />
-                  <span className="font-bold">Faulty (Red Flagged)</span>
-                </label>
               </div>
             </div>
 
@@ -1223,9 +1594,303 @@ export default function InventoryPage() {
               </button>
               <button
                 onClick={handleAddItem}
-                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all"
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
               >
-                Save Inventory Item
+                Save New Product
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: EDIT EXISTING PRODUCT (FOR SUPER ADMIN & INVENTORY MANAGER) */}
+      {editModalOpen && editingItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 w-full max-w-3xl rounded-2xl p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div>
+                <h3 className="text-base font-extrabold text-slate-100 flex items-center gap-2">
+                  <Edit3 className="w-5 h-5 text-amber-400" /> Edit Product: {editingItem.element}
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Restricted to <span className="text-amber-400 font-bold">Super Admin</span> & <span className="text-sky-400 font-bold">Inventory Manager</span>. Modify product specifications and stock status.
+                </p>
+              </div>
+              <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* SECTION 1: CORE PRODUCT IDENTIFICATION */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-sky-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  1. Core Product Identification
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">SAF Code *</label>
+                    <input
+                      type="text"
+                      value={editFormData.safCode}
+                      onChange={(e) => setEditFormData({ ...editFormData, safCode: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono font-bold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Element / Product Name *</label>
+                    <input
+                      type="text"
+                      value={editFormData.element}
+                      onChange={(e) => setEditFormData({ ...editFormData, element: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-bold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Category</label>
+                    <input
+                      type="text"
+                      value={editFormData.inventoryCategory}
+                      onChange={(e) => setEditFormData({ ...editFormData, inventoryCategory: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Sub Category</label>
+                    <input
+                      type="text"
+                      value={editFormData.subCategory}
+                      onChange={(e) => setEditFormData({ ...editFormData, subCategory: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 2: TECHNICAL & PHYSICAL SPECIFICATIONS */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-indigo-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  2. Technical & Physical Specifications
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-slate-300 block mb-1">Brand / Project</label>
+                    <input
+                      type="text"
+                      value={editFormData.brandProject}
+                      onChange={(e) => setEditFormData({ ...editFormData, brandProject: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Model</label>
+                    <input
+                      type="text"
+                      value={editFormData.model}
+                      onChange={(e) => setEditFormData({ ...editFormData, model: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Serial Number</label>
+                    <input
+                      type="text"
+                      value={editFormData.serialNo}
+                      onChange={(e) => setEditFormData({ ...editFormData, serialNo: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-mono focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Size (LxWxH)</label>
+                    <input
+                      type="text"
+                      value={editFormData.sizeLwh}
+                      onChange={(e) => setEditFormData({ ...editFormData, sizeLwh: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Throw Ratio</label>
+                    <input
+                      type="text"
+                      value={editFormData.throwRatio}
+                      onChange={(e) => setEditFormData({ ...editFormData, throwRatio: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 3: QUANTITY, UNIT & STORAGE */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-emerald-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  3. Stock Quantity, Unit & Location
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Total Quantity *</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editFormData.totalQuantity}
+                      onChange={(e) => setEditFormData({ ...editFormData, totalQuantity: parseInt(e.target.value) || 0 })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-extrabold focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Unit of Measure (UOM)</label>
+                    <select
+                      value={editFormData.uom}
+                      onChange={(e) => setEditFormData({ ...editFormData, uom: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="Nos">Nos (Numbers)</option>
+                      <option value="Pcs">Pcs (Pieces)</option>
+                      <option value="Mtr">Mtr (Meters)</option>
+                      <option value="Set">Set</option>
+                      <option value="Box">Box</option>
+                      <option value="Pair">Pair</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Year of Purchase</label>
+                    <input
+                      type="text"
+                      value={editFormData.yearOfPurchase}
+                      onChange={(e) => setEditFormData({ ...editFormData, yearOfPurchase: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Storage Location / Warehouse</label>
+                    <input
+                      type="text"
+                      value={editFormData.location}
+                      onChange={(e) => setEditFormData({ ...editFormData, location: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 4: OPERATIONAL STATUS & OWNERSHIP */}
+              <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                <span className="text-[11px] font-extrabold uppercase text-amber-400 tracking-wider block border-b border-slate-800 pb-1.5">
+                  4. Department, Ownership & Faulty Flag
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1">Department / Usage</label>
+                    <select
+                      value={editFormData.inventoryUsageType}
+                      onChange={(e) =>
+                        setEditFormData({
+                          ...editFormData,
+                          inventoryUsageType: e.target.value,
+                          inventoryCategory: e.target.value === 'PRODUCTION' ? 'Production' : 'Technical',
+                        })
+                      }
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-semibold focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="TECHNICAL">TECHNICAL</option>
+                      <option value="PRODUCTION">PRODUCTION</option>
+                      <option value="OTHER">OTHER</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Source</label>
+                    <select
+                      value={editFormData.inventorySource}
+                      onChange={(e) => setEditFormData({ ...editFormData, inventorySource: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="Owned">Owned</option>
+                      <option value="Rental">Rental</option>
+                      <option value="Purchased">Purchased</option>
+                      <option value="Transferred">Transferred</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Ownership Type</label>
+                    <select
+                      value={editFormData.ownershipType}
+                      onChange={(e) => setEditFormData({ ...editFormData, ownershipType: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="SAF">SAF (Internal)</option>
+                      <option value="Sponsor">Sponsor</option>
+                      <option value="Vendor">Vendor</option>
+                      <option value="Loaned">Loaned</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Item Condition</label>
+                    <select
+                      value={editFormData.condition}
+                      onChange={(e) => setEditFormData({ ...editFormData, condition: e.target.value })}
+                      className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-slate-100 font-medium focus:border-sky-500 focus:outline-none"
+                    >
+                      <option value="OK">OK / Operational</option>
+                      <option value="Good">Good Condition</option>
+                      <option value="Fair">Fair / Minor Wear</option>
+                      <option value="Damaged">Damaged</option>
+                      <option value="Faulty (Red Flagged)">Faulty (Red Flagged)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-slate-300 block mb-1">Faulty Status Flag</label>
+                    <label className="flex items-center gap-2 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-rose-300 cursor-pointer hover:border-rose-500 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={editFormData.isFaulty}
+                        onChange={(e) => setEditFormData({ ...editFormData, isFaulty: e.target.checked })}
+                        className="accent-rose-500 w-4 h-4 cursor-pointer"
+                      />
+                      <span className="font-bold text-[11px]">Red Flagged (Faulty)</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION 5: REMARKS & NOTES */}
+              <div>
+                <label className="text-slate-300 block font-bold mb-1">Remarks & Operational Notes</label>
+                <textarea
+                  rows={2}
+                  value={editFormData.remarks}
+                  onChange={(e) => setEditFormData({ ...editFormData, remarks: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+              <button
+                onClick={() => setEditModalOpen(false)}
+                className="px-4 py-2 text-xs font-semibold text-slate-400 hover:text-white"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmEditItem}
+                disabled={isSubmittingEdit}
+                className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-5 py-2.5 rounded-xl transition-all shadow-lg shadow-amber-500/20 cursor-pointer disabled:opacity-50"
+              >
+                {isSubmittingEdit ? 'Saving Changes...' : 'Update Product Details'}
               </button>
             </div>
           </div>
