@@ -1154,7 +1154,7 @@ export default function DashboardPage() {
       )}
 
       {/* SECTION 1: DYNAMIC REORDERABLE STAT TILES */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3.5 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-5">
         {statOrder
           .filter((key) => !hiddenCards.includes(key))
           .map((tileKey, index) => (
@@ -1166,7 +1166,7 @@ export default function DashboardPage() {
               onDragLeave={handleDragLeave}
               onDrop={(e) => handleDrop(e, 'stat', tileKey, index)}
               onDragEnd={handleDragEnd}
-              className={`relative group p-5 rounded-3xl bg-[#232334] border transition-all flex flex-col justify-between ${
+              className={`relative group p-3.5 sm:p-5 rounded-3xl bg-[#232334] border transition-all flex flex-col justify-between ${
                 isCustomizing
                   ? 'border-[#38bdf8]/40 ring-2 ring-[#38bdf8]/20 cursor-grab active:cursor-grabbing shadow-lg'
                   : 'border-white/5 hover:border-[#8b5cf6]/40 shadow-xl'
