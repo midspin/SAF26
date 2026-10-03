@@ -1,4 +1,6 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useRef, useId } from 'react';
 
 interface WeaveLogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -8,6 +10,30 @@ interface WeaveLogoProps {
   className?: string;
 }
 
+const SPHERE_PATHS = [
+  "M361.604 361.238c-24.407 24.408-51.119 37.27-59.662 28.727-8.542-8.543 4.319-35.255 28.726-59.663 24.408-24.407 51.12-37.269 59.663-28.726 8.542 8.543-4.319 35.255-28.727 59.662z",
+  "M360.72 360.354c-35.879 35.88-75.254 54.677-87.946 41.985-12.692-12.692 6.105-52.067 41.985-87.947 35.879-35.879 75.254-54.676 87.946-41.984 12.692 12.692-6.105 52.067-41.984 87.946z",
+  "M357.185 356.819c-44.91 44.91-94.376 68.258-110.485 52.149-16.11-16.11 7.238-65.575 52.149-110.485 44.91-44.91 94.376-68.259 110.485-52.15 16.11 16.11-7.239 65.576-52.149 110.486z",
+  "M350.998 350.632c-53.21 53.209-111.579 81.107-130.373 62.313-18.794-18.793 9.105-77.163 62.314-130.372 53.209-53.21 111.579-81.108 130.373-62.314 18.794 18.794-9.105 77.164-62.314 130.373z",
+  "M343.043 342.677c-59.8 59.799-125.292 91.26-146.283 70.268-20.99-20.99 10.47-86.483 70.269-146.282 59.799-59.8 125.292-91.26 146.283-70.269 20.99 20.99-10.47 86.484-70.27 146.283z",
+  "M334.646 334.28c-65.169 65.169-136.697 99.3-159.762 76.235-23.065-23.066 11.066-94.593 76.235-159.762s136.697-99.3 159.762-76.235c23.065 23.065-11.066 94.593-76.235 159.762z",
+  "M324.923 324.557c-69.806 69.806-146.38 106.411-171.031 81.76-24.652-24.652 11.953-101.226 81.759-171.032 69.806-69.806 146.38-106.411 171.031-81.76 24.652 24.653-11.953 101.226-81.759 171.032z",
+  "M312.99 312.625c-73.222 73.223-153.555 111.609-179.428 85.736-25.872-25.872 12.514-106.205 85.737-179.428s153.556-111.609 179.429-85.737c25.872 25.873-12.514 106.205-85.737 179.429z",
+  "M300.175 299.808c-75.909 75.909-159.11 115.778-185.837 89.052-26.726-26.727 13.143-109.929 89.051-185.837 75.908-75.908 159.11-115.778 185.837-89.051 26.726 26.726-13.143 109.928-89.051 185.836z",
+  "M284.707 284.34c-77.617 77.617-162.303 118.773-189.152 91.924-26.848-26.848 14.308-111.534 91.924-189.15C265.096 109.496 349.782 68.34 376.63 95.188c26.849 26.849-14.307 111.535-91.923 189.151z",
+  "M269.239 267.989c-78.105 78.104-163.187 119.656-190.035 92.807-26.849-26.848 14.703-111.93 92.807-190.035 78.105-78.104 163.187-119.656 190.035-92.807 26.849 26.848-14.703 111.93-92.807 190.035z",
+  "M252.887 252.52C175.27 330.138 90.584 371.294 63.736 344.446 36.887 317.596 78.043 232.91 155.66 155.293 233.276 77.677 317.962 36.521 344.81 63.37c26.85 26.848-14.307 111.534-91.923 189.15z",
+  "M236.977 236.61C161.069 312.52 77.867 352.389 51.14 325.663c-26.726-26.727 13.143-109.928 89.052-185.837 75.908-75.908 159.11-115.777 185.836-89.05 26.727 26.726-13.143 109.928-89.051 185.836z",
+  "M221.067 220.7C147.844 293.925 67.51 332.31 41.639 306.439c-25.873-25.873 12.513-106.206 85.736-179.429C200.6 53.786 280.931 15.4 306.804 41.272c25.872 25.873-12.514 106.206-85.737 179.429z",
+  "M205.157 204.79c-69.806 69.807-146.38 106.412-171.031 81.76-24.652-24.652 11.953-101.225 81.759-171.031 69.806-69.807 146.38-106.411 171.031-81.76 24.652 24.652-11.953 101.226-81.759 171.032z",
+  "M189.247 188.881c-65.169 65.169-136.696 99.3-159.762 76.235-23.065-23.065 11.066-94.593 76.235-159.762s136.697-99.3 159.762-76.235c23.065 23.065-11.066 94.593-76.235 159.762z",
+  "M173.337 172.971c-59.799 59.8-125.292 91.26-146.282 70.269-20.991-20.99 10.47-86.484 70.268-146.283 59.8-59.799 125.292-91.26 146.283-70.269 20.99 20.991-10.47 86.484-70.269 146.283z",
+  "M157.427 157.061c-53.209 53.21-111.578 81.108-130.372 62.314-18.794-18.794 9.104-77.164 62.313-130.373 53.21-53.209 111.58-81.108 130.373-62.314 18.794 18.794-9.105 77.164-62.314 130.373z",
+  "M141.517 141.151c-44.91 44.91-94.376 68.259-110.485 52.15-16.11-16.11 7.239-65.576 52.15-110.486 44.91-44.91 94.375-68.258 110.485-52.15 16.109 16.11-7.24 65.576-52.15 110.486z",
+  "M125.608 125.241c-35.88 35.88-75.255 54.677-87.947 41.985-12.692-12.692 6.105-52.067 41.985-87.947C115.525 43.4 154.9 24.603 167.592 37.295c12.692 12.692-6.105 52.067-41.984 87.946z",
+  "M109.698 109.332c-24.408 24.407-51.12 37.268-59.663 28.726-8.542-8.543 4.319-35.255 28.727-59.662 24.407-24.408 51.12-37.27 59.662-28.727 8.543 8.543-4.319 35.255-28.726 59.663z",
+];
+
 export default function WeaveLogo({
   size = 'md',
   showTagline = true,
@@ -15,7 +41,45 @@ export default function WeaveLogo({
   layout = 'horizontal',
   className = '',
 }: WeaveLogoProps) {
-  const heightClass =
+  const pathRefs = useRef<(SVGPathElement | null)[]>([]);
+  const animFrameRef = useRef<number | null>(null);
+  const rawGradId = useId();
+  const gradientId = `sphereGrad_${rawGradId.replace(/:/g, '_')}`;
+
+  useEffect(() => {
+    let startTime = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - startTime;
+      pathRefs.current.forEach((path, i) => {
+        if (!path) return;
+        // Breathing scale loop per path with phase delay (Julian Garnier math)
+        const percent = (1 - Math.sin(i * 0.35 + 0.0022 * elapsed)) / 2;
+        const scale = 1 + percent * 0.26;
+        path.style.transform = `scale(${scale})`;
+        path.style.transformOrigin = '220px 220px';
+      });
+      animFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, []);
+
+  // Dimensions matching PNG height exactly
+  const sphereSizeClass =
+    size === 'sm'
+      ? 'w-8 h-8'
+      : size === 'xl'
+      ? 'w-20 h-20'
+      : size === 'lg'
+      ? 'w-14 h-14'
+      : 'w-11 h-11';
+
+  const pngHeightClass =
     size === 'sm'
       ? 'h-8 max-w-[150px]'
       : size === 'xl'
@@ -25,13 +89,50 @@ export default function WeaveLogo({
       : 'h-11 max-w-[190px]';
 
   return (
-    <div className={`inline-flex items-center justify-center group select-none ${className}`}>
+    <div className={`inline-flex items-center gap-2.5 group select-none ${className}`}>
+      {/* 3D Animated Sphere SVG Logo */}
+      <div className={`relative ${sphereSizeClass} shrink-0 flex items-center justify-center`}>
+        <svg
+          className="w-full h-full drop-shadow-[0_0_12px_rgba(168,85,247,0.5)] transition-transform duration-300 group-hover:scale-110"
+          viewBox="0 0 440 440"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <linearGradient id={gradientId} x1="5%" y1="0%" x2="95%" y2="100%">
+              <stop offset="0%" stopColor="#a855f7" />
+              <stop offset="50%" stopColor="#6366f1" />
+              <stop offset="100%" stopColor="#38bdf8" />
+            </linearGradient>
+          </defs>
+          {SPHERE_PATHS.map((d, i) => (
+            <path
+              key={i}
+              ref={(el) => {
+                pathRefs.current[i] = el;
+              }}
+              d={d}
+              fill={`url(#${gradientId})`}
+              fillOpacity={0.85}
+              stroke="rgba(255, 255, 255, 0.4)"
+              strokeWidth="0.8px"
+              style={{
+                transformOrigin: '220px 220px',
+                transition: 'stroke 0.3s ease',
+              }}
+            />
+          ))}
+        </svg>
+      </div>
+
+      {/* WEAVE Brand PNG Logo Image */}
       <img
         src="/weave-logo.png"
         alt="WEAVE - People. Tasks. Resources. Connected."
-        className={`${heightClass} w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_12px_rgba(255,255,255,0.08)]`}
+        className={`${pngHeightClass} w-auto object-contain transition-transform duration-300 group-hover:scale-105 drop-shadow-[0_2px_12px_rgba(255,255,255,0.08)]`}
       />
     </div>
   );
 }
+
 
