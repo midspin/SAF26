@@ -22,9 +22,62 @@ import {
   Volume2,
   Tv,
   Film,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  SlidersHorizontal,
+  Check,
+  Move,
+  LayoutGrid,
 } from 'lucide-react';
 import AnimatedNumber from '@/components/AnimatedNumber';
 
+// Default Layout Order Keys
+const DEFAULT_STAT_TILES = [
+  'total_artists',
+  'total_artworks',
+  'tech_inventory',
+  'projector_pool',
+  'yamaha_speakers',
+  'media_players',
+];
+
+const DEFAULT_CARDS = [
+  'card_projectors',
+  'card_audio_media',
+  'card_equipment_allotment',
+  'card_allocation_graph',
+  'card_artwork_distribution',
+];
+
+// Card column spans in 12-column grid
+const CARD_COL_SPANS: Record<string, string> = {
+  card_projectors: 'lg:col-span-4',
+  card_audio_media: 'lg:col-span-4',
+  card_equipment_allotment: 'lg:col-span-4',
+  card_allocation_graph: 'lg:col-span-7',
+  card_artwork_distribution: 'lg:col-span-5',
+};
+
+// Card Human Readable Labels for Layout Manager
+const CARD_NAMES: Record<string, string> = {
+  total_artists: 'Total Artist Count Tile',
+  total_artworks: 'Total Artwork Tile',
+  tech_inventory: 'Total Tech Inventory Tile',
+  projector_pool: 'Projector Pool Tile',
+  yamaha_speakers: 'Yamaha Speakers Tile',
+  media_players: 'Media Players Tile',
+  card_projectors: 'Projectors: Brand & Models Breakdown',
+  card_audio_media: 'Audio Speakers & Media Players Breakdown',
+  card_equipment_allotment: 'Equipment Allotment Graph',
+  card_allocation_graph: 'Technical Equipment Allocation Donut Graph',
+  card_artwork_distribution: 'Artwork Spatial Distribution Graph',
+};
 
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -32,6 +85,16 @@ export default function DashboardPage() {
   // User & Role State
   const [activeRole, setActiveRole] = useState<string>('SUPER ADMIN');
   const [userBaseRole, setUserBaseRole] = useState<string>('SUPER ADMIN');
+
+  // Customizable Layout State
+  const [isCustomizing, setIsCustomizing] = useState(false);
+  const [statOrder, setStatOrder] = useState<string[]>(DEFAULT_STAT_TILES);
+  const [cardOrder, setCardOrder] = useState<string[]>(DEFAULT_CARDS);
+  const [hiddenCards, setHiddenCards] = useState<string[]>([]);
+
+  // Drag & Drop State
+  const [draggedItem, setDraggedItem] = useState<{ type: 'stat' | 'card'; key: string; index: number } | null>(null);
+  const [dragOverItem, setDragOverItem] = useState<{ type: 'stat' | 'card'; key: string; index: number } | null>(null);
 
   // Core Data States
   const [artists, setArtists] = useState<any[]>([]);
@@ -59,25 +122,50 @@ export default function DashboardPage() {
     balanceMediaPlayers: 0,
   });
 
-  // Detailed Projectors Breakdown (Brand, Model, Total, Allocated, Balance)
+  // Detailed Projectors Breakdown
   const [projectorsList, setProjectorsList] = useState<
     { brand: string; model: string; element: string; total: number; allocated: number; balance: number }[]
   >([]);
 
-  // Detailed Yamaha Speakers Breakdown (HS5, HS8, HS8S)
+  // Detailed Yamaha Speakers Breakdown
   const [speakersBreakdown, setSpeakersBreakdown] = useState({
     hs5: { model: 'Yamaha HS5 (5" Active Monitor)', total: 0, allocated: 0, balance: 0 },
     hs8: { model: 'Yamaha HS8 (8" Studio Monitor)', total: 0, allocated: 0, balance: 0 },
     hs8s: { model: 'Yamaha HS8S (150W Subwoofer)', total: 0, allocated: 0, balance: 0 },
   });
 
-  // Detailed Media Players Breakdown (Dynamic Brand, Model, Element, Total, Allocated, Balance from DB)
+  // Detailed Media Players Breakdown
   const [mediaPlayersList, setMediaPlayersList] = useState<
     { brand: string; model: string; element: string; badge: string; total: number; allocated: number; balance: number }[]
   >([]);
 
   // Venue & Artwork Distribution Stats for Graph
   const [venueDistribution, setVenueDistribution] = useState<{ name: string; artworkCount: number }[]>([]);
+
+  // 1. Sync Layout Preferences from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedStatOrder = localStorage.getItem('saf_dashboard_stat_order');
+        if (savedStatOrder) {
+          const parsed = JSON.parse(savedStatOrder);
+          if (Array.isArray(parsed) && parsed.length > 0) setStatOrder(parsed);
+        }
+        const savedCardOrder = localStorage.getItem('saf_dashboard_card_order');
+        if (savedCardOrder) {
+          const parsed = JSON.parse(savedCardOrder);
+          if (Array.isArray(parsed) && parsed.length > 0) setCardOrder(parsed);
+        }
+        const savedHiddenCards = localStorage.getItem('saf_dashboard_hidden_cards');
+        if (savedHiddenCards) {
+          const parsed = JSON.parse(savedHiddenCards);
+          if (Array.isArray(parsed)) setHiddenCards(parsed);
+        }
+      } catch (e) {
+        console.error('Failed to load saved dashboard layout', e);
+      }
+    }
+  }, []);
 
   // Sync user role from local storage / header events
   useEffect(() => {
@@ -114,6 +202,114 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
   }, []);
+
+  // Save Layout Handlers
+  const saveStatOrder = (newOrder: string[]) => {
+    setStatOrder(newOrder);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('saf_dashboard_stat_order', JSON.stringify(newOrder));
+    }
+  };
+
+  const saveCardOrder = (newOrder: string[]) => {
+    setCardOrder(newOrder);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('saf_dashboard_card_order', JSON.stringify(newOrder));
+    }
+  };
+
+  const saveHiddenCards = (newHidden: string[]) => {
+    setHiddenCards(newHidden);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('saf_dashboard_hidden_cards', JSON.stringify(newHidden));
+    }
+  };
+
+  const resetDashboardLayout = () => {
+    saveStatOrder(DEFAULT_STAT_TILES);
+    saveCardOrder(DEFAULT_CARDS);
+    saveHiddenCards([]);
+  };
+
+  // Reorder Stat Tiles by Move Controls
+  const moveStatTile = (index: number, direction: 'left' | 'right') => {
+    const targetIndex = direction === 'left' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= statOrder.length) return;
+    const newOrder = [...statOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+    saveStatOrder(newOrder);
+  };
+
+  // Reorder Main Cards by Move Controls
+  const moveMainCard = (index: number, direction: 'up' | 'down') => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= cardOrder.length) return;
+    const newOrder = [...cardOrder];
+    const [moved] = newOrder.splice(index, 1);
+    newOrder.splice(targetIndex, 0, moved);
+    saveCardOrder(newOrder);
+  };
+
+  // Toggle Visibility
+  const toggleCardVisibility = (key: string) => {
+    if (hiddenCards.includes(key)) {
+      saveHiddenCards(hiddenCards.filter((k) => k !== key));
+    } else {
+      saveHiddenCards([...hiddenCards, key]);
+    }
+  };
+
+  // HTML5 Drag & Drop Handlers
+  const handleDragStart = (e: React.DragEvent, type: 'stat' | 'card', key: string, index: number) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify({ type, key, index }));
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedItem({ type, key, index });
+  };
+
+  const handleDragOver = (e: React.DragEvent, type: 'stat' | 'card', key: string, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (draggedItem && draggedItem.type === type && draggedItem.index !== index) {
+      setDragOverItem({ type, key, index });
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverItem(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetType: 'stat' | 'card', targetKey: string, targetIndex: number) => {
+    e.preventDefault();
+    setDragOverItem(null);
+    setDraggedItem(null);
+
+    try {
+      const rawData = e.dataTransfer.getData('text/plain');
+      if (!rawData) return;
+      const data = JSON.parse(rawData);
+      if (data.type !== targetType) return;
+
+      if (targetType === 'stat') {
+        const newOrder = [...statOrder];
+        const [moved] = newOrder.splice(data.index, 1);
+        newOrder.splice(targetIndex, 0, moved);
+        saveStatOrder(newOrder);
+      } else {
+        const newOrder = [...cardOrder];
+        const [moved] = newOrder.splice(data.index, 1);
+        newOrder.splice(targetIndex, 0, moved);
+        saveCardOrder(newOrder);
+      }
+    } catch (err) {
+      console.error('Drop error:', err);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedItem(null);
+    setDragOverItem(null);
+  };
 
   const fetchDashboardData = async () => {
     setLoading(true);
@@ -230,7 +426,7 @@ export default function DashboardPage() {
       const allocHSSpeakersCount = hsMap.hs5.allocated + hsMap.hs8.allocated + hsMap.hs8s.allocated;
       const balHSSpeakersCount = hsMap.hs5.balance + hsMap.hs8.balance + hsMap.hs8s.balance;
 
-      // 6. Calculate Media Players (BrightSign & Cubetech) Count & Balance dynamically from DB
+      // 6. Calculate Media Players (BrightSign & Cubetech) Count & Balance
       const mediaPlayerItems = items.filter((i: any) => {
         const text = `${i.element || ''} ${i.inventoryCategory || ''} ${i.subCategory || ''} ${i.brandProject || ''} ${i.model || ''}`.toLowerCase();
         return text.includes('brightsign') || text.includes('cubetech');
@@ -263,9 +459,7 @@ export default function DashboardPage() {
           ? item.element
           : `${brand} ${model} Media Player`;
 
-        // Badge is strictly model name without BS- prefix (e.g. HD5, XD5, LS3, LS5)
         let badge = model.toUpperCase();
-
         const key = `${brand}-${model}`;
 
         const tot = item.totalQuantity || 0;
@@ -304,7 +498,7 @@ export default function DashboardPage() {
       });
       setVenueDistribution(vDist);
 
-      // Set Master Stats accurately reflecting actual database counts (0 when empty)
+      // Set Master Stats
       setStats({
         totalArtists: artistList.length,
         confirmedArtists: confirmedCount,
@@ -330,170 +524,152 @@ export default function DashboardPage() {
     }
   };
 
-  return (
-    <div className="space-y-8 pb-12 select-none">
-      {/* DASHBOARD HEADER TITLE & REFRESH */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
-        <div>
-          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> Super Admin Dashboard
-          </h1>
-          <p className="text-xs text-[#8a8d9b] mt-0.5">
-            Master operations monitoring center — Artists, Artworks, Tech Inventory, Projectors, Yamaha Speakers & Media Players.
-          </p>
-        </div>
-
-        <button
-          onClick={fetchDashboardData}
-          className="bg-[#232334] hover:bg-[#2c2c40] text-[#38bdf8] border border-white/10 text-xs font-extrabold px-4 py-2 rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Live Metrics
-        </button>
-      </div>
-
-      {/* SECTION 1: STAT CARDS & TILES (DIRECTLY FROM DATABASE) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-        
-        {/* TILE 1: TOTAL ARTIST COUNT */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#8b5cf6]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Artist Count</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
-              <Users className="w-4.5 h-4.5" />
+  // Render Functions for Stat Tiles
+  const renderStatTileContent = (key: string) => {
+    switch (key) {
+      case 'total_artists':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Artist Count</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#8b5cf6]/10 border border-[#8b5cf6]/20 flex items-center justify-center text-[#8b5cf6]">
+                <Users className="w-4.5 h-4.5" />
+              </div>
             </div>
-          </div>
-
-          <div className="my-4">
-            <AnimatedNumber value={stats.totalArtists} className="text-4xl font-black text-white" />
-            <p className="text-xs font-extrabold text-[#8b5cf6] tracking-tight mt-0.5">Registered Artists</p>
-          </div>
-
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Confirmed:</span>
-            <span className="font-extrabold text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-md border border-[#10b981]/20">
-              <AnimatedNumber value={stats.confirmedArtists} suffix=" Active" />
-            </span>
-          </div>
-        </div>
-
-        {/* TILE 2: TOTAL ARTWORK COUNT */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#a855f7]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Artwork</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7]">
-              <Palette className="w-4.5 h-4.5" />
+            <div className="my-4">
+              <AnimatedNumber value={stats.totalArtists} className="text-4xl font-black text-white" />
+              <p className="text-xs font-extrabold text-[#8b5cf6] tracking-tight mt-0.5">Registered Artists</p>
             </div>
-          </div>
-
-          <div className="my-4">
-            <AnimatedNumber value={stats.totalArtworks} className="text-4xl font-black text-white" />
-            <p className="text-xs font-extrabold text-[#a855f7] tracking-tight mt-0.5">Cataloged Artworks</p>
-          </div>
-
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Venue Assigned:</span>
-            <span className="font-extrabold text-white">
-              <AnimatedNumber value={stats.assignedArtworks} suffix=" Space Allocated" />
-            </span>
-          </div>
-        </div>
-
-        {/* TILE 3: TOTAL TECHNICAL INVENTORY COUNT */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#38bdf8]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Tech Inventory</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8]">
-              <Wrench className="w-4.5 h-4.5" />
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Confirmed:</span>
+              <span className="font-extrabold text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-md border border-[#10b981]/20">
+                <AnimatedNumber value={stats.confirmedArtists} suffix=" Active" />
+              </span>
             </div>
-          </div>
+          </>
+        );
 
-          <div className="my-4">
-            <AnimatedNumber value={stats.totalTechnicalInventory} className="text-4xl font-black text-[#38bdf8]" />
-            <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Technical Units</p>
-          </div>
-
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedTechnicalInventory} /></strong></span>
-            <span>Balance: <strong className="text-[#10b981]"><AnimatedNumber value={stats.availableTechnicalInventory} /></strong></span>
-          </div>
-        </div>
-
-        {/* TILE 4: PROJECTOR COUNT & BALANCE */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#f97316]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Projector Pool</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316]">
-              <Camera className="w-4.5 h-4.5" />
+      case 'total_artworks':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Artwork</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7]">
+                <Palette className="w-4.5 h-4.5" />
+              </div>
             </div>
-          </div>
-
-          <div className="my-4">
-            <div className="flex items-baseline gap-2">
-              <AnimatedNumber value={stats.totalProjectors} className="text-4xl font-black text-white" />
-              <span className="text-xs font-extrabold text-[#f97316] uppercase">Units</span>
+            <div className="my-4">
+              <AnimatedNumber value={stats.totalArtworks} className="text-4xl font-black text-white" />
+              <p className="text-xs font-extrabold text-[#a855f7] tracking-tight mt-0.5">Cataloged Artworks</p>
             </div>
-            <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Projectors</p>
-          </div>
-
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedProjectors} /></strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceProjectors} /></strong></span>
-          </div>
-        </div>
-
-        {/* TILE 5: YAMAHA HS SPEAKERS COUNT & BALANCE */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#10b981]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Yamaha HS Speakers</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981]">
-              <Volume2 className="w-4.5 h-4.5" />
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Venue Assigned:</span>
+              <span className="font-extrabold text-white">
+                <AnimatedNumber value={stats.assignedArtworks} suffix=" Space Allocated" />
+              </span>
             </div>
-          </div>
+          </>
+        );
 
-          <div className="my-4">
-            <div className="flex items-baseline gap-2">
-              <AnimatedNumber value={stats.totalHSSpeakers} className="text-4xl font-black text-[#10b981]" />
-              <span className="text-xs font-extrabold text-[#10b981] uppercase">Units</span>
+      case 'tech_inventory':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Total Tech Inventory</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8]">
+                <Wrench className="w-4.5 h-4.5" />
+              </div>
             </div>
-            <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">HS5, HS8, HS8S Speakers</p>
-          </div>
-
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedHSSpeakers} /></strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceHSSpeakers} /></strong></span>
-          </div>
-        </div>
-
-        {/* TILE 6: MEDIA PLAYERS COUNT & BALANCE (BRIGHTSIGN & CUBETECH) */}
-        <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl hover:border-[#38bdf8]/40 transition-all flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Media Players</span>
-            <div className="w-9 h-9 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8]">
-              <Tv className="w-4.5 h-4.5" />
+            <div className="my-4">
+              <AnimatedNumber value={stats.totalTechnicalInventory} className="text-4xl font-black text-[#38bdf8]" />
+              <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Technical Units</p>
             </div>
-          </div>
-
-          <div className="my-4">
-            <div className="flex items-baseline gap-2">
-              <AnimatedNumber value={stats.totalMediaPlayers} className="text-4xl font-black text-[#38bdf8]" />
-              <span className="text-xs font-extrabold text-[#38bdf8] uppercase">Units</span>
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedTechnicalInventory} /></strong></span>
+              <span>Balance: <strong className="text-[#10b981]"><AnimatedNumber value={stats.availableTechnicalInventory} /></strong></span>
             </div>
-            <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">BrightSign & Cubetech</p>
-          </div>
+          </>
+        );
 
-          <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
-            <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedMediaPlayers} /></strong></span>
-            <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceMediaPlayers} /></strong></span>
-          </div>
-        </div>
+      case 'projector_pool':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Projector Pool</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316]">
+                <Camera className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div className="my-4">
+              <div className="flex items-baseline gap-2">
+                <AnimatedNumber value={stats.totalProjectors} className="text-4xl font-black text-white" />
+                <span className="text-xs font-extrabold text-[#f97316] uppercase">Units</span>
+              </div>
+              <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">Total Projectors</p>
+            </div>
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedProjectors} /></strong></span>
+              <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceProjectors} /></strong></span>
+            </div>
+          </>
+        );
 
-      </div>
+      case 'yamaha_speakers':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Yamaha HS Speakers</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981]">
+                <Volume2 className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div className="my-4">
+              <div className="flex items-baseline gap-2">
+                <AnimatedNumber value={stats.totalHSSpeakers} className="text-4xl font-black text-[#10b981]" />
+                <span className="text-xs font-extrabold text-[#10b981] uppercase">Units</span>
+              </div>
+              <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">HS5, HS8, HS8S Speakers</p>
+            </div>
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedHSSpeakers} /></strong></span>
+              <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceHSSpeakers} /></strong></span>
+            </div>
+          </>
+        );
 
-      {/* SECTION 2: DETAILED BREAKDOWN TILES (PROJECTORS, YAMAHA HS SPEAKERS & MEDIA PLAYERS) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      case 'media_players':
+        return (
+          <>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-[#8a8d9b] uppercase tracking-wider">Media Players</span>
+              <div className="w-9 h-9 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8]">
+                <Tv className="w-4.5 h-4.5" />
+              </div>
+            </div>
+            <div className="my-4">
+              <div className="flex items-baseline gap-2">
+                <AnimatedNumber value={stats.totalMediaPlayers} className="text-4xl font-black text-[#38bdf8]" />
+                <span className="text-xs font-extrabold text-[#38bdf8] uppercase">Units</span>
+              </div>
+              <p className="text-xs font-extrabold text-[#8a8d9b] tracking-tight mt-0.5">BrightSign & Cubetech</p>
+            </div>
+            <div className="text-xs text-[#8a8d9b] flex items-center justify-between border-t border-white/5 pt-2.5">
+              <span>Allocated: <strong className="text-white"><AnimatedNumber value={stats.allocatedMediaPlayers} /></strong></span>
+              <span>Balance: <strong className="text-[#10b981] font-extrabold"><AnimatedNumber value={stats.balanceMediaPlayers} /></strong></span>
+            </div>
+          </>
+        );
 
-        {/* CARD 1: PROJECTORS: BRAND, MODELS & BALANCE */}
-        <div className="space-y-4">
+      default:
+        return null;
+    }
+  };
+
+  // Render Functions for Main Cards
+  const renderMainCardContent = (key: string) => {
+    switch (key) {
+      case 'card_projectors':
+        return (
           <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
@@ -556,10 +732,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        );
 
-        {/* CARD 2: COMBINED AUDIO SPEAKERS & MEDIA PLAYERS (2 SECTIONS TOP-TO-BOTTOM WITH SCROLL) */}
-        <div className="space-y-4">
+      case 'card_audio_media':
+        return (
           <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
@@ -581,9 +757,7 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              {/* Container for Audio Speakers & Media Players without scroll */}
               <div className="space-y-5">
-                
                 {/* SECTION 1: YAMAHA HS SPEAKERS */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -749,10 +923,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
-        </div>
+        );
 
-        {/* CARD 3: EQUIPMENT ALLOTMENT BY MAJOR COMPONENTS (HORIZONTAL ANIMATED BAR GRAPH) */}
-        <div className="space-y-4">
+      case 'card_equipment_allotment':
+        return (
           <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
             <div>
               <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
@@ -899,167 +1073,414 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        );
+
+      case 'card_allocation_graph':
+        return (
+          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
+                  <PieChart className="w-4.5 h-4.5 text-[#38bdf8]" /> Technical Equipment Allocation Graph
+                </h3>
+                <p className="text-[10px] text-[#8a8d9b]">Proportional allocation & available balance across inventory categories</p>
+              </div>
+
+              <span className="text-xs font-mono font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2.5 py-1 rounded-lg border border-[#38bdf8]/20">
+                <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Technical Pool Items" />
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
+              <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
+                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-xl">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                  <circle cx="50" cy="50" r="33" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                  <circle cx="50" cy="50" r="24" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                  <circle cx="50" cy="50" r="15" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+
+                  {stats.totalTechnicalInventory > 0 && (
+                    <>
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="#f97316"
+                        strokeWidth="5"
+                        strokeDasharray="263.89"
+                        strokeDashoffset={263.89 * (1 - (stats.totalProjectors / Math.max(stats.totalTechnicalInventory, 1)))}
+                        strokeLinecap="round"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="33"
+                        fill="none"
+                        stroke="#10b981"
+                        strokeWidth="5"
+                        strokeDasharray="207.34"
+                        strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
+                        strokeLinecap="round"
+                      />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        r="24"
+                        fill="none"
+                        stroke="#38bdf8"
+                        strokeWidth="5"
+                        strokeDasharray="150.79"
+                        strokeDashoffset={150.79 * (1 - (stats.totalMediaPlayers / Math.max(stats.totalTechnicalInventory, 1)))}
+                        strokeLinecap="round"
+                      />
+                    </>
+                  )}
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                  <AnimatedNumber
+                    value={
+                      stats.totalTechnicalInventory > 0
+                        ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
+                        : 0
+                    }
+                    suffix="%"
+                    className="text-2xl font-black text-white leading-none"
+                  />
+                  <span className="text-[9px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
+                </div>
+              </div>
+
+              <div className="space-y-2.5 text-xs text-[#8a8d9b] w-full sm:w-auto">
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
+                    <span className="font-semibold text-white">Projectors</span>
+                  </div>
+                  <span className="font-bold text-[#f97316]"><AnimatedNumber value={stats.totalProjectors} suffix=" units" /></span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
+                    <span className="font-semibold text-white">Yamaha HS Speakers</span>
+                  </div>
+                  <span className="font-bold text-[#10b981]"><AnimatedNumber value={stats.totalHSSpeakers} suffix=" units" /></span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
+                    <span className="font-semibold text-white">Media Players</span>
+                  </div>
+                  <span className="font-bold text-[#38bdf8]"><AnimatedNumber value={stats.totalMediaPlayers} suffix=" units" /></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'card_artwork_distribution':
+        return (
+          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5 h-full flex flex-col justify-between">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
+                  <BarChart3 className="w-4.5 h-4.5 text-[#a855f7]" /> Artwork Spatial Distribution Graph
+                </h3>
+                <p className="text-[10px] text-[#8a8d9b]">Artwork assignments per exhibition venue</p>
+              </div>
+
+              <Link href="/artworks" className="text-xs text-[#38bdf8] hover:underline font-semibold flex items-center gap-1">
+                View Artworks <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            <div className="space-y-4 py-1">
+              {venueDistribution.length === 0 ? (
+                <div className="p-6 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5 space-y-1">
+                  <p className="font-semibold text-white">No venues in database</p>
+                  <p className="text-[11px]">Database is empty. Add venues to view spatial artwork distribution.</p>
+                </div>
+              ) : (
+                venueDistribution.slice(0, 4).map((v, idx) => {
+                  const maxVal = Math.max(...venueDistribution.map((vd) => vd.artworkCount), 1);
+                  const pct = Math.round((v.artworkCount / maxVal) * 100);
+                  return (
+                    <div key={idx} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-extrabold text-white flex items-center gap-2">
+                          <Building2 className="w-3.5 h-3.5 text-[#a855f7]" /> {v.name}
+                        </span>
+                        <AnimatedNumber value={v.artworkCount} suffix=" Artworks" className="font-mono font-bold text-[#a855f7]" />
+                      </div>
+
+                      <div className="w-full bg-[#1c1c2a] h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
+                        <div
+                          className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#38bdf8] h-full rounded-full transition-all duration-1000"
+                          style={{ width: `${Math.max(pct, 0)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="space-y-8 pb-12 select-none">
+      {/* DASHBOARD HEADER TITLE & REFRESH & CUSTOMIZE LAYOUT BUTTON */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> Super Admin Dashboard
+          </h1>
+          <p className="text-xs text-[#8a8d9b] mt-0.5">
+            Master operations monitoring center — Drag & arrange cards in whatever layout you prefer.
+          </p>
         </div>
 
+        <div className="flex items-center gap-3">
+          {/* CUSTOMIZE DASHBOARD LAYOUT TOGGLE BUTTON */}
+          <button
+            onClick={() => setIsCustomizing(!isCustomizing)}
+            className={`px-4 py-2 rounded-2xl text-xs font-extrabold border transition-all flex items-center gap-2 cursor-pointer shadow-md ${
+              isCustomizing
+                ? 'bg-gradient-to-r from-[#38bdf8] to-[#8b5cf6] text-white border-transparent ring-2 ring-[#38bdf8]/50 shadow-[#38bdf8]/20'
+                : 'bg-[#232334] hover:bg-[#2c2c40] text-white border-white/10 hover:border-[#38bdf8]/40'
+            }`}
+          >
+            {isCustomizing ? (
+              <>
+                <Check className="w-3.5 h-3.5" /> Done Editing Layout
+              </>
+            ) : (
+              <>
+                <SlidersHorizontal className="w-3.5 h-3.5 text-[#38bdf8]" /> Customize Dashboard Layout
+              </>
+            )}
+          </button>
+
+          {/* REFRESH LIVE METRICS */}
+          <button
+            onClick={fetchDashboardData}
+            className="bg-[#232334] hover:bg-[#2c2c40] text-[#38bdf8] border border-white/10 hover:border-white/20 text-xs font-extrabold px-4 py-2 rounded-2xl transition-all flex items-center gap-2 cursor-pointer shadow-sm"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Live Metrics
+          </button>
+        </div>
       </div>
 
-      {/* SECTION 3: CHARTS AND GRAPHS */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        {/* GRAPH 1: TECHNICAL INVENTORY & ALLOCATION BREAKDOWN CHART */}
-        <div className="lg:col-span-7 p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div>
-              <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
-                <PieChart className="w-4.5 h-4.5 text-[#38bdf8]" /> Technical Equipment Allocation Graph
-              </h3>
-              <p className="text-[10px] text-[#8a8d9b]">Proportional allocation & available balance across inventory categories</p>
+      {/* CUSTOMIZATION MODE INSTRUCTION BAR */}
+      {isCustomizing && (
+        <div className="p-4 rounded-3xl bg-gradient-to-r from-[#1c1c2c] via-[#24243a] to-[#1c1c2c] border-2 border-[#38bdf8]/40 shadow-2xl flex flex-wrap items-center justify-between gap-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#38bdf8]/10 border border-[#38bdf8]/30 flex items-center justify-center text-[#38bdf8]">
+              <Move className="w-5 h-5 animate-pulse" />
             </div>
-
-            <span className="text-xs font-mono font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2.5 py-1 rounded-lg border border-[#38bdf8]/20">
-              <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Technical Pool Items" />
-            </span>
+            <div>
+              <h4 className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-2">
+                Dashboard Card Rearrangement Active
+              </h4>
+              <p className="text-[11px] text-[#8a8d9b] mt-0.5">
+                Drag cards by their handles or use the Move controls to arrange tiles & graphs in your preferred order.
+              </p>
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
-            {/* Concentric SVG Rings Chart */}
-            <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
-              <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-xl">
-                {/* Background Track Rings */}
-                <circle cx="50" cy="50" r="42" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                <circle cx="50" cy="50" r="33" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                <circle cx="50" cy="50" r="24" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                <circle cx="50" cy="50" r="15" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-
-                {stats.totalTechnicalInventory > 0 && (
-                  <>
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="42"
-                      fill="none"
-                      stroke="#f97316"
-                      strokeWidth="5"
-                      strokeDasharray="263.89"
-                      strokeDashoffset={263.89 * (1 - (stats.totalProjectors / Math.max(stats.totalTechnicalInventory, 1)))}
-                      strokeLinecap="round"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="33"
-                      fill="none"
-                      stroke="#10b981"
-                      strokeWidth="5"
-                      strokeDasharray="207.34"
-                      strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
-                      strokeLinecap="round"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="24"
-                      fill="none"
-                      stroke="#38bdf8"
-                      strokeWidth="5"
-                      strokeDasharray="150.79"
-                      strokeDashoffset={150.79 * (1 - (stats.totalMediaPlayers / Math.max(stats.totalTechnicalInventory, 1)))}
-                      strokeLinecap="round"
-                    />
-                  </>
-                )}
-              </svg>
-
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                <AnimatedNumber
-                  value={
-                    stats.totalTechnicalInventory > 0
-                      ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
-                      : 0
-                  }
-                  suffix="%"
-                  className="text-2xl font-black text-white leading-none"
-                />
-                <span className="text-[9px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
-              </div>
-            </div>
-
-            {/* Legends */}
-            <div className="space-y-2.5 text-xs text-[#8a8d9b] w-full sm:w-auto">
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
-                  <span className="font-semibold text-white">Projectors</span>
-                </div>
-                <span className="font-bold text-[#f97316]"><AnimatedNumber value={stats.totalProjectors} suffix=" units" /></span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
-                  <span className="font-semibold text-white">Yamaha HS Speakers</span>
-                </div>
-                <span className="font-bold text-[#10b981]"><AnimatedNumber value={stats.totalHSSpeakers} suffix=" units" /></span>
-              </div>
-
-              <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
-                  <span className="font-semibold text-white">Media Players</span>
-                </div>
-                <span className="font-bold text-[#38bdf8]"><AnimatedNumber value={stats.totalMediaPlayers} suffix=" units" /></span>
-              </div>
-            </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={resetDashboardLayout}
+              className="px-3.5 py-1.5 rounded-xl bg-[#1c1c2a] hover:bg-[#28283d] text-xs font-bold text-[#8a8d9b] hover:text-white border border-white/10 transition-colors flex items-center gap-1.5 cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" /> Reset Default Layout
+            </button>
+            <button
+              onClick={() => setIsCustomizing(false)}
+              className="px-4 py-1.5 rounded-xl bg-[#38bdf8] hover:bg-[#0284c7] text-xs font-extrabold text-black transition-colors flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <Check className="w-3.5 h-3.5" /> Save Layout
+            </button>
           </div>
         </div>
+      )}
 
-        {/* GRAPH 2: ARTWORK & VENUE ALLOCATION DISTRIBUTION CHART */}
-        <div className="lg:col-span-5 p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5">
-          <div className="flex items-center justify-between border-b border-white/10 pb-3">
-            <div>
-              <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
-                <BarChart3 className="w-4.5 h-4.5 text-[#a855f7]" /> Artwork Spatial Distribution Graph
-              </h3>
-              <p className="text-[10px] text-[#8a8d9b]">Artwork assignments per exhibition venue</p>
+      {/* HIDDEN CARDS RESTORE BAR */}
+      {hiddenCards.length > 0 && (
+        <div className="p-3.5 rounded-2xl bg-[#232334] border border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs text-[#8a8d9b]">
+          <div className="flex items-center gap-2">
+            <EyeOff className="w-4 h-4 text-[#f97316]" />
+            <span>Hidden Cards ({hiddenCards.length}):</span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {hiddenCards.map((key) => (
+                <span
+                  key={key}
+                  className="px-2.5 py-1 rounded-xl bg-[#1c1c2a] text-white font-bold border border-white/5 flex items-center gap-1.5"
+                >
+                  {CARD_NAMES[key] || key}
+                  <button
+                    onClick={() => toggleCardVisibility(key)}
+                    className="text-[#38bdf8] hover:text-white cursor-pointer ml-1"
+                    title="Unhide"
+                  >
+                    <Eye className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
             </div>
-
-            <Link href="/artworks" className="text-xs text-[#38bdf8] hover:underline font-semibold flex items-center gap-1">
-              View Artworks <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
 
-          <div className="space-y-4 py-1">
-            {venueDistribution.length === 0 ? (
-              <div className="p-6 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5 space-y-1">
-                <p className="font-semibold text-white">No venues in database</p>
-                <p className="text-[11px]">Database is empty. Add venues to view spatial artwork distribution.</p>
-              </div>
-            ) : (
-              venueDistribution.slice(0, 4).map((v, idx) => {
-                const maxVal = Math.max(...venueDistribution.map((vd) => vd.artworkCount), 1);
-                const pct = Math.round((v.artworkCount / maxVal) * 100);
-                return (
-                  <div key={idx} className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-extrabold text-white flex items-center gap-2">
-                        <Building2 className="w-3.5 h-3.5 text-[#a855f7]" /> {v.name}
-                      </span>
-                      <AnimatedNumber value={v.artworkCount} suffix=" Artworks" className="font-mono font-bold text-[#a855f7]" />
-                    </div>
+          <button
+            onClick={() => saveHiddenCards([])}
+            className="text-[#38bdf8] hover:underline font-bold text-xs cursor-pointer"
+          >
+            Unhide All Cards
+          </button>
+        </div>
+      )}
 
-                    <div className="w-full bg-[#1c1c2a] h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
-                      <div
-                        className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#38bdf8] h-full rounded-full transition-all duration-1000"
-                        style={{ width: `${Math.max(pct, 0)}%` }}
-                      />
-                    </div>
+      {/* SECTION 1: DYNAMIC REORDERABLE STAT TILES */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
+        {statOrder
+          .filter((key) => !hiddenCards.includes(key))
+          .map((tileKey, index) => (
+            <div
+              key={tileKey}
+              draggable={isCustomizing}
+              onDragStart={(e) => handleDragStart(e, 'stat', tileKey, index)}
+              onDragOver={(e) => handleDragOver(e, 'stat', tileKey, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, 'stat', tileKey, index)}
+              onDragEnd={handleDragEnd}
+              className={`relative group p-5 rounded-3xl bg-[#232334] border transition-all flex flex-col justify-between ${
+                isCustomizing
+                  ? 'border-[#38bdf8]/40 ring-2 ring-[#38bdf8]/20 cursor-grab active:cursor-grabbing shadow-lg'
+                  : 'border-white/5 hover:border-[#8b5cf6]/40 shadow-xl'
+              } ${
+                dragOverItem?.type === 'stat' && dragOverItem?.key === tileKey
+                  ? 'scale-[1.03] border-[#38bdf8] ring-4 ring-[#38bdf8]/40 shadow-2xl bg-[#2a2a3f]'
+                  : ''
+              } ${draggedItem?.key === tileKey ? 'opacity-40' : 'opacity-100'}`}
+            >
+              {/* Stat Tile Customization Overlay Bar */}
+              {isCustomizing && (
+                <div className="mb-3 flex items-center justify-between bg-[#181825]/90 backdrop-blur-md px-2.5 py-1 rounded-xl border border-white/10 shadow-sm text-xs">
+                  <div className="flex items-center gap-1 text-[#38bdf8] font-bold text-[10px]">
+                    <GripVertical className="w-3.5 h-3.5 cursor-grab" /> Move
                   </div>
-                );
-              })
-            )}
-          </div>
-        </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => moveStatTile(index, 'left')}
+                      className="p-1 hover:bg-[#28283d] rounded text-[#8a8d9b] hover:text-white disabled:opacity-30 cursor-pointer"
+                      title="Move Left"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === statOrder.length - 1}
+                      onClick={() => moveStatTile(index, 'right')}
+                      className="p-1 hover:bg-[#28283d] rounded text-[#8a8d9b] hover:text-white disabled:opacity-30 cursor-pointer"
+                      title="Move Right"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleCardVisibility(tileKey)}
+                      className="p-1 hover:bg-[#ef4444]/20 rounded text-[#8a8d9b] hover:text-[#ef4444] cursor-pointer"
+                      title="Hide Tile"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
 
+              {/* Render Tile Content */}
+              {renderStatTileContent(tileKey)}
+            </div>
+          ))}
+      </div>
+
+      {/* SECTION 2: DYNAMIC REORDERABLE MAIN CARDS & GRAPHS */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {cardOrder
+          .filter((key) => !hiddenCards.includes(key))
+          .map((cardKey, index) => (
+            <div
+              key={cardKey}
+              draggable={isCustomizing}
+              onDragStart={(e) => handleDragStart(e, 'card', cardKey, index)}
+              onDragOver={(e) => handleDragOver(e, 'card', cardKey, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, 'card', cardKey, index)}
+              onDragEnd={handleDragEnd}
+              className={`relative group transition-all ${CARD_COL_SPANS[cardKey] || 'lg:col-span-6'} ${
+                isCustomizing
+                  ? 'ring-2 ring-[#38bdf8]/40 border-2 border-dashed border-[#38bdf8]/60 rounded-3xl p-1 bg-[#1e1e2d]/60 cursor-grab active:cursor-grabbing'
+                  : ''
+              } ${
+                dragOverItem?.type === 'card' && dragOverItem?.key === cardKey
+                  ? 'scale-[1.01] ring-4 ring-[#38bdf8] shadow-2xl z-30'
+                  : ''
+              } ${draggedItem?.key === cardKey ? 'opacity-40' : 'opacity-100'}`}
+            >
+              {/* Card Customization Header Bar */}
+              {isCustomizing && (
+                <div className="mb-2 flex items-center justify-between bg-[#181825] px-4 py-2 rounded-2xl border border-[#38bdf8]/30 shadow-md text-xs text-[#8a8d9b]">
+                  <div className="flex items-center gap-2 font-bold text-white">
+                    <GripVertical className="w-4 h-4 text-[#38bdf8] cursor-grab" />
+                    <span className="uppercase tracking-wider text-[10px] text-[#38bdf8]">
+                      {CARD_NAMES[cardKey] || cardKey}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      disabled={index === 0}
+                      onClick={() => moveMainCard(index, 'up')}
+                      className="p-1 px-2 hover:bg-[#28283d] rounded-lg text-white disabled:opacity-30 cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                      title="Move Up"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" /> Move Up
+                    </button>
+                    <button
+                      type="button"
+                      disabled={index === cardOrder.length - 1}
+                      onClick={() => moveMainCard(index, 'down')}
+                      className="p-1 px-2 hover:bg-[#28283d] rounded-lg text-white disabled:opacity-30 cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                      title="Move Down"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" /> Move Down
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleCardVisibility(cardKey)}
+                      className="p-1 px-2 hover:bg-[#ef4444]/20 rounded-lg text-[#ef4444] cursor-pointer flex items-center gap-1 text-[11px] font-bold"
+                      title="Hide Card"
+                    >
+                      <EyeOff className="w-3.5 h-3.5" /> Hide
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Render Main Card Content */}
+              {renderMainCardContent(cardKey)}
+            </div>
+          ))}
       </div>
     </div>
   );
