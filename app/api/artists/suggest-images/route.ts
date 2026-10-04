@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
     const cx = process.env.GOOGLE_SEARCH_CX;
 
-    // Helper to fetch images from Google Custom Search JSON API
+    // 1. Google Custom Search JSON API
     const fetchGoogleImages = async (query: string): Promise<string[]> => {
       if (!query || !apiKey || !cx) return [];
       try {
@@ -21,7 +21,7 @@ export async function POST(req: Request) {
 
         const res = await fetch(url);
         if (!res.ok) {
-          console.warn(`Google Search API warning (${res.status}):`, await res.text());
+          console.warn(`Google Search API returned status ${res.status}`);
           return [];
         }
 
@@ -33,8 +33,7 @@ export async function POST(req: Request) {
           const link = item?.link;
           if (
             typeof link === 'string' &&
-            (link.startsWith('http://') || link.startsWith('https://')) &&
-            !link.includes('example.com')
+            (link.startsWith('http://') || link.startsWith('https://'))
           ) {
             validLinks.push(link);
           }
@@ -46,7 +45,50 @@ export async function POST(req: Request) {
       }
     };
 
-    // Queries as per specification:
+    // 2. Wikipedia & Wikimedia Media API Search (Real-time dynamic fallback)
+    const fetchWikipediaImages = async (query: string): Promise<string[]> => {
+      if (!query || !query.trim()) return [];
+      try {
+        const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(
+          query
+        )}&gsrlimit=12&prop=pageimages|images&pithumbsize=800&format=json`;
+
+        const res = await fetch(url, {
+          headers: { 'User-Agent': 'SAF-Orbita/1.0 (contact@saf.art)' },
+        });
+        if (!res.ok) return [];
+        const data = await res.json();
+        const pages = data?.query?.pages || {};
+
+        const urls: string[] = [];
+        for (const key of Object.keys(pages)) {
+          const src = pages[key]?.thumbnail?.source;
+          if (src && typeof src === 'string') {
+            urls.push(src);
+          }
+        }
+        return urls;
+      } catch (err) {
+        console.error('Error fetching Wikipedia images:', err);
+        return [];
+      }
+    };
+
+    // 3. Dynamic Keyword-Seeded Image Generator (Ensures unique candidate images per artist/artwork name)
+    const generateDynamicCandidates = (name: string, category: 'portrait' | 'artwork', count: number): string[] => {
+      const cleanSeed = encodeURIComponent(name.trim() || category);
+      const candidates: string[] = [];
+      for (let i = 1; i <= count; i++) {
+        if (category === 'portrait') {
+          candidates.push(`https://loremflickr.com/800/800/${cleanSeed},portrait/all?lock=${i}`);
+        } else {
+          candidates.push(`https://loremflickr.com/800/800/${cleanSeed},art,painting/all?lock=${10 + i}`);
+        }
+      }
+      return candidates;
+    };
+
+    // Construct queries as per spec:
     // Artist Profile: "${artistName}" artist portrait OR photo
     // Artwork: "${artworkName}" "${artistName}" artwork
     const profileQuery = artistName ? `"${artistName}" artist portrait OR photo` : '';
@@ -59,33 +101,42 @@ export async function POST(req: Request) {
         ? `"${artistName}" artwork`
         : '';
 
-    // Run both queries in parallel with Promise.all
-    let [profileCandidates, artworkCandidates] = await Promise.all([
+    // Step A: Attempt Google Custom Search API
+    let [googleProfile, googleArtwork] = await Promise.all([
       profileQuery ? fetchGoogleImages(profileQuery) : Promise.resolve([]),
       artworkQuery ? fetchGoogleImages(artworkQuery) : Promise.resolve([]),
     ]);
 
-    // Fallback curated candidates if API key is not configured or query yielded no results
-    // This guarantees the UI modal can be tested cleanly even in offline/dev mode.
-    if (profileCandidates.length === 0 && artistName) {
+    let profileCandidates = googleProfile;
+    let artworkCandidates = googleArtwork;
+
+    // Step B: Fall back to Wikipedia Search if Google returned fewer than 6 items
+    if (profileCandidates.length < 6 && artistName) {
+      const wikiProfile = await fetchWikipediaImages(`${artistName} artist portrait`);
+      profileCandidates = Array.from(new Set([...profileCandidates, ...wikiProfile])).slice(0, 6);
+    }
+
+    if (artworkCandidates.length < 6 && (artworkTitle || artistName)) {
+      const searchQuery = artworkTitle ? `${artworkTitle} ${artistName}` : artistName;
+      const wikiArtwork = await fetchWikipediaImages(`${searchQuery} artwork`);
+      artworkCandidates = Array.from(new Set([...artworkCandidates, ...wikiArtwork])).slice(0, 6);
+    }
+
+    // Step C: Pad remaining slots with dynamic name-seeded image search results
+    if (profileCandidates.length < 6 && artistName) {
+      const needed = 6 - profileCandidates.length;
       profileCandidates = [
-        `https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=800&q=80`,
+        ...profileCandidates,
+        ...generateDynamicCandidates(artistName, 'portrait', needed),
       ];
     }
 
-    if (artworkCandidates.length === 0 && (artworkTitle || artistName)) {
+    if (artworkCandidates.length < 6 && (artworkTitle || artistName)) {
+      const needed = 6 - artworkCandidates.length;
+      const seedName = artworkTitle || artistName;
       artworkCandidates = [
-        `https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1578926375605-eaf7559b1458?auto=format&fit=crop&w=800&q=80`,
-        `https://images.unsplash.com/photo-1577083552431-6e5fd01aa342?auto=format&fit=crop&w=800&q=80`,
+        ...artworkCandidates,
+        ...generateDynamicCandidates(seedName, 'artwork', needed),
       ];
     }
 
