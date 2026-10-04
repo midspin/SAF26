@@ -102,6 +102,7 @@ model Artwork {
   weight           String?
   medium           String?
   installationType String?  // Hanging, Floor, Projection, Interactive, Outdoor, Outdoor Pavilion
+  techProdLayout   String?  // Final Layout Diagram / Tech & Production Drawing PDF or Image URL
   notes            String?
   venueId          String?
   venue            Venue?   @relation(fields: [venueId], references: [id], onDelete: SetNull)

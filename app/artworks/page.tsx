@@ -21,6 +21,7 @@ import {
   Info,
   Paperclip,
   Image as ImageIcon,
+  CheckCircle2,
 } from 'lucide-react';
 
 export default function ArtworksPage() {
@@ -70,6 +71,7 @@ export default function ArtworksPage() {
     weight: '',
     images: '', // JSON string array
     description: '',
+    techProdLayout: '',
     notes: '',
   });
 
@@ -83,6 +85,7 @@ export default function ArtworksPage() {
     weight: '',
     images: '', // JSON string array
     description: '',
+    techProdLayout: '',
     notes: '',
   });
 
@@ -207,6 +210,40 @@ export default function ArtworksPage() {
     }
   };
 
+  // Single Layout File Upload Handler
+  const handleLayoutFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    isEdit: boolean = false
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('file', file);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        if (isEdit) {
+          setEditFormData((prev) => ({ ...prev, techProdLayout: data.url }));
+        } else {
+          setFormData((prev) => ({ ...prev, techProdLayout: data.url }));
+        }
+      }
+    } catch (err) {
+      console.error('Layout file upload error:', err);
+      alert('Error uploading layout drawing file');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   // Submit New Artwork
   const handleCreateArtwork = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,6 +286,7 @@ export default function ArtworksPage() {
           weight: '',
           images: '',
           description: '',
+          techProdLayout: '',
           notes: '',
         });
         fetchArtworks();
@@ -274,6 +312,7 @@ export default function ArtworksPage() {
       weight: artwork.weight || '',
       images: artwork.images || '',
       description: artwork.description || '',
+      techProdLayout: artwork.techProdLayout || '',
       notes: artwork.notes || '',
     });
   };
@@ -811,6 +850,49 @@ export default function ArtworksPage() {
                 )}
               </div>
 
+              {/* FINAL LAYOUT DIAGRAM / TECH & PRODUCTION DRAWING UPLOAD */}
+              <div className="p-3 bg-slate-950/70 border border-sky-900/50 rounded-xl space-y-2">
+                <label className="text-sky-400 font-bold block flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5">
+                    📐 Upload Final Layout Diagram / Tech & Production Drawing
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-normal">
+                    Activates Progress Tracker "Layout" milestone
+                  </span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpeg,.jpg,.dwg"
+                    onChange={(e) => handleLayoutFileUpload(e, false)}
+                    className="text-xs text-slate-300 file:bg-sky-500 file:text-slate-950 file:font-bold file:px-3 file:py-1 file:rounded-lg file:border-0 hover:file:bg-sky-400 cursor-pointer w-full"
+                  />
+                </div>
+                {formData.techProdLayout && (
+                  <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/60 px-2.5 py-1.5 rounded-lg text-emerald-300 text-xs">
+                    <span className="flex items-center gap-2 truncate">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <a
+                        href={formData.techProdLayout}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline truncate hover:text-emerald-200"
+                      >
+                        {formData.techProdLayout.split('/').pop() || 'Final Layout Drawing'}
+                      </a>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, techProdLayout: '' })}
+                      className="text-slate-400 hover:text-rose-400 p-0.5"
+                      title="Remove layout file"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {/* DESCRIPTION */}
               <div>
                 <label className="text-slate-300 font-bold block mb-1">Artwork Concept / Description</label>
@@ -1016,6 +1098,49 @@ export default function ArtworksPage() {
                         );
                       })}
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* FINAL LAYOUT DIAGRAM / TECH & PRODUCTION DRAWING UPLOAD */}
+              <div className="p-3 bg-slate-950/70 border border-sky-900/50 rounded-xl space-y-2">
+                <label className="text-sky-400 font-bold block flex items-center justify-between text-xs">
+                  <span className="flex items-center gap-1.5">
+                    📐 Upload Final Layout Diagram / Tech & Production Drawing
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-normal">
+                    Activates Progress Tracker "Layout" milestone
+                  </span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept=".pdf,.png,.jpeg,.jpg,.dwg"
+                    onChange={(e) => handleLayoutFileUpload(e, true)}
+                    className="text-xs text-slate-300 file:bg-sky-500 file:text-slate-950 file:font-bold file:px-3 file:py-1 file:rounded-lg file:border-0 hover:file:bg-sky-400 cursor-pointer w-full"
+                  />
+                </div>
+                {editFormData.techProdLayout && (
+                  <div className="flex items-center justify-between bg-emerald-950/40 border border-emerald-800/60 px-2.5 py-1.5 rounded-lg text-emerald-300 text-xs">
+                    <span className="flex items-center gap-2 truncate">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <a
+                        href={editFormData.techProdLayout}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline truncate hover:text-emerald-200"
+                      >
+                        {editFormData.techProdLayout.split('/').pop() || 'Final Layout Drawing'}
+                      </a>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setEditFormData({ ...editFormData, techProdLayout: '' })}
+                      className="text-slate-400 hover:text-rose-400 p-0.5"
+                      title="Remove layout file"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 )}
               </div>

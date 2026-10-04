@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       weight,
       medium,
       installationType,
+      techProdLayout,
       notes,
     } = body;
 
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         weight,
         medium,
         installationType: installationType || 'Projection',
+        techProdLayout,
         notes,
       },
     });

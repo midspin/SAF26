@@ -49,6 +49,11 @@ export async function GET(req: Request) {
             room: true,
           },
         },
+        allocations: {
+          include: {
+            inventoryItem: true,
+          },
+        },
         _count: {
           select: {
             technicalRequirements: true,

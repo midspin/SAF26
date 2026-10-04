@@ -52,6 +52,7 @@ export async function PUT(
       weight,
       medium,
       installationType,
+      techProdLayout,
       notes,
     } = body;
 
@@ -66,6 +67,7 @@ export async function PUT(
         ...(weight !== undefined ? { weight } : {}),
         ...(medium !== undefined ? { medium } : {}),
         ...(installationType !== undefined ? { installationType } : {}),
+        ...(techProdLayout !== undefined ? { techProdLayout } : {}),
         ...(notes !== undefined ? { notes } : {}),
       },
       include: {

@@ -79,41 +79,51 @@ export default function ProgressTrackerPage() {
           const venueObj = art?.venue || inst?.venue || null;
           const roomObj = art?.room || inst?.room || null;
 
-          // Milestone 1: Artist Onboard (Checked if artist exists)
-          const milestoneOnboard = true;
+          // Milestone 1: Onboard (Artist and artwork updated by programming team)
+          const milestoneOnboard = Boolean(artist && artist.artistName && art && art.artworkName);
 
-          // Milestone 2: Artist Input (Checked if programming input, bio, email, or artworks exist)
-          const milestoneArtistInput = Boolean(
-            artist.biography ||
-              artist.email ||
-              artist.country ||
-              (artist.artworks && artist.artworks.length > 0) ||
-              (artist.programmingAssignments && artist.programmingAssignments.length > 0)
-          );
+          // Installation Type Check for Tech Data Milestone
+          const instType = (art?.installationType || '').toLowerCase();
+          const showTechData =
+            instType.includes('projection') ||
+            instType.includes('interactive') ||
+            instType.includes('digital') ||
+            instType.includes('sound');
 
-          // Milestone 3: Technical Data (Checked if tech requirements, equipment list or allocations exist)
-          const milestoneTechData = Boolean(
-            (artist._count && artist._count.technicalRequirements > 0) ||
-              (artist.technicalRequirements && artist.technicalRequirements.length > 0) ||
-              (artist._count && artist._count.allocations > 0) ||
-              art?.medium ||
-              art?.dimensions
-          );
+          // Inventory Allocations Check
+          const allocationsList: any[] = artist.allocations || [];
 
-          // Milestone 4: Room & Layout (Checked if floorplan / techProdLayout is uploaded for room or venue)
-          const milestoneRoomLayout = Boolean(
-            roomObj?.floorplan ||
-              roomObj?.techProdLayout ||
-              venueObj?.venueDocument ||
-              (art?.venueId && art?.roomId)
-          );
+          // Milestone 2 (Conditional): Tech Data (After allocating a technical inventory item)
+          const milestoneTechData = allocationsList.some((alloc: any) => {
+            const isMatchArtwork = !alloc.artworkId || alloc.artworkId === art?.id;
+            const dept = (alloc.department || '').toUpperCase();
+            const cat = (alloc.inventoryItem?.inventoryCategory || '').toUpperCase();
+            const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
+            return isMatchArtwork && (dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL');
+          });
 
-          // Count completed milestones (0-4)
+          // Milestone 3: Production Allocation (If any production item from inventory is allocated)
+          const milestoneProdAllocation = allocationsList.some((alloc: any) => {
+            const isMatchArtwork = !alloc.artworkId || alloc.artworkId === art?.id;
+            const dept = (alloc.department || '').toUpperCase();
+            const cat = (alloc.inventoryItem?.inventoryCategory || '').toUpperCase();
+            const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
+            return isMatchArtwork && (dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION');
+          });
+
+          // Milestone 4: Layout (Completed if final layout with tech & production diagram is uploaded)
+          const layoutUrl = art?.techProdLayout || roomObj?.techProdLayout || roomObj?.floorplan || venueObj?.venueDocument || null;
+          const milestoneRoomLayout = Boolean(layoutUrl);
+
+          // Total active steps (4 if Projection/Interactive/Digital/Sound, else 3)
+          const totalActiveSteps = showTechData ? 4 : 3;
           const completedCount =
             (milestoneOnboard ? 1 : 0) +
-            (milestoneArtistInput ? 1 : 0) +
-            (milestoneTechData ? 1 : 0) +
+            (showTechData && milestoneTechData ? 1 : 0) +
+            (milestoneProdAllocation ? 1 : 0) +
             (milestoneRoomLayout ? 1 : 0);
+
+          const isFullyComplete = completedCount === totalActiveSteps;
 
           projectRows.push({
             id: art ? `${artist.id}-${art.id}` : artist.id,
@@ -122,13 +132,14 @@ export default function ProgressTrackerPage() {
             artistPhoto: artist.artistPhoto,
             artworkId: art?.id || null,
             artworkName: art?.artworkName || 'Primary Project',
+            installationType: art?.installationType || 'Projection',
             medium: art?.medium || 'N/A',
             venueName: venueObj?.venueName || 'Unassigned Venue',
             venueId: venueObj?.id || null,
             roomNumber: roomObj?.roomNumber || '0',
             roomName: roomObj?.roomName || 'Unassigned Room',
             roomId: roomObj?.id || null,
-            floorplanUrl: roomObj?.floorplan || roomObj?.techProdLayout || venueObj?.venueDocument || null,
+            floorplanUrl: layoutUrl,
             installationId: inst?.id || null,
             installationStatus: inst?.installationStatus || 'Planned',
             startDate: inst?.startDate || artist.arrivalDate || 'TBD',
@@ -136,10 +147,13 @@ export default function ProgressTrackerPage() {
             installationNotes: inst?.installationNotes || '',
             milestones: {
               onboard: milestoneOnboard,
-              artistInput: milestoneArtistInput,
+              showTechData,
               techData: milestoneTechData,
+              prodAllocation: milestoneProdAllocation,
               roomLayout: milestoneRoomLayout,
+              totalActiveSteps,
               completedCount,
+              isFullyComplete,
             },
           });
         });
@@ -228,7 +242,7 @@ export default function ProgressTrackerPage() {
             Progress Tracker
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Data of each artist project projected as a timeline. Real-time milestone updates across programming, technical, and spatial layouts.
+            Data of each artist project projected as a timeline. Real-time milestone updates across programming, technical, production allocations, and spatial layouts.
           </p>
         </div>
 
@@ -240,7 +254,7 @@ export default function ProgressTrackerPage() {
           <div className="text-xs">
             <span className="font-bold text-white block">Active Artist Projects</span>
             <span className="text-[11px] text-sky-400 font-semibold">
-              {projects.filter((p) => p.milestones.completedCount === 4).length} / {projects.length} Milestones Complete
+              {projects.filter((p) => p.milestones.isFullyComplete).length} / {projects.length} Fully Completed
             </span>
           </div>
         </div>
@@ -310,7 +324,7 @@ export default function ProgressTrackerPage() {
         <div className="space-y-4">
           {filteredProjects.map((proj) => {
             const m = proj.milestones;
-            const progressPct = Math.round((m.completedCount / 4) * 100);
+            const progressPct = Math.round((m.completedCount / m.totalActiveSteps) * 100);
 
             return (
               <div
@@ -355,14 +369,18 @@ export default function ProgressTrackerPage() {
                 <div className="flex-1 py-2 lg:py-0 px-1 border-y lg:border-y-0 lg:border-x border-slate-800/80 lg:px-6">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-2">
                     <span className="text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Milestone Status
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Milestone Status ({m.completedCount}/{m.totalActiveSteps})
                     </span>
                     <span className="text-sky-400 font-mono">{progressPct}% Complete</span>
                   </div>
 
-                  {/* 4-Step Connected Timeline Nodes */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    {/* Step 1: Artist Onboard */}
+                  {/* Connected Timeline Nodes */}
+                  <div
+                    className={`grid gap-2.5 ${
+                      m.showTechData ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'
+                    }`}
+                  >
+                    {/* Step 1: Artist & Artwork Onboard */}
                     <div
                       className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
                         m.onboard
@@ -378,51 +396,55 @@ export default function ProgressTrackerPage() {
                           <span className="w-2 h-2 rounded-full bg-slate-600" />
                         )}
                       </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Artist Onboard</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Profile created</span>
-                    </div>
-
-                    {/* Step 2: Artist Input */}
-                    <div
-                      className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                        m.artistInput
-                          ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">2. Input</span>
-                        {m.artistInput ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
-                        )}
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Artist Input</span>
+                      <span className="text-[11px] font-bold text-slate-200 truncate">Artist & Artwork</span>
                       <span className="text-[9px] text-slate-400 block truncate">Updated by Prog Team</span>
                     </div>
 
-                    {/* Step 3: Technical Data */}
+                    {/* Step 2 (Conditional): Tech Data */}
+                    {m.showTechData && (
+                      <div
+                        className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
+                          m.techData
+                            ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider opacity-80">2. Tech Data</span>
+                          {m.techData ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-200 truncate">Tech Data</span>
+                        <span className="text-[9px] text-slate-400 block truncate">Tech item allocated</span>
+                      </div>
+                    )}
+
+                    {/* Step 3: Production Allocation */}
                     <div
                       className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                        m.techData
+                        m.prodAllocation
                           ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
                           : 'bg-slate-950/50 border-slate-800 text-slate-500'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">3. Tech Data</span>
-                        {m.techData ? (
+                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
+                          {m.showTechData ? '3. Production' : '2. Production'}
+                        </span>
+                        {m.prodAllocation ? (
                           <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
                         ) : (
                           <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
                         )}
                       </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Technical Data</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Equipment list updated</span>
+                      <span className="text-[11px] font-bold text-slate-200 truncate">Production Allocation</span>
+                      <span className="text-[9px] text-slate-400 block truncate">Prod item allocated</span>
                     </div>
 
-                    {/* Step 4: Room and Layout */}
+                    {/* Step 4: Final Layout */}
                     <div
                       className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
                         m.roomLayout
@@ -431,15 +453,17 @@ export default function ProgressTrackerPage() {
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">4. Layout</span>
+                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
+                          {m.showTechData ? '4. Layout' : '3. Layout'}
+                        </span>
                         {m.roomLayout ? (
                           <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
                         ) : (
                           <span className="w-2 h-2 rounded-full bg-slate-600" />
                         )}
                       </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Room & Layout</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Final layout uploaded</span>
+                      <span className="text-[11px] font-bold text-slate-200 truncate">Final Layout</span>
+                      <span className="text-[9px] text-slate-400 block truncate">Tech & Prod diagram</span>
                     </div>
                   </div>
                 </div>
