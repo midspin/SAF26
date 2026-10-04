@@ -418,6 +418,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       title: 'OVERVIEW',
       items: [
         { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, moduleId: 'dashboard' },
+        { name: 'Progress Tracker', href: '/progress-tracker', icon: MapPin, moduleId: 'progress-tracker' },
         { name: 'Events', href: '/events', icon: Calendar, moduleId: 'events' },
       ],
     },
@@ -435,9 +436,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
       items: [
         { name: 'Venues', href: '/venues', icon: Building2, moduleId: 'venues' },
         { name: 'Rooms', href: '/rooms', icon: DoorOpen, moduleId: 'rooms' },
-        { name: 'Installations', href: '/installations', icon: MapPin, moduleId: 'installations' },
         { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'New Table', moduleId: 'inventory' },
-        { name: 'Technical & Production', href: '/requirements', icon: Wrench, moduleId: 'installations' },
+        { name: 'Technical & Production', href: '/requirements', icon: Wrench, moduleId: 'requirements' },
       ],
     },
     {

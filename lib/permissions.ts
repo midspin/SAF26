@@ -18,6 +18,7 @@ export interface RoleDefinition {
 
 export const MODULE_DEFINITIONS: { id: string; name: string; category: ModulePermission['category'] }[] = [
   { id: 'dashboard', name: 'Dashboard', category: 'OVERVIEW' },
+  { id: 'progress-tracker', name: 'Progress Tracker', category: 'OVERVIEW' },
   { id: 'events', name: 'Events', category: 'OVERVIEW' },
   { id: 'artists', name: 'Artists', category: 'CURATORIAL & PROGRAMMING' },
   { id: 'artworks', name: 'Artworks', category: 'CURATORIAL & PROGRAMMING' },
@@ -55,7 +56,7 @@ const readOnlyPermissions = (): Record<string, ModulePermission> => {
 
 const techTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'events', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -67,7 +68,7 @@ const techTeamPermissions = (): Record<string, ModulePermission> => {
 
 const prodTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'events', 'artists', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -79,7 +80,7 @@ const prodTeamPermissions = (): Record<string, ModulePermission> => {
 
 const progTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'events', 'artists', 'artworks', 'curators', 'teams', 'venues', 'rooms'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'curators', 'teams', 'venues', 'rooms'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -91,7 +92,7 @@ const progTeamPermissions = (): Record<string, ModulePermission> => {
 
 const invTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'inventory', 'import', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'inventory', 'import', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -103,7 +104,7 @@ const invTeamPermissions = (): Record<string, ModulePermission> => {
 
 const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -115,7 +116,7 @@ const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
 
 const installationTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
