@@ -100,6 +100,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     'TECHNICAL TEAM',
     'TECHNICAL HEAD',
     'TECH HEAD',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'INVENTORY HEAD',
     'INVENTORY MANAGER',
@@ -112,7 +113,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
   // Strict role check for positioning order
   const isPureTechnicalOrInventory =
-    ['TECHNICAL TEAM', 'TECHNICAL HEAD', 'TECH HEAD', 'INVENTORY TEAM', 'INVENTORY HEAD', 'INVENTORY MANAGER', 'INVENTORY'].includes(normalizedRole) &&
+    ['TECHNICAL TEAM', 'TECHNICAL HEAD', 'TECH HEAD', 'INSTALLATION TEAM', 'INVENTORY TEAM', 'INVENTORY HEAD', 'INVENTORY MANAGER', 'INVENTORY'].includes(normalizedRole) &&
     !['PRODUCTION TEAM', 'PRODUCTION HEAD', 'PRODUCTION', 'PROGRAMMING TEAM', 'PROGRAMMING HEAD', 'PROGRAMMING'].includes(normalizedRole);
 
   // Can assign items to Production Allotment: Super Admin, Production Team, Programming Team
@@ -138,6 +139,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     'SUPERADMIN',
     'TECHNICAL TEAM',
     'TECHNICAL HEAD',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'INVENTORY HEAD',
     'INVENTORY MANAGER',
@@ -152,6 +154,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     'SUPER ADMIN',
     'SUPERADMIN',
     'TECHNICAL TEAM',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'INVENTORY MANAGER',
     'INVENTORY HEAD',
@@ -166,6 +169,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     'TECHNICAL TEAM',
     'TECHNICAL HEAD',
     'TECH HEAD',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'INVENTORY MANAGER',
     'INVENTORY HEAD',

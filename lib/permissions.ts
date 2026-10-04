@@ -113,6 +113,18 @@ const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
   return perm;
 };
 
+const installationTeamPermissions = (): Record<string, ModulePermission> => {
+  const perm = readOnlyPermissions();
+  ['dashboard', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
+    if (perm[id]) {
+      perm[id].canView = true;
+      perm[id].canEdit = true;
+      perm[id].canDelete = false;
+    }
+  });
+  return perm;
+};
+
 export const DEFAULT_ROLES: RoleDefinition[] = [
   {
     id: 'SUPER ADMIN',
@@ -153,6 +165,14 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     badgeColor: 'purple',
     isSystem: true,
     permissions: spatialDesignerPermissions(),
+  },
+  {
+    id: 'INSTALLATION TEAM',
+    name: 'INSTALLATION TEAM',
+    description: 'On-site installation focus: artwork setup, venue & room readiness, technical installation tracking & status updates.',
+    badgeColor: 'emerald',
+    isSystem: true,
+    permissions: installationTeamPermissions(),
   },
   {
     id: 'INVENTORY TEAM',

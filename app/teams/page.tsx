@@ -1129,6 +1129,8 @@ export default function TeamsPage() {
                           ? 'PROGRAMMING TEAM'
                           : newTeam === 'SPATIAL'
                           ? 'SPATIAL DESIGNER'
+                          : newTeam === 'INSTALLATION'
+                          ? 'INSTALLATION TEAM'
                           : 'INVENTORY TEAM';
                       setFormData({ ...formData, teamType: newTeam, systemRole: defaultRole });
                     }}
@@ -1139,6 +1141,7 @@ export default function TeamsPage() {
                     <option value="PROGRAMMING">PROGRAMMING TEAM</option>
                     <option value="INVENTORY">INVENTORY TEAM</option>
                     <option value="SPATIAL">SPATIAL DESIGNERS</option>
+                    <option value="INSTALLATION">INSTALLATION TEAM</option>
                   </select>
                 </div>
 

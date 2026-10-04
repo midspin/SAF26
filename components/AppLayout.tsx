@@ -389,6 +389,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     'TECHNICAL TEAM',
     'PRODUCTION TEAM',
     'PROGRAMMING TEAM',
+    'SPATIAL DESIGNER',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'VIEWER',
   ]);

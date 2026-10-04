@@ -74,6 +74,8 @@ export default function SettingsPage() {
     'TECHNICAL TEAM',
     'PRODUCTION TEAM',
     'PROGRAMMING TEAM',
+    'SPATIAL DESIGNER',
+    'INSTALLATION TEAM',
     'INVENTORY TEAM',
     'VIEWER',
   ];
@@ -83,6 +85,8 @@ export default function SettingsPage() {
     { role: 'TECHNICAL TEAM', desc: 'Technical specifications, equipment allocations, live stock assignment, and installations', access: 'Technical Specs & Inventory' },
     { role: 'PRODUCTION TEAM', desc: 'Production requirements, venues, rooms, installations, and fabrication logistics', access: 'Spaces & Production' },
     { role: 'PROGRAMMING TEAM', desc: 'Festival schedule, artist programming assignments, curators, and artworks', access: 'Curatorial & Programming' },
+    { role: 'SPATIAL DESIGNER', desc: '3D spatial design, venue/room floorplans, exhibition layout & installations', access: 'Spaces & Layouts' },
+    { role: 'INSTALLATION TEAM', desc: 'On-site artwork installation setup, technical installation tracking & room readiness', access: 'Installations & Venues' },
     { role: 'INVENTORY TEAM', desc: 'Master inventory pool, Excel migration wizard, live stock assignments, and procurement', access: 'Master Inventory & Procurement' },
     { role: 'VIEWER', desc: 'Read-only access across exhibition dashboards', access: 'Read Only' },
   ];
