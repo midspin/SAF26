@@ -8,6 +8,7 @@ interface ImageUploadInputProps {
   onChange: (url: string) => void;
   label?: string;
   placeholder?: string;
+  onSuggestImages?: () => void;
 }
 
 export default function ImageUploadInput({
@@ -15,6 +16,7 @@ export default function ImageUploadInput({
   onChange,
   label = 'Photo / Image',
   placeholder = 'https://... or upload local file',
+  onSuggestImages,
 }: ImageUploadInputProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
@@ -109,11 +111,23 @@ export default function ImageUploadInput({
             className="hidden"
           />
 
+          {onSuggestImages && (
+            <button
+              type="button"
+              onClick={onSuggestImages}
+              className="bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 font-bold text-xs px-3 py-2 rounded-xl transition-all shrink-0 flex items-center gap-1.5 cursor-pointer shadow-sm"
+              title="Auto-suggest image using Google Search"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-purple-400 animate-pulse" />
+              <span>Suggest</span>
+            </button>
+          )}
+
           <button
             type="button"
             disabled={uploading}
             onClick={() => fileInputRef.current?.click()}
-            className="bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all shrink-0 flex items-center gap-1.5 disabled:opacity-50"
+            className="bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-800 font-bold text-xs px-3.5 py-2 rounded-xl transition-all shrink-0 flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
             title="Upload image file from computer"
           >
             {uploading ? (

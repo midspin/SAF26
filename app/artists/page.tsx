@@ -2,6 +2,7 @@
 
 import ImageUploadInput from '@/components/ImageUploadInput';
 import ArtistPdfExportModal from '@/components/ArtistPdfExportModal';
+import SuggestImagesModal from '@/components/SuggestImagesModal';
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
@@ -42,6 +43,7 @@ interface ArtworkFormItem {
   venueId: string;
   roomId: string;
   notes: string;
+  images?: string;
 }
 
 const emptyArtworkRow = (): ArtworkFormItem => ({
@@ -52,6 +54,7 @@ const emptyArtworkRow = (): ArtworkFormItem => ({
   venueId: '',
   roomId: '',
   notes: '',
+  images: '',
 });
 
 export default function ArtistsPage() {
@@ -61,8 +64,27 @@ export default function ArtistsPage() {
   const [search, setSearch] = useState('');
   const [newModalOpen, setNewModalOpen] = useState(false);
 
-  // User Role State
   const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
+
+  // Auto-Suggest Images Modal State
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false);
+  const [suggestArtistName, setSuggestArtistName] = useState('');
+  const [suggestArtworkTitle, setSuggestArtworkTitle] = useState('');
+  const [suggestTargetIsEdit, setSuggestTargetIsEdit] = useState(false);
+  const [suggestArtworkIndex, setSuggestArtworkIndex] = useState<number | null>(0);
+
+  const openSuggestModal = (
+    artistName: string,
+    artworkTitle: string,
+    isEdit: boolean = false,
+    artworkIdx: number | null = 0
+  ) => {
+    setSuggestArtistName(artistName);
+    setSuggestArtworkTitle(artworkTitle);
+    setSuggestTargetIsEdit(isEdit);
+    setSuggestArtworkIndex(artworkIdx);
+    setSuggestModalOpen(true);
+  };
 
   // Modal active tab
   const [modalTab, setModalTab] = useState<'PROFILE' | 'ARTWORKS' | 'TRAVEL' | 'TEAM'>('PROFILE');
@@ -1096,7 +1118,16 @@ export default function ArtistsPage() {
             {modalTab === 'PROFILE' && (
               <div className="space-y-3.5 text-xs animate-in fade-in">
                 <div>
-                  <label className="text-slate-400 block mb-1">Artist Name *</label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-400 block">Artist Name *</label>
+                    <button
+                      type="button"
+                      onClick={() => openSuggestModal(formData.artistName, formData.artworks[0]?.artworkName || '', false, 0)}
+                      className="text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1 bg-sky-950/60 border border-sky-800/80 px-2.5 py-0.5 rounded-lg transition-all cursor-pointer shadow-sm"
+                    >
+                      <Sparkles className="w-3 h-3 text-sky-400 animate-pulse" /> Auto-Suggest Images
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={formData.artistName}
@@ -1110,6 +1141,7 @@ export default function ArtistsPage() {
                   label="Artist Photo Image"
                   value={formData.artistPhoto}
                   onChange={(url) => setFormData({ ...formData, artistPhoto: url })}
+                  onSuggestImages={() => openSuggestModal(formData.artistName, formData.artworks[0]?.artworkName || '', false, 0)}
                   placeholder="https://... or upload local image file"
                 />
 
@@ -1214,7 +1246,16 @@ export default function ArtistsPage() {
 
                       <div className="grid grid-cols-2 gap-3">
                         <div>
-                          <label className="text-slate-400 block mb-1">Artwork Title *</label>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="text-slate-400 block">Artwork Title *</label>
+                            <button
+                              type="button"
+                              onClick={() => openSuggestModal(formData.artistName, aw.artworkName, false, idx)}
+                              className="text-[10px] font-bold text-purple-400 hover:text-purple-300 flex items-center gap-1 bg-purple-950/60 border border-purple-800/80 px-2 py-0.5 rounded-lg transition-all cursor-pointer"
+                            >
+                              <Sparkles className="w-3 h-3 text-purple-400 animate-pulse" /> Auto-Suggest
+                            </button>
+                          </div>
                           <input
                             type="text"
                             value={aw.artworkName}
@@ -2202,6 +2243,41 @@ export default function ArtistsPage() {
         isOpen={pdfExportModalOpen}
         onClose={() => setPdfExportModalOpen(false)}
         initialArtistData={pdfExportArtistData}
+      />
+
+      {/* AUTO-SUGGEST PROFILE & ARTWORK IMAGES MODAL */}
+      <SuggestImagesModal
+        isOpen={suggestModalOpen}
+        onClose={() => setSuggestModalOpen(false)}
+        initialArtistName={suggestArtistName}
+        initialArtworkTitle={suggestArtworkTitle}
+        onSelectProfileImage={(url) => {
+          if (suggestTargetIsEdit) {
+            setEditFormData((prev) => ({ ...prev, artistPhoto: url }));
+          } else {
+            setFormData((prev) => ({ ...prev, artistPhoto: url }));
+          }
+        }}
+        onSelectArtworkImage={(url) => {
+          const targetIdx = suggestArtworkIndex ?? 0;
+          if (suggestTargetIsEdit) {
+            setEditFormData((prev) => {
+              const updated = [...prev.artworks];
+              if (updated[targetIdx]) {
+                updated[targetIdx] = { ...updated[targetIdx], images: url };
+              }
+              return { ...prev, artworks: updated };
+            });
+          } else {
+            setFormData((prev) => {
+              const updated = [...prev.artworks];
+              if (updated[targetIdx]) {
+                updated[targetIdx] = { ...updated[targetIdx], images: url };
+              }
+              return { ...prev, artworks: updated };
+            });
+          }
+        }}
       />
     </div>
   );

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import SuggestImagesModal from '@/components/SuggestImagesModal';
 import {
   Palette,
   Plus,
@@ -38,6 +39,20 @@ export default function ArtworksPage() {
   // Modal States
   const [newModalOpen, setNewModalOpen] = useState(false);
   const [editModal, setEditModal] = useState<any | null>(null);
+
+  // Auto-Suggest Images Modal State
+  const [suggestModalOpen, setSuggestModalOpen] = useState(false);
+  const [suggestArtistName, setSuggestArtistName] = useState('');
+  const [suggestArtworkTitle, setSuggestArtworkTitle] = useState('');
+  const [suggestIsEdit, setSuggestIsEdit] = useState(false);
+
+  const openSuggestModal = (artistId: string, artworkTitle: string, isEdit: boolean = false) => {
+    const artistObj = artists.find((a) => a.id === artistId);
+    setSuggestArtistName(artistObj?.artistName || '');
+    setSuggestArtworkTitle(artworkTitle);
+    setSuggestIsEdit(isEdit);
+    setSuggestModalOpen(true);
+  };
   const [deleteModal, setDeleteModal] = useState<any | null>(null);
   const [previewModal, setPreviewModal] = useState<{
     title: string;
@@ -655,9 +670,18 @@ export default function ArtworksPage() {
               {/* ARTWORK TITLE & INSTALLATION CATEGORY */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-300 font-bold block mb-1">
-                    Artwork Title <span className="text-rose-400">*</span>
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-slate-300 font-bold block">
+                      Artwork Title <span className="text-rose-400">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => openSuggestModal(formData.artistId, formData.artworkName, false)}
+                      className="text-[10px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1 bg-sky-950/60 border border-sky-800/80 px-2 py-0.5 rounded-lg transition-all cursor-pointer shadow-sm"
+                    >
+                      <Sparkles className="w-3 h-3 text-sky-400 animate-pulse" /> Auto-Suggest Images
+                    </button>
+                  </div>
                   <input
                     type="text"
                     required
@@ -1119,6 +1143,28 @@ export default function ArtworksPage() {
           </div>
         </div>
       )}
+      {/* AUTO-SUGGEST PROFILE & ARTWORK IMAGES MODAL */}
+      <SuggestImagesModal
+        isOpen={suggestModalOpen}
+        onClose={() => setSuggestModalOpen(false)}
+        initialArtistName={suggestArtistName}
+        initialArtworkTitle={suggestArtworkTitle}
+        onSelectArtworkImage={(url) => {
+          if (suggestIsEdit) {
+            setEditFormData((prev: any) => {
+              const currentList = parseImageList(prev.images);
+              const updatedList = Array.from(new Set([url, ...currentList]));
+              return { ...prev, images: JSON.stringify(updatedList) };
+            });
+          } else {
+            setFormData((prev: any) => {
+              const currentList = parseImageList(prev.images);
+              const updatedList = Array.from(new Set([url, ...currentList]));
+              return { ...prev, images: JSON.stringify(updatedList) };
+            });
+          }
+        }}
+      />
     </div>
   );
 }
