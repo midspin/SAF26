@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import ImageUploadInput from '@/components/ImageUploadInput';
@@ -282,11 +282,72 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   // Notifications state
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [notifications, setNotifications] = useState<any[]>([
-    { id: '1', title: 'Inventory Allocation Approved', message: '4x Epson 10K Projectors allocated to Hiroshi Tanimoto', time: '10 mins ago', isRead: false },
-    { id: '2', title: 'Purchase Request Raised', message: 'Marcus Chen raised request for Custom Water Basin', time: '1 hour ago', isRead: false },
-    { id: '3', title: 'Google Sheet Auto-Synced', message: 'Technical Inventory Workbook synced successfully', time: '2 hours ago', isRead: true },
-  ]);
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  const fetchNotifications = useCallback(async () => {
+    try {
+      const roleToUse = activeRole || 'SUPER ADMIN';
+      const res = await fetch(`/api/notifications?role=${encodeURIComponent(roleToUse)}&limit=30`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.notifications)) {
+        let clearedSet: Set<string> = new Set();
+        try {
+          const stored = localStorage.getItem('saf_attended_notif_ids');
+          if (stored) {
+            const arr = JSON.parse(stored);
+            if (Array.isArray(arr)) clearedSet = new Set(arr);
+          }
+        } catch (e) {}
+
+        const filtered = data.notifications.filter((n: any) => !clearedSet.has(n.id));
+        setNotifications(filtered);
+      }
+    } catch (e) {
+      console.error('Error fetching notifications:', e);
+    }
+  }, [activeRole]);
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000);
+    return () => clearInterval(interval);
+  }, [fetchNotifications]);
+
+  const handleClearNotification = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+
+    try {
+      const stored = localStorage.getItem('saf_attended_notif_ids');
+      const arr = stored ? JSON.parse(stored) : [];
+      if (!arr.includes(id)) {
+        arr.push(id);
+        localStorage.setItem('saf_attended_notif_ids', JSON.stringify(arr));
+      }
+    } catch (e) {}
+
+    try {
+      await fetch(`/api/notifications?id=${id}`, { method: 'DELETE' });
+    } catch (e) {}
+  };
+
+  const handleClearAllNotifications = async () => {
+    setNotifications([]);
+    try {
+      await fetch('/api/notifications?all=true', { method: 'DELETE' });
+    } catch (e) {}
+  };
+
+  const handleMarkAllRead = async () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ markAllRead: true }),
+      });
+    } catch (e) {}
+  };
 
   // Live Countdown Timer to 13 Dec 2026, 11:00 AM (Month, Week, Day, Hour, Min, Sec)
   const [countdown, setCountdown] = useState({
@@ -683,31 +744,78 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
               {/* Notifications Dropdown Drawer */}
               {notificationsOpen && (
-                <div className="absolute right-0 mt-3 w-72 sm:w-80 bg-[#232334] border border-white/10 rounded-3xl shadow-2xl z-50 p-4 space-y-3">
+                <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#232334] border border-white/10 rounded-3xl shadow-2xl z-50 p-4 space-y-3">
                   <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
                     <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-[#8b5cf6]" /> Operational Notifications
+                      <Bell className="w-4 h-4 text-[#8b5cf6]" /> Operational Notifications ({notifications.length})
                     </h4>
-                    <button
-                      onClick={() => setNotifications(notifications.map((n) => ({ ...n, isRead: true })))}
-                      className="text-[10px] text-[#8b5cf6] hover:underline font-bold"
-                    >
-                      Mark all read
-                    </button>
-                  </div>
-                  <div className="space-y-2 max-h-64 overflow-y-auto">
-                    {notifications.map((n) => (
-                      <div
-                        key={n.id}
-                        className={`p-3 rounded-2xl border text-xs transition-colors ${
-                          n.isRead ? 'bg-[#1c1c2a]/60 border-white/5 text-[#8a8d9b]' : 'bg-[#1c1c2a] border-[#8b5cf6]/40 text-white'
-                        }`}
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="text-[10px] text-[#8b5cf6] hover:underline font-bold"
                       >
-                        <p className="font-semibold text-white">{n.title}</p>
-                        <p className="text-[11px] text-[#8a8d9b] mt-0.5">{n.message}</p>
-                        <p className="text-[9px] text-[#8b5cf6] mt-1">{n.time}</p>
+                        Mark read
+                      </button>
+                      <button
+                        onClick={handleClearAllNotifications}
+                        className="text-[10px] text-rose-400 hover:underline font-bold"
+                      >
+                        Clear all
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5 max-h-80 overflow-y-auto pr-1">
+                    {notifications.length === 0 ? (
+                      <div className="p-4 text-center text-slate-400 text-xs italic">
+                        No notifications for your role.
                       </div>
-                    ))}
+                    ) : (
+                      notifications.map((n) => (
+                        <div
+                          key={n.id}
+                          className={`p-3 rounded-2xl border text-xs transition-colors relative group flex items-start justify-between gap-2 ${
+                            n.isRead ? 'bg-[#1c1c2a]/60 border-white/5 text-[#8a8d9b]' : 'bg-[#1c1c2a] border-[#8b5cf6]/40 text-white shadow-md'
+                          }`}
+                        >
+                          <div className="flex-1 pr-1">
+                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                              <span className="text-[9px] font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-800/60">
+                                {n.addedBy ? `By: ${n.addedBy}` : 'By: System'}
+                              </span>
+                              <span className="text-[9px] text-slate-400">
+                                {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Just now')}
+                              </span>
+                            </div>
+
+                            <p className="font-bold text-white text-xs leading-snug">{n.title}</p>
+                            <p className="text-[11px] text-[#8a8d9b] mt-0.5 leading-snug">{n.message}</p>
+
+                            {n.link && (
+                              <Link
+                                href={n.link}
+                                onClick={(e) => {
+                                  setNotificationsOpen(false);
+                                  handleClearNotification(n.id, e);
+                                }}
+                                className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:underline mt-1.5"
+                              >
+                                View resource →
+                              </Link>
+                            )}
+                          </div>
+
+                          {/* CLEAR BUTTON FOR EACH NOTIFICATION */}
+                          <button
+                            onClick={(e) => handleClearNotification(n.id, e)}
+                            className="p-1 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors shrink-0 mt-0.5"
+                            title="Clear this notification"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
               )}

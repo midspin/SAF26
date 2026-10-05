@@ -789,10 +789,11 @@ model AuditLog {
 
 model Notification {
   id          String   @id @default(uuid())
-  eventId          String?
-  event            Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  eventId     String?
+  event       Event?   @relation(fields: [eventId], references: [id], onDelete: SetNull)
   title       String
   message     String
+  addedBy     String?  // Name of person who added data for notification
   type        String   @default("info") // info, success, warning, error
   targetRoles String?  // Comma-separated list of target roles e.g. "TECHNICAL HEAD,PRODUCTION & LAYOUT,INVENTORY MANAGER,PROCUREMENT MANAGER"
   isRead      Boolean  @default(false)

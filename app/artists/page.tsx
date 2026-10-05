@@ -396,10 +396,19 @@ export default function ArtistsPage() {
         console.error('Failed to fetch events:', e);
       }
 
+      let userName = 'Programming Team';
+      try {
+        const session = localStorage.getItem('saf_user_session');
+        if (session) {
+          const parsed = JSON.parse(session);
+          if (parsed.name) userName = parsed.name;
+        }
+      } catch (e) {}
+
       const res = await fetch('/api/artists', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventId, userRole, ...formData }),
+        body: JSON.stringify({ eventId, userRole, userName, ...formData }),
       });
       const data = await res.json();
       if (data.success && data.artist) {

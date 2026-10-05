@@ -233,23 +233,22 @@ export async function POST(req: Request) {
       },
     });
 
-    // Notification trigger
-    const creatorRoleNorm = (body.userRole || 'SUPER ADMIN').trim().toUpperCase();
-    if (isAuthorized(creatorRoleNorm)) {
-      try {
-        await prisma.notification.create({
-          data: {
-            eventId: targetEventId,
-            title: '🎨 New Artist Registered',
-            message: `Artist "${artist.artistName}" was added by ${body.userRole || 'Super Admin'}.`,
-            type: 'info',
-            targetRoles: 'TECHNICAL HEAD,PRODUCTION & LAYOUT,INVENTORY MANAGER,PROCUREMENT MANAGER',
-            link: `/artists/${artist.id}`,
-          },
-        });
-      } catch (notifErr) {
-        console.error('Failed to create artist notification:', notifErr);
-      }
+    // Notification trigger: PROGRAMMING TEAM adding an artist ---> SPATIAL DESIGNERS, INVENTORY TEAM, TECHNICAL TEAM, PRODUCTION TEAM
+    try {
+      const addedByName = body.userName || body.createdByName || body.addedBy || (body.userRole ? `${body.userRole} Member` : 'Programming Team');
+      await prisma.notification.create({
+        data: {
+          eventId: targetEventId,
+          title: '🎨 New Artist Added',
+          message: `Artist "${artist.artistName}" was added by ${addedByName}.`,
+          addedBy: addedByName,
+          type: 'info',
+          targetRoles: 'SPATIAL DESIGNER,INVENTORY MANAGER,TECHNICAL HEAD,PRODUCTION & LAYOUT',
+          link: `/artists/${artist.id}`,
+        },
+      });
+    } catch (notifErr) {
+      console.error('Failed to create artist notification:', notifErr);
     }
 
     return NextResponse.json({ success: true, artist: fullArtist });

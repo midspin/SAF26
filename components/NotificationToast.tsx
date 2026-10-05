@@ -2,27 +2,32 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
-import { Bell, X, Sparkles, ArrowUpRight, ShieldAlert } from 'lucide-react';
+import { Bell, X, ArrowUpRight, UserCheck } from 'lucide-react';
 
 export default function NotificationToast() {
   const [activeToast, setActiveToast] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
   const seenIdsRef = useRef<Set<string>>(new Set());
 
-  // Initialize role and seen IDs from sessionStorage
+  // Initialize role and seen/attended IDs
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedRole = localStorage.getItem('saf_user_role') || 'SUPER ADMIN';
       setUserRole(storedRole);
 
       try {
+        const storedAttended = localStorage.getItem('saf_attended_notif_ids');
         const storedSeen = sessionStorage.getItem('saf_seen_notif_ids');
+        const set = new Set<string>();
+        if (storedAttended) {
+          const arr = JSON.parse(storedAttended);
+          if (Array.isArray(arr)) arr.forEach((id: string) => set.add(id));
+        }
         if (storedSeen) {
           const arr = JSON.parse(storedSeen);
-          if (Array.isArray(arr)) {
-            seenIdsRef.current = new Set(arr);
-          }
+          if (Array.isArray(arr)) arr.forEach((id: string) => set.add(id));
         }
+        seenIdsRef.current = set;
       } catch (e) {}
     }
 
@@ -48,7 +53,6 @@ export default function NotificationToast() {
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
 
-      // Tone 1: High C (523.25 Hz)
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.type = 'sine';
@@ -60,7 +64,6 @@ export default function NotificationToast() {
       osc1.start(ctx.currentTime);
       osc1.stop(ctx.currentTime + 0.35);
 
-      // Tone 2: Harmonious E (659.25 Hz)
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.type = 'sine';
@@ -76,6 +79,30 @@ export default function NotificationToast() {
     }
   };
 
+  const handleDismissOrAttend = async (id: string) => {
+    setActiveToast(null);
+    seenIdsRef.current.add(id);
+
+    // Save in localStorage so it never pops up again for this device/user
+    try {
+      const stored = localStorage.getItem('saf_attended_notif_ids');
+      const arr = stored ? JSON.parse(stored) : [];
+      if (!arr.includes(id)) {
+        arr.push(id);
+        localStorage.setItem('saf_attended_notif_ids', JSON.stringify(arr));
+      }
+    } catch (e) {}
+
+    // Mark as read in DB
+    try {
+      await fetch('/api/notifications', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+    } catch (e) {}
+  };
+
   // Poll for new notifications targeting the current role
   useEffect(() => {
     const checkNotifications = async () => {
@@ -85,6 +112,11 @@ export default function NotificationToast() {
         const recipientRoles = [
           'SUPER ADMIN',
           'SUPERADMIN',
+          'SPATIAL DESIGNER',
+          'SPATIAL DESIGNERS',
+          'SPATIAL DESIGN TEAM',
+          'PROGRAMMING',
+          'PROGRAMMING TEAM',
           'TECHNICAL TEAM',
           'TECHNICAL HEAD',
           'TECH HEAD',
@@ -104,15 +136,14 @@ export default function NotificationToast() {
         const isRecipient = recipientRoles.includes(normRole);
         if (!isRecipient) return;
 
-        const res = await fetch(`/api/notifications?role=${encodeURIComponent(userRole)}&limit=10`);
+        const res = await fetch(`/api/notifications?role=${encodeURIComponent(userRole)}&limit=15`);
         const data = await res.json();
 
         if (data.success && Array.isArray(data.notifications) && data.notifications.length > 0) {
-          // Find the newest unseen notification
-          const newest = data.notifications[0];
+          // Find the newest un-attended notification
+          const newest = data.notifications.find((n: any) => !seenIdsRef.current.has(n.id) && !n.isRead);
 
-          if (newest && !seenIdsRef.current.has(newest.id)) {
-            // Mark as seen
+          if (newest) {
             seenIdsRef.current.add(newest.id);
             try {
               sessionStorage.setItem(
@@ -121,14 +152,8 @@ export default function NotificationToast() {
               );
             } catch (e) {}
 
-            // Trigger Pop-up Toast and Sound
             setActiveToast(newest);
             playNotificationSound();
-
-            // Auto-hide toast after 7 seconds
-            setTimeout(() => {
-              setActiveToast((prev: any) => (prev?.id === newest.id ? null : prev));
-            }, 7000);
           }
         }
       } catch (err) {
@@ -136,9 +161,8 @@ export default function NotificationToast() {
       }
     };
 
-    // Initial check and interval polling
     checkNotifications();
-    const interval = setInterval(checkNotifications, 3000);
+    const interval = setInterval(checkNotifications, 4000);
     return () => clearInterval(interval);
   }, [userRole]);
 
@@ -155,14 +179,18 @@ export default function NotificationToast() {
         </div>
 
         <div className="flex-1 pr-6 space-y-1">
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[9px] font-black uppercase tracking-wider bg-sky-950 text-sky-300 px-2 py-0.5 rounded-full border border-sky-800">
               Role Notification
             </span>
-            <span className="text-[10px] text-slate-400 font-medium">Just now</span>
+            {activeToast.addedBy && (
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60 flex items-center gap-1">
+                <UserCheck className="w-3 h-3" /> By: {activeToast.addedBy}
+              </span>
+            )}
           </div>
 
-          <h4 className="text-xs font-black text-white flex items-center gap-1">
+          <h4 className="text-xs font-black text-white flex items-center gap-1 pt-1">
             {activeToast.title}
           </h4>
 
@@ -170,20 +198,29 @@ export default function NotificationToast() {
             {activeToast.message}
           </p>
 
-          {activeToast.link && (
-            <Link
-              href={activeToast.link}
-              onClick={() => setActiveToast(null)}
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-400 hover:text-sky-300 mt-1.5 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-sky-500 transition-all"
+          <div className="flex items-center gap-2 pt-1.5">
+            {activeToast.link && (
+              <Link
+                href={activeToast.link}
+                onClick={() => handleDismissOrAttend(activeToast.id)}
+                className="inline-flex items-center gap-1 text-[11px] font-bold text-sky-400 hover:text-sky-300 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700 hover:border-sky-500 transition-all"
+              >
+                Open Resource <ArrowUpRight className="w-3.5 h-3.5" />
+              </Link>
+            )}
+            <button
+              onClick={() => handleDismissOrAttend(activeToast.id)}
+              className="text-[11px] font-bold text-rose-400 hover:text-rose-300 bg-rose-950/40 px-2.5 py-1 rounded-lg border border-rose-800/40 transition-all"
             >
-              Open Resource <ArrowUpRight className="w-3.5 h-3.5" />
-            </Link>
-          )}
+              Clear & Attend
+            </button>
+          </div>
         </div>
 
         <button
-          onClick={() => setActiveToast(null)}
+          onClick={() => handleDismissOrAttend(activeToast.id)}
           className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+          title="Clear notification"
         >
           <X className="w-4 h-4" />
         </button>
@@ -191,3 +228,4 @@ export default function NotificationToast() {
     </div>
   );
 }
+

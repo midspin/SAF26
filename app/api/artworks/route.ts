@@ -66,6 +66,25 @@ export async function POST(req: Request) {
       },
     });
 
+    if (techProdLayout) {
+      try {
+        const addedByName = body.userName || body.createdByName || body.addedBy || (body.userRole ? `${body.userRole} Member` : 'Spatial Designer');
+        await prisma.notification.create({
+          data: {
+            eventId: eventId || artwork.eventId,
+            title: '📐 Spatial Drawing Uploaded',
+            message: `Spatial layout drawing for artwork "${artwork.artworkName}" was uploaded by ${addedByName}.`,
+            addedBy: addedByName,
+            type: 'info',
+            targetRoles: 'PRODUCTION & LAYOUT,PROGRAMMING',
+            link: artwork.artistId ? `/artists/${artwork.artistId}` : '/artworks',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to create artwork drawing notification:', notifErr);
+      }
+    }
+
     return NextResponse.json({ success: true, artwork });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

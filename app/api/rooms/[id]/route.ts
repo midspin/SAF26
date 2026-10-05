@@ -118,6 +118,25 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     });
 
+    if (floorplan || elevation || techProdLayout) {
+      try {
+        const addedByName = userName || (userRole ? `${userRole} Member` : 'Spatial Designer');
+        await prisma.notification.create({
+          data: {
+            eventId: room.eventId,
+            title: '📐 Spatial Drawing Uploaded',
+            message: `Spatial drawing for Room "${room.roomName} (${room.roomNumber})" was updated/uploaded by ${addedByName}.`,
+            addedBy: addedByName,
+            type: 'info',
+            targetRoles: 'PRODUCTION & LAYOUT,PROGRAMMING',
+            link: '/rooms',
+          },
+        });
+      } catch (notifErr) {
+        console.error('Failed to create room drawing notification:', notifErr);
+      }
+    }
+
     return NextResponse.json({ success: true, room });
   } catch (error: any) {
     console.error('Error updating room:', error);

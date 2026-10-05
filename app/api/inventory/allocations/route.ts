@@ -159,6 +159,54 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    if (result.allocation) {
+      try {
+        const itemObj = await prisma.inventoryItem.findUnique({ where: { id: inventoryItemId } });
+        const artistObj = artistId ? await prisma.artist.findUnique({ where: { id: artistId } }) : null;
+
+        const isProdItem =
+          (department && department.toUpperCase() === 'PRODUCTION') ||
+          (itemObj && itemObj.inventoryUsageType === 'PRODUCTION') ||
+          (itemObj && itemObj.inventoryCategory && itemObj.inventoryCategory.toUpperCase().includes('PRODUCTION'));
+
+        const addedByName = body.userName || body.createdByName || body.addedBy || approvedBy || (isProdItem ? 'Production Team' : 'Technical Team');
+        const itemName = itemObj?.element || 'inventory item';
+        const artistName = artistObj?.artistName ? `artist "${artistObj.artistName}"` : 'artist';
+
+        const finalEventId = eventId || itemObj?.eventId || result.allocation.eventId;
+
+        if (isProdItem) {
+          // PRODUCTION TEAM adding an artist item from production inventory ---> SPATIAL DESIGNERS, INVENTORY TEAM, TECHNICAL TEAM, PROGRAMMING TEAM
+          await prisma.notification.create({
+            data: {
+              eventId: finalEventId,
+              title: '📦 Production Item Added to Artist',
+              message: `${addedByName} added production item "${itemName}" (${reqQty}x) for ${artistName}.`,
+              addedBy: addedByName,
+              type: 'info',
+              targetRoles: 'SPATIAL DESIGNER,INVENTORY MANAGER,TECHNICAL HEAD,PROGRAMMING',
+              link: artistId ? `/artists/${artistId}` : '/inventory',
+            },
+          });
+        } else {
+          // TECHNICAL TEAM adding an artist item from tech inventory ---> SPATIAL DESIGNERS, INVENTORY TEAM, PROGRAMMING TEAM, PRODUCTION TEAM
+          await prisma.notification.create({
+            data: {
+              eventId: finalEventId,
+              title: '⚡ Tech Item Added to Artist',
+              message: `${addedByName} added tech item "${itemName}" (${reqQty}x) for ${artistName}.`,
+              addedBy: addedByName,
+              type: 'info',
+              targetRoles: 'SPATIAL DESIGNER,INVENTORY MANAGER,PROGRAMMING,PRODUCTION & LAYOUT',
+              link: artistId ? `/artists/${artistId}` : '/inventory',
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.error('Failed to create allocation notification:', notifErr);
+      }
+    }
+
     return NextResponse.json({ success: true, allocation: result.allocation });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
