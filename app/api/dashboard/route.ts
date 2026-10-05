@@ -5,43 +5,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const [artists, artworks, items, venues] = await Promise.all([
+    const results = await Promise.all([
       prisma.artist.findMany({
-        select: {
-          id: true,
-          status: true,
-          createdAt: true,
-          artworks: {
-            select: {
-              id: true,
-              artworkName: true,
-              installationType: true,
-              techProdLayout: true,
-              venueId: true,
-              roomId: true,
-            },
-          },
-          allocations: {
-            select: {
-              id: true,
-              artworkId: true,
-              department: true,
-              inventoryItem: {
-                select: {
-                  inventoryCategory: true,
-                  inventoryUsageType: true,
-                },
-              },
-            },
-          },
-          installations: {
-            select: {
-              id: true,
-              installationStatus: true,
-              artworkId: true,
-            },
-          },
-        },
+        select: { id: true, status: true },
       }),
       prisma.artwork.findMany({
         select: {
@@ -77,7 +43,30 @@ export async function GET() {
           },
         },
       }),
+      prisma.artist.findMany({
+        include: {
+          artworks: {
+            include: {
+              venue: true,
+              room: true,
+            },
+          },
+          allocations: {
+            include: {
+              inventoryItem: true,
+            },
+          },
+        },
+      }),
+      prisma.artistInstallation.findMany(),
     ]);
+
+    const artists = results[0];
+    const artworks = results[1];
+    const items = results[2];
+    const venues = results[3];
+    const allArtists = results[4];
+    const allInstallations = results[5];
 
     // 1. Artist stats
     const totalArtists = artists.length;
@@ -251,44 +240,91 @@ export async function GET() {
       return { name: v.venueName || 'Venue', artworkCount: count };
     });
 
-    // 8. Progress Tracker Stages Breakdown
+    // 8. Progress Tracker Artwork Stages
+    let totalTrackedArtworks = 0;
     let stageOnboarded = 0;
     let stageTechAllocated = 0;
     let stageProdAllocated = 0;
-    let stageSpatialLayout = 0;
-    let stageInstalled = 0;
+    let stageLayoutUploaded = 0;
+    let stageFullyCompleted = 0;
 
-    artists.forEach((artist: any) => {
-      const arts = artist.artworks && artist.artworks.length > 0 ? artist.artworks : [null];
-      arts.forEach((art: any) => {
-        stageOnboarded += 1;
+    const installationStagesCount: Record<string, number> = {
+      Planned: 0,
+      Ready: 0,
+      'Installation In Progress': 0,
+      Installed: 0,
+      Completed: 0,
+    };
+
+    allArtists.forEach((artist) => {
+      const artworksList = artist.artworks && artist.artworks.length > 0 ? artist.artworks : [null];
+      artworksList.forEach((art) => {
+        totalTrackedArtworks++;
+        const inst = allInstallations.find(
+          (i) => i.artistId === artist.id && (art ? i.artworkId === art.id : true)
+        ) || allInstallations.find((i) => i.artistId === artist.id);
+
+        const status = inst?.installationStatus || 'Planned';
+        installationStagesCount[status] = (installationStagesCount[status] || 0) + 1;
+
+        const isOnboarded = Boolean(artist.artistName && art?.artworkName);
+        const instType = (art?.installationType || '').toLowerCase();
+        const showTechData =
+          instType.includes('projection') ||
+          instType.includes('interactive') ||
+          instType.includes('digital') ||
+          instType.includes('sound');
+
         const allocations = artist.allocations || [];
-        const hasTech = allocations.some((a: any) => {
-          const isMatch = !a.artworkId || a.artworkId === art?.id;
-          const dept = (a.department || '').toUpperCase();
-          const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
-          const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+        const hasTechAlloc = allocations.some((alloc: any) => {
+          const isMatch = !alloc.artworkId || alloc.artworkId === art?.id;
+          const dept = (alloc.department || '').toUpperCase();
+          const cat = (alloc.inventoryItem?.inventoryCategory || '').toUpperCase();
+          const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
           return isMatch && (dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL');
         });
-        if (hasTech) stageTechAllocated += 1;
 
-        const hasProd = allocations.some((a: any) => {
-          const isMatch = !a.artworkId || a.artworkId === art?.id;
-          const dept = (a.department || '').toUpperCase();
-          const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
-          const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+        const hasProdAlloc = allocations.some((alloc: any) => {
+          const isMatch = !alloc.artworkId || alloc.artworkId === art?.id;
+          const dept = (alloc.department || '').toUpperCase();
+          const cat = (alloc.inventoryItem?.inventoryCategory || '').toUpperCase();
+          const usage = (alloc.inventoryItem?.inventoryUsageType || '').toUpperCase();
           return isMatch && (dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION');
         });
-        if (hasProd) stageProdAllocated += 1;
 
-        if (art?.techProdLayout) stageSpatialLayout += 1;
+        const hasLayout = Boolean(
+          art?.techProdLayout || art?.room?.techProdLayout || art?.room?.floorplan || art?.venue?.venueDocument
+        );
 
-        const inst = (artist.installations || []).find((i: any) => !art || i.artworkId === art.id);
-        if (inst && (inst.installationStatus === 'Installed' || inst.installationStatus === 'Completed')) {
-          stageInstalled += 1;
+        if (isOnboarded) stageOnboarded++;
+        if (hasTechAlloc) stageTechAllocated++;
+        if (hasProdAlloc) stageProdAllocated++;
+        if (hasLayout) stageLayoutUploaded++;
+
+        const totalActiveSteps = showTechData ? 4 : 3;
+        const completedCount =
+          (isOnboarded ? 1 : 0) +
+          (showTechData && hasTechAlloc ? 1 : 0) +
+          (hasProdAlloc ? 1 : 0) +
+          (hasLayout ? 1 : 0);
+
+        if (completedCount === totalActiveSteps) {
+          stageFullyCompleted++;
         }
       });
     });
+
+    const progressTrackerData = {
+      totalTrackedArtworks,
+      milestones: {
+        onboarded: stageOnboarded,
+        techAllocated: stageTechAllocated,
+        prodAllocated: stageProdAllocated,
+        layoutUploaded: stageLayoutUploaded,
+        fullyCompleted: stageFullyCompleted,
+      },
+      installationStages: installationStagesCount,
+    };
 
     return NextResponse.json({
       success: true,
@@ -310,17 +346,11 @@ export async function GET() {
         allocatedMediaPlayers,
         balanceMediaPlayers,
       },
-      progressTrackerStats: {
-        stageOnboarded,
-        stageTechAllocated,
-        stageProdAllocated,
-        stageSpatialLayout,
-        stageInstalled,
-      },
       projectorsList,
       speakersBreakdown: hsMap,
       mediaPlayersList,
       venueDistribution,
+      progressTrackerData,
     });
   } catch (error: any) {
     console.error('Dashboard API Error:', error);
