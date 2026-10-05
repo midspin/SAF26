@@ -497,22 +497,19 @@ export default function AppLayout({ children }: AppLayoutProps) {
       items: [
         { name: 'Venues', href: '/venues', icon: Building2, moduleId: 'venues' },
         { name: 'Rooms', href: '/rooms', icon: DoorOpen, moduleId: 'rooms' },
-        { name: 'Production Team Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'New Table', moduleId: 'inventory' },
-        { name: 'Technical & Production', href: '/requirements', icon: Wrench, moduleId: 'requirements' },
       ],
     },
     {
       title: 'INVENTORY & PROCUREMENT',
       items: [
-        { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, badge: 'Tech', moduleId: 'inventory' },
-        { name: 'Production Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, badge: 'Production', moduleId: 'inventory' },
+        { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, moduleId: 'inventory' },
+        { name: 'Production Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, moduleId: 'inventory' },
         { name: 'Purchase & Rentals', href: '/procurement', icon: ShoppingCart, moduleId: 'procurement' },
       ],
     },
     {
       title: 'INTEGRATIONS & GOVERNANCE',
       items: [
-        { name: 'Google Sheets 1-Way Sync', href: '/google-sheets', icon: RefreshCw, badge: 'Live Mirror', moduleId: 'google-sheets' },
         { name: 'Reports & Analytics', href: '/reports', icon: FileText, moduleId: 'reports' },
         { name: 'Audit Logs', href: '/audit-logs', icon: ShieldCheck, moduleId: 'audit-logs' },
         { name: 'Settings & Users', href: '/settings', icon: Settings, moduleId: 'settings' },

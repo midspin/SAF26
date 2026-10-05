@@ -31,7 +31,6 @@ export const MODULE_DEFINITIONS: { id: string; name: string; category: ModulePer
   { id: 'import', name: 'Excel Migration Wizard', category: 'INVENTORY & PROCUREMENT' },
   { id: 'procurement', name: 'Purchase & Rentals', category: 'INVENTORY & PROCUREMENT' },
   { id: 'vendors', name: 'Vendors Directory', category: 'INVENTORY & PROCUREMENT' },
-  { id: 'google-sheets', name: 'Google Sheets 1-Way Sync', category: 'INTEGRATIONS & GOVERNANCE' },
   { id: 'reports', name: 'Reports & Analytics', category: 'INTEGRATIONS & GOVERNANCE' },
   { id: 'audit-logs', name: 'Audit Logs', category: 'INTEGRATIONS & GOVERNANCE' },
   { id: 'settings', name: 'Settings & Users', category: 'INTEGRATIONS & GOVERNANCE' },
