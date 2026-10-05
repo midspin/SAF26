@@ -376,189 +376,192 @@ export default function ProgressTrackerPage() {
             return (
               <div
                 key={proj.id}
-                className="group relative bg-[#1c1c2b] border border-slate-800 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 overflow-hidden"
+                className="group relative bg-[#1c1c2b] border border-slate-800 hover:border-slate-700/80 rounded-2xl p-4 sm:p-5 transition-all duration-200 shadow-xl flex flex-col gap-4 overflow-hidden"
               >
-                {/* Left Section: Artist Name, Artwork Title, Venue & Room Subline */}
-                <div className="space-y-1.5 shrink-0 lg:max-w-[280px] w-full">
-                  <div className="flex items-center gap-2">
-                    {proj.artistPhoto && (
-                      <img
-                        src={proj.artistPhoto}
-                        alt={proj.artistName}
-                        className="w-7 h-7 rounded-full object-cover border border-slate-700"
-                        onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
-                      />
-                    )}
-                    <h3 className="text-sm font-extrabold text-white tracking-wide group-hover:text-sky-300 transition-colors">
-                      {proj.artistName}
-                    </h3>
-                  </div>
-
-                  <p className="text-xs font-semibold text-sky-400 flex items-center gap-1.5">
-                    <Palette className="w-3.5 h-3.5 text-sky-400 shrink-0" />
-                    <span>Artwork: {proj.artworkName}</span>
-                  </p>
-
-                  <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
-                    <span className="flex items-center gap-1 text-slate-400">
-                      <Building2 className="w-3.5 h-3.5 text-amber-400/90 shrink-0" />
-                      {proj.venueName}
-                    </span>
-                    <span className="text-slate-600">|</span>
-                    <span className="flex items-center gap-1 text-slate-400">
-                      <DoorOpen className="w-3.5 h-3.5 text-emerald-400/90 shrink-0" />
-                      Room {proj.roomNumber} ({proj.roomName})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Center Section: Milestone Progress Timeline Stepper */}
-                <div className="flex-1 py-2 lg:py-0 px-1 border-y lg:border-y-0 lg:border-x border-slate-800/80 lg:px-6">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-2">
-                    <span className="text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Milestone Status ({m.completedCount}/{m.totalActiveSteps})
-                    </span>
-                    <span className="text-sky-400 font-mono">{progressPct}% Complete</span>
-                  </div>
-
-                  {/* Connected Timeline Nodes */}
-                  <div
-                    className={`grid gap-2.5 ${
-                      m.showTechData ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'
-                    }`}
-                  >
-                    {/* Step 1: Artist & Artwork Onboard */}
-                    <div
-                      className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                        m.onboard
-                          ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">1. Onboard</span>
-                        {m.onboard ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-slate-600" />
-                        )}
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Artist & Artwork</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Updated by Prog Team</span>
+                {/* Main Card Header Row */}
+                <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 w-full">
+                  {/* Left Section: Artist Name, Artwork Title, Venue & Room Subline */}
+                  <div className="space-y-1.5 shrink-0 lg:max-w-[280px] w-full">
+                    <div className="flex items-center gap-2">
+                      {proj.artistPhoto && (
+                        <img
+                          src={proj.artistPhoto}
+                          alt={proj.artistName}
+                          className="w-7 h-7 rounded-full object-cover border border-slate-700"
+                          onError={(e) => { (e.target as HTMLElement).style.display = 'none'; }}
+                        />
+                      )}
+                      <h3 className="text-sm font-extrabold text-white tracking-wide group-hover:text-sky-300 transition-colors">
+                        {proj.artistName}
+                      </h3>
                     </div>
 
-                    {/* Step 2 (Conditional): Tech Data */}
-                    {m.showTechData && (
+                    <p className="text-xs font-semibold text-sky-400 flex items-center gap-1.5">
+                      <Palette className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+                      <span>Artwork: {proj.artworkName}</span>
+                    </p>
+
+                    <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Building2 className="w-3.5 h-3.5 text-amber-400/90 shrink-0" />
+                        {proj.venueName}
+                      </span>
+                      <span className="text-slate-600">|</span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <DoorOpen className="w-3.5 h-3.5 text-emerald-400/90 shrink-0" />
+                        Room {proj.roomNumber} ({proj.roomName})
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Center Section: Milestone Progress Timeline Stepper */}
+                  <div className="flex-1 py-2 lg:py-0 px-1 border-y lg:border-y-0 lg:border-x border-slate-800/80 lg:px-6">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-400 mb-2">
+                      <span className="text-slate-300 uppercase tracking-wider text-[10px] flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Milestone Status ({m.completedCount}/{m.totalActiveSteps})
+                      </span>
+                      <span className="text-sky-400 font-mono">{progressPct}% Complete</span>
+                    </div>
+
+                    {/* Connected Timeline Nodes */}
+                    <div
+                      className={`grid gap-2.5 ${
+                        m.showTechData ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-3'
+                      }`}
+                    >
+                      {/* Step 1: Artist & Artwork Onboard */}
                       <div
                         className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                          m.techData
+                          m.onboard
                             ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
                             : 'bg-slate-950/50 border-slate-800 text-slate-500'
                         }`}
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase tracking-wider opacity-80">2. Tech Data</span>
-                          {m.techData ? (
+                          <span className="text-[10px] font-black uppercase tracking-wider opacity-80">1. Onboard</span>
+                          {m.onboard ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-slate-600" />
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-200 truncate">Artist & Artwork</span>
+                        <span className="text-[9px] text-slate-400 block truncate">Updated by Prog Team</span>
+                      </div>
+
+                      {/* Step 2 (Conditional): Tech Data */}
+                      {m.showTechData && (
+                        <div
+                          className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
+                            m.techData
+                              ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                              : 'bg-slate-950/50 border-slate-800 text-slate-500'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black uppercase tracking-wider opacity-80">2. Tech Data</span>
+                            {m.techData ? (
+                              <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                            ) : (
+                              <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
+                            )}
+                          </div>
+                          <span className="text-[11px] font-bold text-slate-200 truncate">Tech Data</span>
+                          <span className="text-[9px] text-slate-400 block truncate">Tech item allocated</span>
+                        </div>
+                      )}
+
+                      {/* Step 3: Production Allocation */}
+                      <div
+                        className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
+                          m.prodAllocation
+                            ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-500'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
+                            {m.showTechData ? '3. Production' : '2. Production'}
+                          </span>
+                          {m.prodAllocation ? (
                             <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
                           ) : (
                             <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
                           )}
                         </div>
-                        <span className="text-[11px] font-bold text-slate-200 truncate">Tech Data</span>
-                        <span className="text-[9px] text-slate-400 block truncate">Tech item allocated</span>
+                        <span className="text-[11px] font-bold text-slate-200 truncate">Production Allocation</span>
+                        <span className="text-[9px] text-slate-400 block truncate">Prod item allocated</span>
                       </div>
-                    )}
 
-                    {/* Step 3: Production Allocation */}
-                    <div
-                      className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                        m.prodAllocation
-                          ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
-                          {m.showTechData ? '3. Production' : '2. Production'}
-                        </span>
-                        {m.prodAllocation ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-amber-500/80 animate-pulse" />
-                        )}
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Production Allocation</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Prod item allocated</span>
-                    </div>
-
-                    {/* Step 4: Final Layout */}
-                    <div
-                      className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
-                        m.roomLayout
-                          ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
-                          : 'bg-slate-950/50 border-slate-800 text-slate-500'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
-                          {m.showTechData ? '4. Layout' : '3. Layout'}
-                        </span>
-                        {m.roomLayout ? (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
-                        ) : (
-                          <span className="w-2 h-2 rounded-full bg-slate-600" />
-                        )}
-                      </div>
-                      <span className="text-[11px] font-bold text-slate-200 truncate">Final Layout</span>
-                      <span className="text-[9px] text-slate-400 block truncate">Tech & Prod diagram</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Section: Status Pill Badge & Action Button */}
-                <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0">
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => toggleProjectDetails(proj)}
-                      className={`px-3.5 py-1.5 rounded-full font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer hover:scale-105 active:scale-95 ${
-                        expandedProjects.has(proj.id)
-                          ? 'bg-purple-600 text-white border border-purple-400 shadow-purple-900/50'
-                          : 'bg-slate-900 hover:bg-slate-800 text-purple-300 border border-purple-500/40'
-                      }`}
-                      title="Click to expand detailed workflow timeline chart & user entry logs"
-                    >
-                      <Layers className="w-3.5 h-3.5 text-purple-300" />
-                      <span>{expandedProjects.has(proj.id) ? 'Collapse View' : 'Detailed View'}</span>
-                      {expandedProjects.has(proj.id) ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleOpenUpdate(proj)}
-                      className="px-3.5 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-                      title="Click to update installation status & notes"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-                      <span>{proj.installationStatus}</span>
-                    </button>
-                  </div>
-
-                  <div className="text-right">
-                    <span className="text-[10px] text-slate-400 block">
-                      Target: <strong className="text-slate-300">{proj.startDate}</strong>
-                    </span>
-                    {proj.floorplanUrl && (
-                      <a
-                        href={proj.floorplanUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-[10px] font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center justify-end gap-1 mt-0.5"
+                      {/* Step 4: Final Layout */}
+                      <div
+                        className={`p-2 rounded-xl border transition-all flex flex-col justify-between space-y-1 ${
+                          m.roomLayout
+                            ? 'bg-emerald-950/40 border-emerald-800/60 text-emerald-300'
+                            : 'bg-slate-950/50 border-slate-800 text-slate-500'
+                        }`}
                       >
-                        <span>View Layout</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-wider opacity-80">
+                            {m.showTechData ? '4. Layout' : '3. Layout'}
+                          </span>
+                          {m.roomLayout ? (
+                            <Check className="w-3.5 h-3.5 text-emerald-400 stroke-[3]" />
+                          ) : (
+                            <span className="w-2 h-2 rounded-full bg-slate-600" />
+                          )}
+                        </div>
+                        <span className="text-[11px] font-bold text-slate-200 truncate">Final Layout</span>
+                        <span className="text-[9px] text-slate-400 block truncate">Tech & Prod diagram</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Section: Status Pill Badge & Action Button */}
+                  <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => toggleProjectDetails(proj)}
+                        className={`px-3.5 py-1.5 rounded-full font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer hover:scale-105 active:scale-95 ${
+                          expandedProjects.has(proj.id)
+                            ? 'bg-purple-600 text-white border border-purple-400 shadow-purple-900/50'
+                            : 'bg-slate-900 hover:bg-slate-800 text-purple-300 border border-purple-500/40'
+                        }`}
+                        title="Click to expand detailed workflow timeline chart & user entry logs"
+                      >
+                        <Layers className="w-3.5 h-3.5 text-purple-300" />
+                        <span>{expandedProjects.has(proj.id) ? 'Collapse View' : 'Detailed View'}</span>
+                        {expandedProjects.has(proj.id) ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleOpenUpdate(proj)}
+                        className="px-3.5 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
+                        title="Click to update installation status & notes"
+                      >
+                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                        <span>{proj.installationStatus}</span>
+                      </button>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block">
+                        Target: <strong className="text-slate-300">{proj.startDate}</strong>
+                      </span>
+                      {proj.floorplanUrl && (
+                        <a
+                          href={proj.floorplanUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-bold text-purple-400 hover:text-purple-300 hover:underline flex items-center justify-end gap-1 mt-0.5"
+                        >
+                          <span>View Layout</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
 
