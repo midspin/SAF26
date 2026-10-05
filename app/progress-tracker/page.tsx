@@ -591,14 +591,62 @@ export default function ProgressTrackerPage() {
 
                       {/* Work Status Timeline Chart Swimlanes */}
                       <div className="space-y-3 overflow-x-auto pb-2">
-                        {/* Top Milestones Header Row (Reference Image Alignment) */}
-                        <div className="min-w-[720px] grid grid-cols-12 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
-                          <div className="col-span-3 text-left pl-2 text-purple-300">Team / Contributor</div>
-                          <div className="col-span-2 border-l border-slate-800">Milestone 01<br/><span className="text-[9px] text-slate-500 font-normal">Onboard</span></div>
-                          <div className="col-span-2 border-l border-slate-800">Milestone 02<br/><span className="text-[9px] text-slate-500 font-normal">Tech Data</span></div>
-                          <div className="col-span-2 border-l border-slate-800">Milestone 03<br/><span className="text-[9px] text-slate-500 font-normal">Prod Alloc</span></div>
-                          <div className="col-span-2 border-l border-slate-800">Milestone 04<br/><span className="text-[9px] text-slate-500 font-normal">Spatial Layout</span></div>
-                          <div className="col-span-1 border-l border-slate-800">Status</div>
+                        {/* Top Milestone Pin Markers & Month Header Row (Creation Month → Event Date) */}
+                        <div className="min-w-[840px] space-y-1.5 mb-3">
+                          {/* Triangular Milestone Pin Markers */}
+                          <div className="grid grid-cols-12 text-[10px] font-black text-center">
+                            <div className="col-span-3 text-left pl-3 text-purple-300 font-extrabold uppercase tracking-wider">
+                              Team / Contributor
+                            </div>
+                            <div className="col-span-2 relative">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-[9px] shadow-sm">
+                                ▼ Milestone 01
+                              </span>
+                            </div>
+                            <div className="col-span-2 relative">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-[9px] shadow-sm">
+                                ▼ Milestone 02
+                              </span>
+                            </div>
+                            <div className="col-span-2 relative">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[9px] shadow-sm">
+                                ▼ Milestone 03
+                              </span>
+                            </div>
+                            <div className="col-span-2 relative">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[9px] shadow-sm">
+                                ▼ Milestone 04
+                              </span>
+                            </div>
+                            <div className="col-span-1 text-sky-300 font-extrabold text-[9px]">STATUS</div>
+                          </div>
+
+                          {/* Month Wise Headers (Event Creation Month → Event Date) */}
+                          <div className="grid grid-cols-12 text-[10px] font-extrabold uppercase tracking-wider bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center text-slate-300">
+                            <div className="col-span-3 text-left pl-3 text-purple-300">
+                              Workflow Swimlanes
+                            </div>
+                            <div className="col-span-2 border-l border-slate-800 flex flex-col items-center">
+                              <span>OCT 2026</span>
+                              <span className="text-[8px] text-purple-400 font-normal">Creation Month</span>
+                            </div>
+                            <div className="col-span-2 border-l border-slate-800 flex flex-col items-center">
+                              <span>NOV 2026</span>
+                              <span className="text-[8px] text-amber-400 font-normal">Tech Data</span>
+                            </div>
+                            <div className="col-span-2 border-l border-slate-800 flex flex-col items-center">
+                              <span>DEC 2026</span>
+                              <span className="text-[8px] text-rose-400 font-normal">Prod Alloc</span>
+                            </div>
+                            <div className="col-span-2 border-l border-slate-800 flex flex-col items-center">
+                              <span>JAN 2027</span>
+                              <span className="text-[8px] text-emerald-400 font-normal">Spatial Layout</span>
+                            </div>
+                            <div className="col-span-1 border-l border-slate-800 flex flex-col items-center">
+                              <span>FEB 2027</span>
+                              <span className="text-[8px] text-sky-400 font-normal">Event Date</span>
+                            </div>
+                          </div>
                         </div>
 
                         {/* Row 1: PROGRAMMING TEAM (Purple Color Band) */}

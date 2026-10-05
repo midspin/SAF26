@@ -7,7 +7,41 @@ export async function GET() {
   try {
     const [artists, artworks, items, venues] = await Promise.all([
       prisma.artist.findMany({
-        select: { id: true, status: true },
+        select: {
+          id: true,
+          status: true,
+          createdAt: true,
+          artworks: {
+            select: {
+              id: true,
+              artworkName: true,
+              installationType: true,
+              techProdLayout: true,
+              venueId: true,
+              roomId: true,
+            },
+          },
+          allocations: {
+            select: {
+              id: true,
+              artworkId: true,
+              department: true,
+              inventoryItem: {
+                select: {
+                  inventoryCategory: true,
+                  inventoryUsageType: true,
+                },
+              },
+            },
+          },
+          installations: {
+            select: {
+              id: true,
+              installationStatus: true,
+              artworkId: true,
+            },
+          },
+        },
       }),
       prisma.artwork.findMany({
         select: {
@@ -217,6 +251,45 @@ export async function GET() {
       return { name: v.venueName || 'Venue', artworkCount: count };
     });
 
+    // 8. Progress Tracker Stages Breakdown
+    let stageOnboarded = 0;
+    let stageTechAllocated = 0;
+    let stageProdAllocated = 0;
+    let stageSpatialLayout = 0;
+    let stageInstalled = 0;
+
+    artists.forEach((artist: any) => {
+      const arts = artist.artworks && artist.artworks.length > 0 ? artist.artworks : [null];
+      arts.forEach((art: any) => {
+        stageOnboarded += 1;
+        const allocations = artist.allocations || [];
+        const hasTech = allocations.some((a: any) => {
+          const isMatch = !a.artworkId || a.artworkId === art?.id;
+          const dept = (a.department || '').toUpperCase();
+          const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+          const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+          return isMatch && (dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL');
+        });
+        if (hasTech) stageTechAllocated += 1;
+
+        const hasProd = allocations.some((a: any) => {
+          const isMatch = !a.artworkId || a.artworkId === art?.id;
+          const dept = (a.department || '').toUpperCase();
+          const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+          const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+          return isMatch && (dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION');
+        });
+        if (hasProd) stageProdAllocated += 1;
+
+        if (art?.techProdLayout) stageSpatialLayout += 1;
+
+        const inst = (artist.installations || []).find((i: any) => !art || i.artworkId === art.id);
+        if (inst && (inst.installationStatus === 'Installed' || inst.installationStatus === 'Completed')) {
+          stageInstalled += 1;
+        }
+      });
+    });
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -236,6 +309,13 @@ export async function GET() {
         totalMediaPlayers,
         allocatedMediaPlayers,
         balanceMediaPlayers,
+      },
+      progressTrackerStats: {
+        stageOnboarded,
+        stageTechAllocated,
+        stageProdAllocated,
+        stageSpatialLayout,
+        stageInstalled,
       },
       projectorsList,
       speakersBreakdown: hsMap,

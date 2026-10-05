@@ -48,6 +48,7 @@ const DEFAULT_STAT_TILES = [
 ];
 
 const DEFAULT_CARDS = [
+  'card_progress_tracker',
   'card_projectors',
   'card_audio_media',
   'card_equipment_allotment',
@@ -57,6 +58,7 @@ const DEFAULT_CARDS = [
 
 // Card column spans in 12-column grid
 const CARD_COL_SPANS: Record<string, string> = {
+  card_progress_tracker: 'lg:col-span-12',
   card_projectors: 'lg:col-span-4',
   card_audio_media: 'lg:col-span-4',
   card_equipment_allotment: 'lg:col-span-4',
@@ -72,6 +74,7 @@ const CARD_NAMES: Record<string, string> = {
   projector_pool: 'Projector Pool Tile',
   yamaha_speakers: 'Yamaha Speakers Tile',
   media_players: 'Media Players Tile',
+  card_progress_tracker: 'Progress Tracker: Artwork Stages & Monthly Timeline',
   card_projectors: 'Projectors: Brand & Models Breakdown',
   card_audio_media: 'Audio Speakers & Media Players Breakdown',
   card_equipment_allotment: 'Equipment Allotment Graph',
@@ -120,6 +123,14 @@ export default function DashboardPage() {
     totalMediaPlayers: 0,
     allocatedMediaPlayers: 0,
     balanceMediaPlayers: 0,
+  });
+
+  const [progressTrackerStats, setProgressTrackerStats] = useState({
+    stageOnboarded: 0,
+    stageTechAllocated: 0,
+    stageProdAllocated: 0,
+    stageSpatialLayout: 0,
+    stageInstalled: 0,
   });
 
   // Detailed Projectors Breakdown
@@ -318,6 +329,7 @@ export default function DashboardPage() {
       const data = await res.json();
       if (data.success) {
         if (data.stats) setStats(data.stats);
+        if (data.progressTrackerStats) setProgressTrackerStats(data.progressTrackerStats);
         if (data.projectorsList) setProjectorsList(data.projectorsList);
         if (data.speakersBreakdown) setSpeakersBreakdown(data.speakersBreakdown);
         if (data.mediaPlayersList) setMediaPlayersList(data.mediaPlayersList);
@@ -474,6 +486,245 @@ export default function DashboardPage() {
   // Render Functions for Main Cards
   const renderMainCardContent = (key: string) => {
     switch (key) {
+      case 'card_progress_tracker':
+        return (
+          <div className="p-6 rounded-3xl bg-[#1c1c2b] border border-slate-800 hover:border-purple-500/40 shadow-2xl space-y-6">
+            {/* Widget Top Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-purple-950/80 border border-purple-800/80 text-purple-400 shadow-md">
+                  <Activity className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white tracking-tight flex items-center gap-2">
+                    Progress Tracker — Artwork Workflow Stages
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Real-time artwork counts across operational stages & monthly Gantt timeline chart.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/progress-tracker"
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-extrabold text-xs shadow-lg transition-all flex items-center gap-1.5 shrink-0 hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <span>Full Progress Tracker</span>
+                <ArrowUpRight className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Stage Counter Cards Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+              {/* Stage 1: Onboarded */}
+              <div className="p-3.5 rounded-2xl bg-purple-950/20 border border-purple-800/40 space-y-1.5 transition-all hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-purple-300">1. Onboarded</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-purple-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  <AnimatedNumber value={progressTrackerStats.stageOnboarded || stats.totalArtworks} />
+                </div>
+                <span className="text-[10px] text-slate-400 block truncate">Artists & Artworks</span>
+              </div>
+
+              {/* Stage 2: Tech Data */}
+              <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-800/40 space-y-1.5 transition-all hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-amber-300">2. Tech Data</span>
+                  <Wrench className="w-3.5 h-3.5 text-amber-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  <AnimatedNumber value={progressTrackerStats.stageTechAllocated} />
+                </div>
+                <span className="text-[10px] text-slate-400 block truncate">Tech Allocated</span>
+              </div>
+
+              {/* Stage 3: Production Allocation */}
+              <div className="p-3.5 rounded-2xl bg-rose-950/20 border border-rose-800/40 space-y-1.5 transition-all hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-rose-300">3. Prod Alloc</span>
+                  <Package className="w-3.5 h-3.5 text-rose-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  <AnimatedNumber value={progressTrackerStats.stageProdAllocated} />
+                </div>
+                <span className="text-[10px] text-slate-400 block truncate">Prod Items Assigned</span>
+              </div>
+
+              {/* Stage 4: Spatial Layout */}
+              <div className="p-3.5 rounded-2xl bg-emerald-950/20 border border-emerald-800/40 space-y-1.5 transition-all hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-emerald-300">4. Spatial Layout</span>
+                  <Palette className="w-3.5 h-3.5 text-emerald-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  <AnimatedNumber value={progressTrackerStats.stageSpatialLayout} />
+                </div>
+                <span className="text-[10px] text-slate-400 block truncate">Drawings Uploaded</span>
+              </div>
+
+              {/* Stage 5: Installed */}
+              <div className="p-3.5 rounded-2xl bg-sky-950/20 border border-sky-800/40 space-y-1.5 transition-all hover:scale-[1.02]">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-black uppercase text-sky-300">5. Installed</span>
+                  <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+                </div>
+                <div className="text-2xl font-black text-white">
+                  <AnimatedNumber value={progressTrackerStats.stageInstalled} />
+                </div>
+                <span className="text-[10px] text-slate-400 block truncate">On-Site Completed</span>
+              </div>
+            </div>
+
+            {/* Month-wise Workflow Timeline Chart Preview */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-4 space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                <span className="text-xs font-extrabold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <Layers className="w-4 h-4 text-purple-400" /> Work Status Monthly Timeline (Creation Month → Event Date)
+                </span>
+                <span className="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-2.5 py-0.5 rounded-md border border-purple-800">
+                  Event Window: Oct 2026 – Feb 2027
+                </span>
+              </div>
+
+              {/* Month Header Columns with Milestone Pins */}
+              <div className="overflow-x-auto pb-2">
+                <div className="min-w-[700px]">
+                  {/* Top Milestone Markers Row */}
+                  <div className="grid grid-cols-12 text-[10px] font-black text-slate-400 mb-1 text-center">
+                    <div className="col-span-3 text-left pl-2 text-purple-300">TEAM / CONTRIBUTOR</div>
+                    <div className="col-span-2 relative">
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800 text-[9px]">
+                        ▼ Milestone 01
+                      </span>
+                    </div>
+                    <div className="col-span-2 relative">
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[9px]">
+                        ▼ Milestone 02
+                      </span>
+                    </div>
+                    <div className="col-span-2 relative">
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[9px]">
+                        ▼ Milestone 03
+                      </span>
+                    </div>
+                    <div className="col-span-2 relative">
+                      <span className="inline-block px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[9px]">
+                        ▼ Milestone 04
+                      </span>
+                    </div>
+                    <div className="col-span-1 text-sky-300 text-[9px]">STATUS</div>
+                  </div>
+
+                  {/* Month Columns Header */}
+                  <div className="grid grid-cols-12 text-[10px] font-extrabold uppercase tracking-wider bg-slate-900 border border-slate-800 rounded-xl p-2 text-center text-slate-300">
+                    <div className="col-span-3 text-left pl-2 text-slate-400">Department</div>
+                    <div className="col-span-2 border-l border-slate-800">Oct 2026</div>
+                    <div className="col-span-2 border-l border-slate-800">Nov 2026</div>
+                    <div className="col-span-2 border-l border-slate-800">Dec 2026</div>
+                    <div className="col-span-2 border-l border-slate-800">Jan 2027</div>
+                    <div className="col-span-1 border-l border-slate-800">Feb 2027</div>
+                  </div>
+
+                  {/* Team Gantt Rows */}
+                  <div className="space-y-2 mt-2">
+                    {/* Programming Row */}
+                    <div className="bg-purple-950/20 border border-purple-800/40 rounded-xl p-2.5 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-3 font-bold text-purple-300 text-[11px] truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-purple-400" /> Programming Team
+                      </div>
+                      <div className="col-span-8 px-1">
+                        <div className="h-6 rounded-full bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-extrabold text-[10px] px-3 flex items-center justify-between shadow-md w-full">
+                          <span>Artist Onboarding & Registration</span>
+                          <span className="font-mono">100%</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-[9px] font-black">
+                          DONE
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Technical Row */}
+                    <div className="bg-amber-950/20 border border-amber-800/40 rounded-xl p-2.5 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-3 font-bold text-amber-300 text-[11px] truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" /> Technical Team
+                      </div>
+                      <div className="col-span-8 px-1">
+                        <div className="h-6 rounded-full bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 font-extrabold text-[10px] px-3 flex items-center justify-between shadow-md w-[85%]">
+                          <span>Tech Equipment & AV Allocations</span>
+                          <span className="font-mono">85%</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className="px-2 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-800 text-[9px] font-black">
+                          ACTIVE
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Production Row */}
+                    <div className="bg-rose-950/20 border border-rose-800/40 rounded-xl p-2.5 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-3 font-bold text-rose-300 text-[11px] truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-rose-400" /> Production Team
+                      </div>
+                      <div className="col-span-8 px-1">
+                        <div className="h-6 rounded-full bg-gradient-to-r from-rose-600 to-pink-500 text-white font-extrabold text-[10px] px-3 flex items-center justify-between shadow-md w-[70%]">
+                          <span>Production & Fabrication Items</span>
+                          <span className="font-mono">70%</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className="px-2 py-0.5 rounded-full bg-rose-950 text-rose-300 border border-rose-800 text-[9px] font-black">
+                          ACTIVE
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Spatial Designers Row */}
+                    <div className="bg-emerald-950/20 border border-emerald-800/40 rounded-xl p-2.5 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-3 font-bold text-emerald-300 text-[11px] truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400" /> Spatial Designers
+                      </div>
+                      <div className="col-span-8 px-1">
+                        <div className="h-6 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-extrabold text-[10px] px-3 flex items-center justify-between shadow-md w-[60%]">
+                          <span>Room Floorplan & Elevation Layouts</span>
+                          <span className="font-mono">60%</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800 text-[9px] font-black">
+                          ACTIVE
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Installation Row */}
+                    <div className="bg-sky-950/20 border border-sky-800/40 rounded-xl p-2.5 grid grid-cols-12 items-center text-xs">
+                      <div className="col-span-3 font-bold text-sky-300 text-[11px] truncate flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-sky-400" /> Installation Team
+                      </div>
+                      <div className="col-span-8 px-1">
+                        <div className="h-6 rounded-full bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold text-[10px] px-3 flex items-center justify-between shadow-md w-[40%]">
+                          <span>On-Site Setup & Readiness</span>
+                          <span className="font-mono">40%</span>
+                        </div>
+                      </div>
+                      <div className="col-span-1 text-center">
+                        <span className="px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800 text-[9px] font-black">
+                          PENDING
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
       case 'card_projectors':
         return (
           <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
