@@ -15,12 +15,18 @@ import {
   Search,
   SlidersHorizontal,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Upload,
   Check,
   X,
   AlertCircle,
   ExternalLink,
   Layers,
+  UserCheck,
+  PackageCheck,
+  Cpu,
+  History,
 } from 'lucide-react';
 
 export default function ProgressTrackerPage() {
@@ -39,6 +45,11 @@ export default function ProgressTrackerPage() {
   const [updateStatus, setUpdateStatus] = useState('');
   const [updateNotes, setUpdateNotes] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Detailed View Workflow Expansion State
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [artistDetailsMap, setArtistDetailsMap] = useState<Record<string, { activityLogs: any[]; fullArtist?: any }>>({});
+  const [loadingDetails, setLoadingDetails] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     fetchData();
@@ -145,6 +156,9 @@ export default function ProgressTrackerPage() {
             startDate: inst?.startDate || artist.arrivalDate || 'TBD',
             endDate: inst?.endDate || artist.departureDate || 'TBD',
             installationNotes: inst?.installationNotes || '',
+            artistObj: artist,
+            artworkObj: art,
+            allocationsList,
             milestones: {
               onboard: milestoneOnboard,
               showTechData,
@@ -164,6 +178,39 @@ export default function ProgressTrackerPage() {
       console.error('Error fetching progress tracker data:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleProjectDetails = async (proj: any) => {
+    const next = new Set(expandedProjects);
+    if (next.has(proj.id)) {
+      next.delete(proj.id);
+      setExpandedProjects(next);
+      return;
+    }
+
+    next.add(proj.id);
+    setExpandedProjects(next);
+
+    if (!artistDetailsMap[proj.artistId] && proj.artistId) {
+      setLoadingDetails((prev) => ({ ...prev, [proj.id]: true }));
+      try {
+        const res = await fetch(`/api/artists/${proj.artistId}`);
+        const data = await res.json();
+        if (data.success) {
+          setArtistDetailsMap((prev) => ({
+            ...prev,
+            [proj.artistId]: {
+              activityLogs: data.activityLogs || [],
+              fullArtist: data.artist || null,
+            },
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to load artist detailed workflow:', err);
+      } finally {
+        setLoadingDetails((prev) => ({ ...prev, [proj.id]: false }));
+      }
     }
   };
 
@@ -468,17 +515,34 @@ export default function ProgressTrackerPage() {
                   </div>
                 </div>
 
-                {/* Right Section: Status Pill Badge & Action Button (Matching Reference Image) */}
+                {/* Right Section: Status Pill Badge & Action Button */}
                 <div className="flex flex-row lg:flex-col items-center lg:items-end justify-between lg:justify-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenUpdate(proj)}
-                    className="px-4 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-                    title="Click to update installation status & notes"
-                  >
-                    <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-                    <span>{proj.installationStatus}</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleProjectDetails(proj)}
+                      className={`px-3.5 py-1.5 rounded-full font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-md cursor-pointer hover:scale-105 active:scale-95 ${
+                        expandedProjects.has(proj.id)
+                          ? 'bg-purple-600 text-white border border-purple-400 shadow-purple-900/50'
+                          : 'bg-slate-900 hover:bg-slate-800 text-purple-300 border border-purple-500/40'
+                      }`}
+                      title="Click to expand detailed workflow timeline chart & user entry logs"
+                    >
+                      <Layers className="w-3.5 h-3.5 text-purple-300" />
+                      <span>{expandedProjects.has(proj.id) ? 'Collapse View' : 'Detailed View'}</span>
+                      {expandedProjects.has(proj.id) ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenUpdate(proj)}
+                      className="px-3.5 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
+                      title="Click to update installation status & notes"
+                    >
+                      <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                      <span>{proj.installationStatus}</span>
+                    </button>
+                  </div>
 
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 block">
@@ -497,6 +561,376 @@ export default function ProgressTrackerPage() {
                     )}
                   </div>
                 </div>
+
+                {/* EXPANDED DETAILED WORKFLOW TIMELINE CHART (Matching Reference Image "Work Status Timeline Template") */}
+                {expandedProjects.has(proj.id) && (
+                  <div className="w-full mt-4 pt-4 border-t border-slate-800/80 space-y-4 animate-in slide-in-from-top-3 duration-300">
+                    <div className="bg-slate-950/90 border border-purple-500/30 rounded-2xl p-4 sm:p-5 shadow-2xl space-y-4">
+                      {/* Header Sub-bar */}
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                        <div>
+                          <h4 className="text-sm font-extrabold text-white flex items-center gap-2">
+                            <Layers className="w-4 h-4 text-purple-400 animate-pulse" /> Detailed Work Status Timeline — {proj.artistName}
+                          </h4>
+                          <p className="text-[11px] text-slate-400 mt-0.5">
+                            Visual role-based workflow chart tracking inputs given by users with exact dates of entry.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                          <span className="px-2.5 py-1 rounded-lg bg-sky-950 text-sky-300 border border-sky-800/80 font-bold">
+                            Artwork: {proj.artworkName} ({proj.medium})
+                          </span>
+                          <span className="px-2.5 py-1 rounded-lg bg-purple-950 text-purple-300 border border-purple-800/80 font-bold">
+                            Venue: {proj.venueName} (Room {proj.roomNumber})
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Work Status Timeline Chart Swimlanes */}
+                      <div className="space-y-3 overflow-x-auto pb-2">
+                        {/* Top Milestones Header Row (Reference Image Alignment) */}
+                        <div className="min-w-[720px] grid grid-cols-12 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-center">
+                          <div className="col-span-3 text-left pl-2 text-purple-300">Team / Contributor</div>
+                          <div className="col-span-2 border-l border-slate-800">Milestone 01<br/><span className="text-[9px] text-slate-500 font-normal">Onboard</span></div>
+                          <div className="col-span-2 border-l border-slate-800">Milestone 02<br/><span className="text-[9px] text-slate-500 font-normal">Tech Data</span></div>
+                          <div className="col-span-2 border-l border-slate-800">Milestone 03<br/><span className="text-[9px] text-slate-500 font-normal">Prod Alloc</span></div>
+                          <div className="col-span-2 border-l border-slate-800">Milestone 04<br/><span className="text-[9px] text-slate-500 font-normal">Spatial Layout</span></div>
+                          <div className="col-span-1 border-l border-slate-800">Status</div>
+                        </div>
+
+                        {/* Row 1: PROGRAMMING TEAM (Purple Color Band) */}
+                        {(() => {
+                          const progAuthor = proj.artistObj?.createdBy || 'Programming Member';
+                          const progDate = proj.artistObj?.createdAt ? new Date(proj.artistObj.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+                          return (
+                            <div className="min-w-[720px] bg-purple-950/20 border border-purple-800/40 rounded-xl p-3 grid grid-cols-12 items-center gap-2 text-xs">
+                              <div className="col-span-3 space-y-0.5">
+                                <span className="font-extrabold text-purple-300 block text-xs flex items-center gap-1.5">
+                                  <UserCheck className="w-3.5 h-3.5 text-purple-400" /> Programming Team
+                                </span>
+                                <span className="text-[10px] text-slate-400 block">Artist Onboarding & Registration</span>
+                              </div>
+                              <div className="col-span-8 bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                                <div
+                                  className="h-7 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-500 text-white font-bold text-[11px] px-3 flex items-center justify-between shadow-md transition-all duration-500"
+                                  style={{ width: proj.milestones.onboard ? '100%' : '15%' }}
+                                >
+                                  <span className="truncate">
+                                    {proj.milestones.onboard ? `Artist "${proj.artistName}" Onboarded` : 'Pending Onboard'}
+                                  </span>
+                                  <span className="text-[10px] font-mono shrink-0 ml-2">
+                                    {proj.milestones.onboard ? '100%' : '0%'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                                  <span className="truncate max-w-[60%]">Input: Artwork "{proj.artworkName}" ({proj.medium})</span>
+                                  <span className="font-semibold text-purple-300 shrink-0">
+                                    Entered by: {progAuthor} | Date: {progDate}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 border border-purple-800 text-[9px] font-black uppercase">
+                                  {proj.milestones.onboard ? 'DONE' : 'WAIT'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Row 2: TECHNICAL TEAM (Yellow/Gold Color Band) */}
+                        {(() => {
+                          const techAllocations = (proj.allocationsList || []).filter((a: any) => {
+                            const isMatchArtwork = !a.artworkId || a.artworkId === proj.artworkId;
+                            const dept = (a.department || '').toUpperCase();
+                            const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+                            const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+                            return isMatchArtwork && (dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL');
+                          });
+                          const techAuthor = techAllocations[0]?.approvedBy || techAllocations[0]?.requestedBy || 'Technical Head';
+                          const techDate = techAllocations[0]?.allocationDate || (techAllocations[0]?.createdAt ? new Date(techAllocations[0].createdAt).toLocaleDateString('en-GB') : 'Pending');
+                          const techItemsSummary = techAllocations.map((a: any) => `${a.issuedQuantity || a.requestedQuantity}x ${a.inventoryItem?.element || 'Item'}`).join(', ');
+
+                          return (
+                            <div className="min-w-[720px] bg-amber-950/20 border border-amber-800/40 rounded-xl p-3 grid grid-cols-12 items-center gap-2 text-xs">
+                              <div className="col-span-3 space-y-0.5">
+                                <span className="font-extrabold text-amber-300 block text-xs flex items-center gap-1.5">
+                                  <Cpu className="w-3.5 h-3.5 text-amber-400" /> Technical Team
+                                </span>
+                                <span className="text-[10px] text-slate-400 block">Tech Equipment & AV Allocations</span>
+                              </div>
+                              <div className="col-span-8 bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                                <div
+                                  className={`h-7 rounded-lg text-slate-950 font-extrabold text-[11px] px-3 flex items-center justify-between shadow-md transition-all duration-500 ${
+                                    proj.milestones.techData ? 'bg-gradient-to-r from-amber-400 to-yellow-500' : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                  style={{ width: proj.milestones.techData ? '100%' : '20%' }}
+                                >
+                                  <span className="truncate">
+                                    {techAllocations.length > 0 ? `${techAllocations.length} Tech Item(s) Allocated` : 'No Tech Items Allocated'}
+                                  </span>
+                                  <span className="text-[10px] font-mono shrink-0 ml-2">
+                                    {proj.milestones.techData ? '100%' : '0%'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                                  <span className="truncate max-w-[60%]">
+                                    Input: {techItemsSummary || 'Awaiting technical inventory allocation'}
+                                  </span>
+                                  <span className="font-semibold text-amber-300 shrink-0">
+                                    Entered by: {techAuthor} | Date: {techDate}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                                  proj.milestones.techData ? 'bg-amber-950 text-amber-300 border-amber-800' : 'bg-slate-900 text-slate-500 border-slate-800'
+                                }`}>
+                                  {proj.milestones.techData ? 'DONE' : 'PENDING'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Row 3: PRODUCTION TEAM (Orange/Coral Color Band) */}
+                        {(() => {
+                          const prodAllocations = (proj.allocationsList || []).filter((a: any) => {
+                            const isMatchArtwork = !a.artworkId || a.artworkId === proj.artworkId;
+                            const dept = (a.department || '').toUpperCase();
+                            const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+                            const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+                            return isMatchArtwork && (dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION');
+                          });
+                          const prodAuthor = prodAllocations[0]?.approvedBy || prodAllocations[0]?.requestedBy || 'Production Manager';
+                          const prodDate = prodAllocations[0]?.allocationDate || (prodAllocations[0]?.createdAt ? new Date(prodAllocations[0].createdAt).toLocaleDateString('en-GB') : 'Pending');
+                          const prodItemsSummary = prodAllocations.map((a: any) => `${a.issuedQuantity || a.requestedQuantity}x ${a.inventoryItem?.element || 'Item'}`).join(', ');
+
+                          return (
+                            <div className="min-w-[720px] bg-rose-950/20 border border-rose-800/40 rounded-xl p-3 grid grid-cols-12 items-center gap-2 text-xs">
+                              <div className="col-span-3 space-y-0.5">
+                                <span className="font-extrabold text-rose-300 block text-xs flex items-center gap-1.5">
+                                  <PackageCheck className="w-3.5 h-3.5 text-rose-400" /> Production Team
+                                </span>
+                                <span className="text-[10px] text-slate-400 block">Production Inventory & Fabrication</span>
+                              </div>
+                              <div className="col-span-8 bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                                <div
+                                  className={`h-7 rounded-lg text-white font-extrabold text-[11px] px-3 flex items-center justify-between shadow-md transition-all duration-500 ${
+                                    proj.milestones.prodAllocation ? 'bg-gradient-to-r from-rose-500 to-pink-600' : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                  style={{ width: proj.milestones.prodAllocation ? '100%' : '20%' }}
+                                >
+                                  <span className="truncate">
+                                    {prodAllocations.length > 0 ? `${prodAllocations.length} Production Item(s) Allocated` : 'No Prod Items Allocated'}
+                                  </span>
+                                  <span className="text-[10px] font-mono shrink-0 ml-2">
+                                    {proj.milestones.prodAllocation ? '100%' : '0%'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                                  <span className="truncate max-w-[60%]">
+                                    Input: {prodItemsSummary || 'Awaiting production item allocation'}
+                                  </span>
+                                  <span className="font-semibold text-rose-300 shrink-0">
+                                    Entered by: {prodAuthor} | Date: {prodDate}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                                  proj.milestones.prodAllocation ? 'bg-rose-950 text-rose-300 border-rose-800' : 'bg-slate-900 text-slate-500 border-slate-800'
+                                }`}>
+                                  {proj.milestones.prodAllocation ? 'DONE' : 'PENDING'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Row 4: SPATIAL DESIGNERS (Green Color Band) */}
+                        {(() => {
+                          const spatialAuthor = 'Spatial Designer';
+                          const spatialDate = proj.floorplanUrl ? 'Verified' : 'Pending';
+
+                          return (
+                            <div className="min-w-[720px] bg-emerald-950/20 border border-emerald-800/40 rounded-xl p-3 grid grid-cols-12 items-center gap-2 text-xs">
+                              <div className="col-span-3 space-y-0.5">
+                                <span className="font-extrabold text-emerald-300 block text-xs flex items-center gap-1.5">
+                                  <Palette className="w-3.5 h-3.5 text-emerald-400" /> Spatial Designers
+                                </span>
+                                <span className="text-[10px] text-slate-400 block">Room Floorplan & Elevation Drawings</span>
+                              </div>
+                              <div className="col-span-8 bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                                <div
+                                  className={`h-7 rounded-lg text-slate-950 font-extrabold text-[11px] px-3 flex items-center justify-between shadow-md transition-all duration-500 ${
+                                    proj.milestones.roomLayout ? 'bg-gradient-to-r from-emerald-400 to-teal-500' : 'bg-slate-800 text-slate-400'
+                                  }`}
+                                  style={{ width: proj.milestones.roomLayout ? '100%' : '20%' }}
+                                >
+                                  <span className="truncate">
+                                    {proj.milestones.roomLayout ? 'Tech & Production Layout Diagram Uploaded' : 'Awaiting Layout Upload'}
+                                  </span>
+                                  <span className="text-[10px] font-mono shrink-0 ml-2">
+                                    {proj.milestones.roomLayout ? '100%' : '0%'}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                                  <span className="truncate max-w-[60%]">
+                                    Input: {proj.floorplanUrl ? `Layout URL: ${proj.floorplanUrl.split('/').pop()}` : 'No layout drawing uploaded'}
+                                  </span>
+                                  <span className="font-semibold text-emerald-300 shrink-0">
+                                    Entered by: {spatialAuthor} | Date: {spatialDate}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                                  proj.milestones.roomLayout ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-slate-900 text-slate-500 border-slate-800'
+                                }`}>
+                                  {proj.milestones.roomLayout ? 'DONE' : 'PENDING'}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Row 5: INSTALLATION TEAM (Blue Color Band) */}
+                        {(() => {
+                          const instPct = proj.installationStatus === 'Completed' || proj.installationStatus === 'Installed' ? 100 : proj.installationStatus === 'Installation In Progress' ? 65 : proj.installationStatus === 'Ready' ? 40 : 15;
+                          const instAuthor = 'Installation Lead';
+                          const instDate = proj.startDate || 'TBD';
+
+                          return (
+                            <div className="min-w-[720px] bg-sky-950/20 border border-sky-800/40 rounded-xl p-3 grid grid-cols-12 items-center gap-2 text-xs">
+                              <div className="col-span-3 space-y-0.5">
+                                <span className="font-extrabold text-sky-300 block text-xs flex items-center gap-1.5">
+                                  <Wrench className="w-3.5 h-3.5 text-sky-400" /> Installation Team
+                                </span>
+                                <span className="text-[10px] text-slate-400 block">On-Site Setup & Readiness</span>
+                              </div>
+                              <div className="col-span-8 bg-slate-900/90 rounded-xl p-2.5 border border-slate-800">
+                                <div
+                                  className="h-7 rounded-lg bg-gradient-to-r from-sky-500 to-blue-600 text-white font-extrabold text-[11px] px-3 flex items-center justify-between shadow-md transition-all duration-500"
+                                  style={{ width: `${instPct}%` }}
+                                >
+                                  <span className="truncate">Status: {proj.installationStatus}</span>
+                                  <span className="text-[10px] font-mono shrink-0 ml-2">{instPct}%</span>
+                                </div>
+                                <div className="flex items-center justify-between text-[10px] text-slate-400 mt-1.5 px-1">
+                                  <span className="truncate max-w-[60%]">
+                                    Input Notes: "{proj.installationNotes || 'No notes provided'}"
+                                  </span>
+                                  <span className="font-semibold text-sky-300 shrink-0">
+                                    Entered by: {instAuthor} | Date: {instDate}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="col-span-1 text-center">
+                                <span className="px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800 text-[9px] font-black uppercase">
+                                  {proj.installationStatus}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* User Input Log & Audit History Table */}
+                      {(() => {
+                        const detailsData = artistDetailsMap[proj.artistId];
+                        const logsList = detailsData?.activityLogs || [];
+
+                        return (
+                          <div className="mt-4 pt-3 border-t border-slate-800 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <h5 className="text-xs font-bold text-slate-300 flex items-center gap-2">
+                                <History className="w-3.5 h-3.5 text-purple-400" /> Detailed User Entry Log History
+                              </h5>
+                              {loadingDetails[proj.id] && (
+                                <span className="text-[10px] text-sky-400 font-bold flex items-center gap-1">
+                                  <Sparkles className="w-3 h-3 animate-spin" /> Loading audit history...
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+                              <table className="w-full text-left text-xs border-collapse">
+                                <thead>
+                                  <tr className="bg-slate-900 text-slate-400 text-[10px] uppercase font-bold border-b border-slate-800">
+                                    <th className="p-2.5">Date of Entry</th>
+                                    <th className="p-2.5">Team / Role</th>
+                                    <th className="p-2.5">User Name</th>
+                                    <th className="p-2.5">Input Action / Details</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                                  {logsList.length > 0 ? (
+                                    logsList.map((log: any) => (
+                                      <tr key={log.id} className="hover:bg-slate-800/40 transition-colors">
+                                        <td className="p-2.5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                                          {new Date(log.createdAt).toLocaleString([], { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </td>
+                                        <td className="p-2.5">
+                                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-950/80 text-purple-300 border border-purple-800">
+                                            {log.userRole || 'TEAM'}
+                                          </span>
+                                        </td>
+                                        <td className="p-2.5 font-semibold text-white">
+                                          {log.userName || 'Admin'}
+                                        </td>
+                                        <td className="p-2.5 text-slate-300">
+                                          {log.action} — {log.entityType} ({log.entityId})
+                                        </td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <>
+                                      <tr className="hover:bg-slate-800/40 transition-colors">
+                                        <td className="p-2.5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                                          {proj.artistObj?.createdAt ? new Date(proj.artistObj.createdAt).toLocaleDateString('en-GB') : 'N/A'}
+                                        </td>
+                                        <td className="p-2.5">
+                                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-950/80 text-purple-300 border border-purple-800">
+                                            PROGRAMMING
+                                          </span>
+                                        </td>
+                                        <td className="p-2.5 font-semibold text-white">
+                                          {proj.artistObj?.createdBy || 'Programming Team'}
+                                        </td>
+                                        <td className="p-2.5 text-slate-300">
+                                          Registered artist "{proj.artistName}" & artwork "{proj.artworkName}" ({proj.medium})
+                                        </td>
+                                      </tr>
+                                      {proj.floorplanUrl && (
+                                        <tr className="hover:bg-slate-800/40 transition-colors">
+                                          <td className="p-2.5 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                                            Layout Verified
+                                          </td>
+                                          <td className="p-2.5">
+                                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-950/80 text-emerald-300 border border-emerald-800">
+                                              SPATIAL DESIGNER
+                                            </span>
+                                          </td>
+                                          <td className="p-2.5 font-semibold text-white">
+                                            Spatial Designer
+                                          </td>
+                                          <td className="p-2.5 text-slate-300">
+                                            Uploaded final spatial layout & tech production diagram: {proj.floorplanUrl.split('/').pop()}
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
