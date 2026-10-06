@@ -48,10 +48,13 @@ export default function RoomsPage() {
     };
   }, []);
 
-  // ONLY SUPER ADMIN CAN CREATE, EDIT, OR DELETE ROOMS
-  const canManage = ['SUPER ADMIN'].includes(
-    (userRole || '').trim().toUpperCase()
-  );
+  // SUPER ADMIN & TECH LAYOUT DESIGNER CAN CREATE, EDIT, OR DELETE ROOMS
+  const canManage = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'TECH LAYOUT DESIGNER',
+    'TECHNICAL LAYOUT DESIGNER',
+  ].includes((userRole || '').trim().toUpperCase());
 
   // Venue Filter & Room Search State
   const [selectedVenueFilter, setSelectedVenueFilter] = useState<string>('ALL');

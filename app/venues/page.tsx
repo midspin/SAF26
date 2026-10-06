@@ -47,10 +47,13 @@ export default function VenuesPage() {
     };
   }, []);
 
-  // ONLY SUPER ADMIN CAN CREATE, EDIT, OR DELETE VENUES & ROOMS
-  const canManage = ['SUPER ADMIN'].includes(
-    (userRole || '').trim().toUpperCase()
-  );
+  // SUPER ADMIN & TECH LAYOUT DESIGNER CAN CREATE, EDIT, OR DELETE VENUES & ROOMS
+  const canManage = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'TECH LAYOUT DESIGNER',
+    'TECHNICAL LAYOUT DESIGNER',
+  ].includes((userRole || '').trim().toUpperCase());
 
   // Edit Venue Modal State
   const [editVenueModal, setEditVenueModal] = useState<any | null>(null);

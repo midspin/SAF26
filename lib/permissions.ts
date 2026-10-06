@@ -119,7 +119,7 @@ const techLayoutDesignerPermissions = (): Record<string, ModulePermission> => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
-      perm[id].canDelete = false;
+      perm[id].canDelete = id === 'rooms';
     }
   });
   return perm;
