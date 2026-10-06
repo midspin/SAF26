@@ -35,10 +35,11 @@ export default function InventoryPage() {
   // User Role State & Edit Provision
   const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
 
-  // Filters
+  // Filters & Progressive Loading
   const [search, setSearch] = useState('');
   const [usageFilter, setUsageFilter] = useState('ALL');
   const [faultyOnlyFilter, setFaultyOnlyFilter] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(40);
 
   // Modals state
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -528,6 +529,11 @@ export default function InventoryPage() {
     }
   };
 
+  // Reset visible items count when filters change
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [search, usageFilter, faultyOnlyFilter]);
+
   const filteredItems = items.filter((item) => {
     const isFaultyItem = item.isFaulty || /faulty|damaged|red/i.test(item.condition || '');
     if (faultyOnlyFilter && !isFaultyItem) return false;
@@ -546,6 +552,9 @@ export default function InventoryPage() {
     }
     return true;
   });
+
+  const visibleItems = filteredItems.slice(0, visibleCount);
+  const hasMoreItems = visibleCount < filteredItems.length;
 
   const productionItemsCount = items.filter((i) => i.inventoryUsageType === 'PRODUCTION').length;
   const technicalItemsCount = items.filter((i) => i.inventoryUsageType === 'TECHNICAL').length;
@@ -806,7 +815,7 @@ export default function InventoryPage() {
                   </td>
                 </tr>
               ) : (
-                filteredItems.map((item) => {
+                visibleItems.map((item) => {
                   const isFaultyItem = item.isFaulty || /faulty|damaged|red/i.test(item.condition || '');
 
                   // Calculate active allocated artist and venue/room
@@ -1056,6 +1065,30 @@ export default function InventoryPage() {
             </tbody>
           </table>
         </div>
+
+        {/* PROGRESSIVE LOADING / LOAD MORE BAR */}
+        {hasMoreItems && (
+          <div className="p-4 bg-slate-900/60 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <span className="text-slate-400 font-medium">
+              Showing <strong className="text-slate-100">{visibleItems.length}</strong> of{' '}
+              <strong className="text-slate-100">{filteredItems.length}</strong> items
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 40)}
+                className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                Load More ({Math.min(40, filteredItems.length - visibleCount)} more)
+              </button>
+              <button
+                onClick={() => setVisibleCount(filteredItems.length)}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl border border-slate-700 transition-all cursor-pointer"
+              >
+                Show All ({filteredItems.length})
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* MODAL: ALLOCATE ITEM (PRODUCTION TEAM / TECHNICAL TEAM) */}

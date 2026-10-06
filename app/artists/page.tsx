@@ -99,8 +99,14 @@ export default function ArtistsPage() {
   const [selectedArtist, setSelectedArtist] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<string>('ARTIST_ASC');
   const [showArtworkSuggestions, setShowArtworkSuggestions] = useState<boolean>(false);
+  const [visibleCount, setVisibleCount] = useState<number>(24);
 
   const artworkContainerRef = useRef<HTMLDivElement>(null);
+
+  // Reset pagination when search or filters change
+  useEffect(() => {
+    setVisibleCount(24);
+  }, [search, selectedArtist, selectedVenue, selectedRoom, selectedArtwork, artworkInput, sortBy]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -852,8 +858,9 @@ export default function ArtistsPage() {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredArtists.map((art) => {
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filteredArtists.slice(0, visibleCount).map((art) => {
             const isNewlyAdded = art.id === newlyAddedId;
 
             return (
@@ -1042,6 +1049,31 @@ export default function ArtistsPage() {
             );
           })}
         </div>
+
+        {/* LOAD MORE / PAGINATION CONTROLS */}
+        {filteredArtists.length > visibleCount && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-900/80 border border-slate-800 rounded-2xl">
+            <span className="text-xs text-slate-400">
+              Showing <strong className="text-slate-100">{Math.min(visibleCount, filteredArtists.length)}</strong> of{' '}
+              <strong className="text-slate-100">{filteredArtists.length}</strong> artists
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setVisibleCount((prev) => prev + 24)}
+                className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition-all shadow-md cursor-pointer flex items-center gap-1.5"
+              >
+                Load More Artists (+24)
+              </button>
+              <button
+                onClick={() => setVisibleCount(filteredArtists.length)}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl border border-slate-700 transition-all cursor-pointer"
+              >
+                Show All ({filteredArtists.length})
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
       )}
 
       {/* FULLSCREEN CENTER-SCREEN TICK SUCCESS ANIMATION OVERLAY */}
