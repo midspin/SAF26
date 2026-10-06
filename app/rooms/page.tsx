@@ -18,6 +18,8 @@ import {
   Lock,
   AlertTriangle,
   Search,
+  Palette,
+  User,
 } from 'lucide-react';
 
 export default function RoomsPage() {
@@ -64,8 +66,8 @@ export default function RoomsPage() {
 
   // Auto-calculate Area in sq.m from Length and Width in mm
   const calcAreaFromMm = (lengthMm: string | number, widthMm: string | number): string => {
-    const l = typeof lengthMm === 'number' ? lengthMm : parseFloat(lengthMm);
-    const w = typeof widthMm === 'number' ? widthMm : parseFloat(widthMm);
+    const l = typeof lengthMm === 'number' ? lengthMm : parseFloat(lengthMm as string);
+    const w = typeof widthMm === 'number' ? widthMm : parseFloat(widthMm as string);
     if (!isNaN(l) && !isNaN(w) && l > 0 && w > 0) {
       const areaSqm = (l / 1000) * (w / 1000);
       const formatted = Number.isInteger(areaSqm) ? areaSqm.toString() : areaSqm.toFixed(2);
@@ -88,7 +90,6 @@ export default function RoomsPage() {
     lightingInfo: 'Blackout enabled + DMX Track Lights',
     floorplan: '',
     elevation: '',
-    techProdLayout: '',
     notes: '',
   });
 
@@ -109,7 +110,6 @@ export default function RoomsPage() {
     lightingInfo: 'Blackout enabled + DMX Track Lights',
     floorplan: '',
     elevation: '',
-    techProdLayout: '',
     notes: '',
   });
 
@@ -148,7 +148,7 @@ export default function RoomsPage() {
 
   const handleFileUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    field: 'floorplan' | 'elevation' | 'techProdLayout',
+    field: 'floorplan' | 'elevation',
     isEdit: boolean = false
   ) => {
     const file = e.target.files?.[0];
@@ -169,13 +169,13 @@ export default function RoomsPage() {
           setEditRoomFormData((prev) => ({
             ...prev,
             [field]: data.url,
-            ...(field === 'techProdLayout' ? { roomImage: data.url } : {}),
+            ...(field === 'floorplan' ? { roomImage: data.url } : {}),
           }));
         } else {
           setFormData((prev) => ({
             ...prev,
             [field]: data.url,
-            ...(field === 'techProdLayout' ? { roomImage: data.url } : {}),
+            ...(field === 'floorplan' ? { roomImage: data.url } : {}),
           }));
         }
       }
@@ -195,6 +195,8 @@ export default function RoomsPage() {
         eventsData.events?.find((e: any) => e.status === 'Active') || eventsData.events?.[0];
       const eventId = activeEvent?.id;
 
+      const computedRoomName = formData.roomNumber ? `Room ${formData.roomNumber}` : 'Exhibition Gallery';
+
       const res = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -203,6 +205,8 @@ export default function RoomsPage() {
           userRole,
           userName: 'Admin User',
           ...formData,
+          roomName: computedRoomName,
+          roomImage: formData.floorplan || null,
         }),
       });
       const data = await res.json();
@@ -220,7 +224,6 @@ export default function RoomsPage() {
           lightingInfo: 'Blackout enabled + DMX Track Lights',
           floorplan: '',
           elevation: '',
-          techProdLayout: '',
           notes: '',
         });
         fetchRooms();
@@ -237,16 +240,15 @@ export default function RoomsPage() {
     setEditRoomFormData({
       venueId: room.venueId || '',
       roomNumber: room.roomNumber || '',
-      roomName: room.roomName || '',
+      roomName: room.roomName || (room.roomNumber ? `Room ${room.roomNumber}` : ''),
       floor: room.floor || '',
       length: room.length || '',
       width: room.width || '',
       area: room.area || '',
       height: room.height || '',
       lightingInfo: room.lightingInfo || '',
-      floorplan: room.floorplan || '',
+      floorplan: room.floorplan || room.roomImage || '',
       elevation: room.elevation || '',
-      techProdLayout: room.techProdLayout || room.roomImage || '',
       notes: room.notes || '',
     });
   };
@@ -254,6 +256,8 @@ export default function RoomsPage() {
   const handleUpdateRoom = async () => {
     if (!canManage || !editRoomModal) return;
     try {
+      const computedRoomName = editRoomFormData.roomNumber ? `Room ${editRoomFormData.roomNumber}` : 'Exhibition Gallery';
+
       const res = await fetch(`/api/rooms/${editRoomModal.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -261,6 +265,8 @@ export default function RoomsPage() {
           userRole,
           userName: 'Admin User',
           ...editRoomFormData,
+          roomName: computedRoomName,
+          roomImage: editRoomFormData.floorplan || null,
         }),
       });
       const data = await res.json();
@@ -301,11 +307,12 @@ export default function RoomsPage() {
     const query = roomSearchQuery.trim().toLowerCase();
     if (!query) return matchesVenue;
 
-    const matchesName = (r.roomName || '').toLowerCase().includes(query);
+    const artworkTitle = (r.installations?.[0]?.artwork?.artworkName || r.artworks?.[0]?.artworkName || r.roomName || '').toLowerCase();
+    const artistName = (r.installations?.[0]?.artist?.artistName || r.artworks?.[0]?.artist?.artistName || '').toLowerCase();
     const matchesCode = (r.roomNumber || '').toLowerCase().includes(query);
     const matchesVenueName = (r.venue?.venueName || '').toLowerCase().includes(query);
 
-    return matchesVenue && (matchesName || matchesCode || matchesVenueName);
+    return matchesVenue && (artworkTitle.includes(query) || artistName.includes(query) || matchesCode || matchesVenueName);
   });
 
   return (
@@ -314,10 +321,10 @@ export default function RoomsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold text-slate-50 flex items-center gap-2.5">
-            <DoorOpen className="w-7 h-7 text-sky-400" /> Exhibition Rooms & Spatial Drawings
+            <DoorOpen className="w-7 h-7 text-sky-400" /> Exhibition Rooms & Floorplan Drawings
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Manage floorplans, elevation technical drawings, height clearances, and blackout specs
+            Manage room floorplans, elevation technical drawings, height clearances, and artwork gallery spaces
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -343,7 +350,7 @@ export default function RoomsPage() {
           <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
           <div>
             <strong>Permission Notice:</strong> Editing and deleting rooms is restricted to{' '}
-            <span className="font-bold underline text-amber-300">SUPER ADMIN</span> role. Switch your role using the header role switcher to enable management capabilities.
+            <span className="font-bold underline text-amber-300">SUPER ADMIN</span> role.
           </div>
         </div>
       )}
@@ -358,7 +365,7 @@ export default function RoomsPage() {
               type="text"
               value={roomSearchQuery}
               onChange={(e) => setRoomSearchQuery(e.target.value)}
-              placeholder="Search by Room Name, Code, or Venue..."
+              placeholder="Search by Artwork, Artist Name, Room Code, or Venue..."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-8 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
             />
             {roomSearchQuery && (
@@ -409,6 +416,12 @@ export default function RoomsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3.5">
           {filteredRooms.map((r) => {
+            // Artwork Title & Artist Name derivation
+            const assignedArtwork = r.installations?.[0]?.artwork || r.artworks?.[0];
+            const assignedArtist = r.installations?.[0]?.artist || r.artworks?.[0]?.artist;
+            const artworkTitle = assignedArtwork?.artworkName || `Room ${r.roomNumber}`;
+            const artistName = assignedArtist?.artistName;
+
             return (
               <div
                 key={r.id}
@@ -446,10 +459,19 @@ export default function RoomsPage() {
                     )}
                   </div>
 
-                  {/* Room Name */}
-                  <h3 className="text-xs font-extrabold text-white truncate" title={r.roomName}>
-                    {r.roomName}
-                  </h3>
+                  {/* Artwork Title (Replaces Room Title) */}
+                  <div>
+                    <h3 className="text-xs font-extrabold text-white truncate flex items-center gap-1.5" title={artworkTitle}>
+                      <Palette className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      <span className="truncate">{artworkTitle}</span>
+                    </h3>
+                    {artistName && (
+                      <p className="text-[10px] font-semibold text-slate-400 truncate flex items-center gap-1 mt-0.5">
+                        <User className="w-3 h-3 text-sky-400 shrink-0" />
+                        <span className="truncate">{artistName}</span>
+                      </p>
+                    )}
+                  </div>
 
                   {/* Specs Summary Grid */}
                   <div className="grid grid-cols-2 gap-1.5 text-[10px] bg-slate-950/80 p-2 rounded-xl text-slate-300 border border-slate-800/80">
@@ -471,46 +493,46 @@ export default function RoomsPage() {
                     </div>
                   </div>
 
-                  {/* Main Technical & Production Layout Thumbnail */}
+                  {/* Main Room Floorplan Thumbnail */}
                   <div className="space-y-1">
-                    <span className="text-[9px] font-bold text-emerald-400 uppercase tracking-wider block truncate">
-                      📐 Tech & Production drawing
+                    <span className="text-[9px] font-bold text-sky-400 uppercase tracking-wider block truncate">
+                      📐 Room Floorplan (Thumbnail)
                     </span>
-                    {r.techProdLayout || r.roomImage ? (
+                    {r.floorplan || r.roomImage ? (
                       <div
                         onClick={() =>
                           setFullViewModal({
-                            title: `Room ${r.roomNumber} - Technical & Production Layout`,
-                            url: r.techProdLayout || r.roomImage,
-                            type: (r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
+                            title: `Room ${r.roomNumber} - Floorplan Layout`,
+                            url: r.floorplan || r.roomImage,
+                            type: (r.floorplan || r.roomImage)?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
                           })
                         }
-                        className="relative rounded-xl overflow-hidden border border-emerald-500/30 bg-slate-950 h-24 cursor-pointer group/thumb hover:border-emerald-400 transition-all shadow-md"
+                        className="relative rounded-xl overflow-hidden border border-sky-500/30 bg-slate-950 h-24 cursor-pointer group/thumb hover:border-sky-400 transition-all shadow-md"
                       >
-                        {(r.techProdLayout || r.roomImage)?.endsWith('.pdf') ? (
-                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-emerald-400 p-2">
+                        {(r.floorplan || r.roomImage)?.endsWith('.pdf') ? (
+                          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-sky-400 p-2">
                             <FileText className="w-6 h-6 mb-0.5" />
-                            <span className="text-[10px] font-bold">Layout PDF</span>
+                            <span className="text-[10px] font-bold">Floorplan PDF</span>
                           </div>
                         ) : (
                           <img
-                            src={r.techProdLayout || r.roomImage}
-                            alt="Technical & Production Layout"
+                            src={r.floorplan || r.roomImage}
+                            alt="Room Floorplan Thumbnail"
                             className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300 opacity-90 group-hover/thumb:opacity-100"
                           />
                         )}
                         <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-slate-100 text-[10px] font-bold">
-                          <Maximize2 className="w-3.5 h-3.5 text-emerald-400 mr-1" /> View
+                          <Maximize2 className="w-3.5 h-3.5 text-sky-400 mr-1" /> View Floorplan
                         </div>
                       </div>
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 h-20 flex flex-col items-center justify-center text-slate-600 text-[10px]">
-                        <span>No drawing attached</span>
+                        <span>No floorplan thumbnail</span>
                       </div>
                     )}
                   </div>
 
-                  {/* Interactive Buttons for Floorplan & Elevation Drawings */}
+                  {/* Interactive Drawing Buttons */}
                   <div className="grid grid-cols-2 gap-1.5 pt-1">
                     {r.floorplan ? (
                       <button
@@ -640,54 +662,21 @@ export default function RoomsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">Room Number Code *</label>
-                  <input
-                    type="text"
-                    value={formData.roomNumber}
-                    onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
-                    placeholder="e.g. R-102"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">Room Title *</label>
-                  <input
-                    type="text"
-                    value={formData.roomName}
-                    onChange={(e) => setFormData({ ...formData, roomName: e.target.value })}
-                    placeholder="e.g. Kinetic Sound Gallery"
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                  />
-                </div>
-              </div>
-
-              {/* UPLOAD TECHNICAL & PRODUCTION LAYOUT (MAIN THUMBNAIL) */}
               <div>
-                <label className="text-emerald-400 font-bold block mb-1">
-                  🖼️ Upload Technical & Production Layout (Main Room Thumbnail - Image or PDF)
-                </label>
-                <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-                  <Upload className="w-4 h-4 text-emerald-400" />
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpeg,.jpg,.webp"
-                    onChange={(e) => handleFileUpload(e, 'techProdLayout', false)}
-                    className="text-xs text-slate-300 file:bg-emerald-500 file:text-slate-950 file:font-bold file:px-2.5 file:py-1 file:rounded-lg file:border-0 hover:file:bg-emerald-400 cursor-pointer w-full"
-                  />
-                </div>
-                {formData.techProdLayout && (
-                  <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-                    ✓ Layout Uploaded: {formData.techProdLayout}
-                  </p>
-                )}
+                <label className="text-slate-400 block mb-1 font-semibold">Room Number Code *</label>
+                <input
+                  type="text"
+                  value={formData.roomNumber}
+                  onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
+                  placeholder="e.g. R-102"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
+                />
               </div>
 
-              {/* UPLOAD FLOORPLAN */}
+              {/* UPLOAD FLOORPLAN (MAIN ROOM THUMBNAIL) */}
               <div>
                 <label className="text-sky-400 font-bold block mb-1">
-                  📐 Upload Room Floorplan (Image or PDF)
+                  📐 Upload Room Floorplan (Main Room Thumbnail - Image or PDF)
                 </label>
                 <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
                   <Upload className="w-4 h-4 text-sky-400" />
@@ -849,52 +838,20 @@ export default function RoomsPage() {
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">Room Number Code *</label>
-                  <input
-                    type="text"
-                    value={editRoomFormData.roomNumber}
-                    onChange={(e) => setEditRoomFormData({ ...editRoomFormData, roomNumber: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                  />
-                </div>
-                <div>
-                  <label className="text-slate-400 block mb-1 font-semibold">Room Title *</label>
-                  <input
-                    type="text"
-                    value={editRoomFormData.roomName}
-                    onChange={(e) => setEditRoomFormData({ ...editRoomFormData, roomName: e.target.value })}
-                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
-                  />
-                </div>
-              </div>
-
-              {/* RE-UPLOAD TECHNICAL & PRODUCTION LAYOUT */}
               <div>
-                <label className="text-emerald-400 font-bold block mb-1">
-                  🖼️ Upload/Replace Technical & Production Layout (Main Room Thumbnail - Image or PDF)
-                </label>
-                <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-                  <Upload className="w-4 h-4 text-emerald-400" />
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpeg,.jpg,.webp"
-                    onChange={(e) => handleFileUpload(e, 'techProdLayout', true)}
-                    className="text-xs text-slate-300 file:bg-emerald-500 file:text-slate-950 file:font-bold file:px-2.5 file:py-1 file:rounded-lg file:border-0 hover:file:bg-emerald-400 cursor-pointer w-full"
-                  />
-                </div>
-                {editRoomFormData.techProdLayout && (
-                  <p className="text-[11px] text-emerald-400 font-semibold mt-1">
-                    ✓ Current Layout: {editRoomFormData.techProdLayout}
-                  </p>
-                )}
+                <label className="text-slate-400 block mb-1 font-semibold">Room Number Code *</label>
+                <input
+                  type="text"
+                  value={editRoomFormData.roomNumber}
+                  onChange={(e) => setEditRoomFormData({ ...editRoomFormData, roomNumber: e.target.value })}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-slate-100"
+                />
               </div>
 
-              {/* RE-UPLOAD FLOORPLAN */}
+              {/* RE-UPLOAD FLOORPLAN (MAIN ROOM THUMBNAIL) */}
               <div>
                 <label className="text-sky-400 font-bold block mb-1">
-                  📐 Replace Floorplan Drawing (Image or PDF)
+                  📐 Replace Room Floorplan (Main Room Thumbnail - Image or PDF)
                 </label>
                 <div className="flex items-center gap-3 bg-slate-950 border border-slate-800 rounded-xl p-2.5">
                   <Upload className="w-4 h-4 text-sky-400" />
@@ -1039,7 +996,7 @@ export default function RoomsPage() {
               <p className="text-xs text-slate-400 mt-1">
                 Are you sure you want to delete room{' '}
                 <span className="font-bold text-slate-200">
-                  {deleteRoomModal.roomNumber} ({deleteRoomModal.roomName})
+                  {deleteRoomModal.roomNumber}
                 </span>
                 ? This action cannot be undone.
               </p>
