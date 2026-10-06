@@ -543,6 +543,11 @@ model InventoryAllocation {
   requestedBy       String?
   approvedBy        String?
   issuedBy          String?
+  dispatchedByUserId String?
+  dispatchedByName   String?
+  dispatchedUserRole String?
+  transportedByName   String?
+  dispatchedAt       DateTime?
   allocationDate    String?
   requiredDate      String?
   returnDueDate     String?

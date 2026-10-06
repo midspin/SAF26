@@ -367,6 +367,60 @@ export async function DELETE(req: Request) {
 export async function PATCH(req: Request) {
   try {
     const body = await req.json();
+
+    // Check for Dispatch / Transport Handover update
+    if (body.action === 'UPDATE_DISPATCH') {
+      const { allocationId, allocationIds, dispatchedByUserId, dispatchedByName, dispatchedUserRole, transportedByName } = body;
+      const ids: string[] = allocationIds && Array.isArray(allocationIds) ? allocationIds : (allocationId ? [allocationId] : []);
+
+      if (ids.length === 0) {
+        return NextResponse.json({ success: false, error: 'At least one allocation ID is required' }, { status: 400 });
+      }
+
+      const dispatchedAt = new Date();
+
+      await prisma.inventoryAllocation.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          dispatchedByUserId: dispatchedByUserId || null,
+          dispatchedByName: dispatchedByName || 'Inventory Staff',
+          dispatchedUserRole: dispatchedUserRole || 'Technical / Inventory Team',
+          transportedByName: transportedByName || 'Logistics Transport',
+          dispatchedAt,
+        },
+      });
+
+      // Audit Log
+      try {
+        await prisma.auditLog.create({
+          data: {
+            userName: dispatchedByName || 'System User',
+            userRole: dispatchedUserRole || 'STAFF',
+            entityType: 'INVENTORY_DISPATCH',
+            entityId: ids.join(','),
+            action: 'DISPATCH_ITEMS',
+            newValueJson: JSON.stringify({
+              allocationIds: ids,
+              dispatchedByName,
+              dispatchedUserRole,
+              transportedByName,
+              dispatchedAt,
+            }),
+          },
+        });
+      } catch (logErr) {
+        console.error('Failed audit log for dispatch:', logErr);
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Transport handover logged successfully for ${ids.length} allocation(s)`,
+        dispatchedAt,
+        dispatchedByName,
+        transportedByName,
+      });
+    }
+
     const {
       allocationId,
       targetArtistId,
