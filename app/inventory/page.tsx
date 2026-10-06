@@ -176,8 +176,8 @@ export default function InventoryPage() {
     }
   };
 
-  const fetchInventory = async () => {
-    setLoading(true);
+  const fetchInventory = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const url = selectedEventId && selectedEventId !== 'ALL' ? `/api/inventory?eventId=${selectedEventId}` : '/api/inventory';
       const res = await fetch(url);
@@ -188,11 +188,12 @@ export default function InventoryPage() {
     } catch (err) {
       console.error('Error fetching inventory:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
   const fetchAllocationDropdowns = async () => {
+    if (artists.length > 0 && venues.length > 0) return;
     try {
       const [artRes, venRes] = await Promise.all([
         fetch('/api/artists'),
@@ -227,6 +228,27 @@ export default function InventoryPage() {
   const handleConfirmAllocate = async () => {
     if (!selectedItemForAlloc) return;
     setAllocating(true);
+    const allocQty = parseInt(String(allocForm.quantity), 10) || 1;
+    const targetItemId = selectedItemForAlloc.id;
+
+    // Optimistically update local inventory state
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === targetItemId) {
+          const newAllocated = (item.allocatedQuantity || 0) + allocQty;
+          const newAvailable = Math.max(0, (item.availableQuantity || 0) - allocQty);
+          return {
+            ...item,
+            allocatedQuantity: newAllocated,
+            availableQuantity: newAvailable,
+          };
+        }
+        return item;
+      })
+    );
+
+    setAllocateModalOpen(false);
+
     try {
       const activeEvtId = selectedItemForAlloc.eventId || await getActiveEventId();
       const res = await fetch('/api/inventory/allocations', {
@@ -234,13 +256,13 @@ export default function InventoryPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId: activeEvtId,
-          inventoryItemId: selectedItemForAlloc.id,
+          inventoryItemId: targetItemId,
           artistId: allocForm.artistId || null,
           artworkId: allocForm.artworkId || null,
           venueId: allocForm.venueId || null,
           roomId: allocForm.roomId || null,
           department: allocForm.department || selectedItemForAlloc.inventoryUsageType || 'PRODUCTION',
-          requestedQuantity: allocForm.quantity,
+          requestedQuantity: allocQty,
           approvedBy: 'Production Team',
           requiredDate: allocForm.requiredDate || null,
           returnDueDate: allocForm.returnDueDate || null,
@@ -250,13 +272,16 @@ export default function InventoryPage() {
 
       const data = await res.json();
       if (data.success) {
-        setAllocateModalOpen(false);
-        fetchInventory();
+        // Silent background refresh to get accurate DB state
+        fetchInventory(false);
       } else {
+        // Revert optimistic update on failure
+        fetchInventory(false);
         alert(data.message || data.error || 'Failed to allocate item');
       }
     } catch (err: any) {
       console.error(err);
+      fetchInventory(false);
       alert(err.message || 'Error executing allocation');
     } finally {
       setAllocating(false);

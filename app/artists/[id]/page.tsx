@@ -323,8 +323,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (data.success) {
         setAssignItemModalOpen(false);
-        await fetchArtistDetails(false);
-        await fetchInventoryPool();
+        // Optimistically append newly created allocation to local artist state if available
+        if (data.allocation) {
+          setArtistData((prev: any) => ({
+            ...prev,
+            allocations: [data.allocation, ...(prev?.allocations || [])],
+          }));
+        }
         setToastNotification({
           show: true,
           safCode: itemToAssign.safCode,
@@ -332,6 +337,8 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           quantity: targetQty,
         });
         playSuccessChime();
+        // Fetch fresh details concurrently in background
+        Promise.all([fetchArtistDetails(false), fetchInventoryPool()]).catch(console.error);
       } else {
         alert(data.message || data.error || 'Failed to allocate item.');
       }
@@ -871,6 +878,12 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       if (!data.success) {
         alert(data.message || data.error || 'Cannot allocate item');
       } else {
+        if (data.allocation) {
+          setArtistData((prev: any) => ({
+            ...prev,
+            allocations: [data.allocation, ...(prev?.allocations || [])],
+          }));
+        }
         playSuccessChime();
         setToastNotification({
           show: true,
@@ -879,7 +892,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           quantity: qtyToAssign,
         });
 
-        await Promise.all([fetchArtistDetails(false), fetchInventoryPool()]);
+        Promise.all([fetchArtistDetails(false), fetchInventoryPool()]).catch(console.error);
       }
     } catch (err) {
       console.error(err);

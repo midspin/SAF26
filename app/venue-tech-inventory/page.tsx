@@ -46,11 +46,11 @@ interface Allocation {
   requestedBy?: string;
   approvedBy?: string;
   issuedBy?: string;
-  dispatchedByUserId?: string;
-  dispatchedByName?: string;
-  dispatchedUserRole?: string;
-  transportedByName?: string;
-  dispatchedAt?: string;
+  dispatchedByUserId?: string | null;
+  dispatchedByName?: string | null;
+  dispatchedUserRole?: string | null;
+  transportedByName?: string | null;
+  dispatchedAt?: string | null;
   allocationDate?: string;
   requiredDate?: string;
   returnDueDate?: string;
@@ -131,8 +131,8 @@ export default function VenueTechInventoryPage() {
     fetchInitialData();
   }, [selectedEventId]);
 
-  const fetchInitialData = async () => {
-    setLoading(true);
+  const fetchInitialData = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const [allocRes, userRes, eventRes] = await Promise.all([
         fetch(
@@ -164,7 +164,7 @@ export default function VenueTechInventoryPage() {
     } catch (err) {
       console.error('Error loading venue tech inventory:', err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
@@ -223,6 +223,25 @@ export default function VenueTechInventoryPage() {
     }
 
     setSubmittingDispatch(targetKey);
+    const nowIso = new Date().toISOString();
+
+    // Optimistically update allocation dispatch state
+    setAllocations((prevAllocations) =>
+      prevAllocations.map((a) => {
+        if (allocationIds.includes(a.id)) {
+          return {
+            ...a,
+            dispatchedByUserId: dispatchedByUserId || null,
+            dispatchedByName,
+            dispatchedUserRole,
+            transportedByName: form.transportedByName.trim(),
+            dispatchedAt: nowIso,
+          };
+        }
+        return a;
+      })
+    );
+
     try {
       const res = await fetch('/api/inventory/allocations', {
         method: 'PATCH',
@@ -243,12 +262,15 @@ export default function VenueTechInventoryPage() {
           `✅ Handover timestamped & logged for ${allocationIds.length} item(s)!`
         );
         setTimeout(() => setSuccessMessage(null), 4000);
-        fetchInitialData();
+        // Silent background refresh
+        fetchInitialData(false);
       } else {
+        fetchInitialData(false);
         alert(data.error || 'Failed to update transport handover.');
       }
     } catch (err: any) {
       console.error(err);
+      fetchInitialData(false);
       alert(err.message || 'Error updating transport handover.');
     } finally {
       setSubmittingDispatch(null);
@@ -534,10 +556,10 @@ export default function VenueTechInventoryPage() {
     targetKey: string,
     allocationIds: string[],
     existingDispatchInfo?: {
-      dispatchedByName?: string;
-      dispatchedUserRole?: string;
-      transportedByName?: string;
-      dispatchedAt?: string;
+      dispatchedByName?: string | null;
+      dispatchedUserRole?: string | null;
+      transportedByName?: string | null;
+      dispatchedAt?: string | null;
     }
   ) => {
     const form = dispatchForms[targetKey] || {
