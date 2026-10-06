@@ -18,6 +18,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Force clear inputs on mount to override browser autofill
+  useEffect(() => {
+    setUsername('');
+    setPassword('');
+    const t = setTimeout(() => {
+      setUsername('');
+      setPassword('');
+    }, 150);
+    return () => clearTimeout(t);
+  }, []);
+
   // If already logged in, redirect to dashboard
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -109,7 +120,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form className="space-y-5" onSubmit={(e) => handleLogin(e)}>
+          <form className="space-y-5" onSubmit={(e) => handleLogin(e)} autoComplete="off">
             <div>
               <label className="block text-xs font-bold text-slate-300 mb-1.5">Username or Email</label>
               <div className="relative rounded-2xl shadow-sm">
@@ -119,6 +130,7 @@ export default function LoginPage() {
                 <input
                   type="text"
                   required
+                  autoComplete="off"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username or email"
@@ -136,6 +148,7 @@ export default function LoginPage() {
                 <input
                   type="password"
                   required
+                  autoComplete="new-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
