@@ -143,7 +143,7 @@ export async function POST(req: Request) {
       });
 
       return { insufficient: false, isFaultyBlocked: false, allocation, item };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     if (result.isFaultyBlocked) {
       return NextResponse.json({
@@ -271,7 +271,7 @@ export async function PUT(req: Request) {
       });
 
       return alloc;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
 
     return NextResponse.json({ success: true, allocation: result });
   } catch (error: any) {
@@ -288,66 +288,74 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ success: false, error: 'Allocation ID is required' }, { status: 400 });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const alloc = await tx.inventoryAllocation.findUnique({
-        where: { id },
-        include: { inventoryItem: true, artist: true },
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const alloc = await tx.inventoryAllocation.findUnique({
+          where: { id },
+          include: { inventoryItem: true, artist: true },
+        });
 
-      if (!alloc) throw new Error('Allocation record not found');
-      const item = alloc.inventoryItem;
+        if (!alloc) throw new Error('Allocation record not found');
+        const item = alloc.inventoryItem;
 
-      // Quantity to restore to pool
-      const remainingIssued = Math.max(0, alloc.issuedQuantity - alloc.returnedQuantity - alloc.damagedQuantity);
+        // Quantity to restore to pool
+        const remainingIssued = Math.max(0, alloc.issuedQuantity - alloc.returnedQuantity - alloc.damagedQuantity);
 
-      // Delete the allocation record
-      await tx.inventoryAllocation.delete({ where: { id } });
+        // Delete the allocation record
+        await tx.inventoryAllocation.delete({ where: { id } });
 
-      // Update inventory item stock
-      const newAllocated = Math.max(0, item.allocatedQuantity - remainingIssued);
-      const newAvailable = Math.max(
-        0,
-        item.totalQuantity - item.reservedQuantity - newAllocated - item.damagedQuantity - item.maintenanceQuantity
-      );
+        // Update inventory item stock
+        const newAllocated = Math.max(0, item.allocatedQuantity - remainingIssued);
+        const newAvailable = Math.max(
+          0,
+          item.totalQuantity - item.reservedQuantity - newAllocated - item.damagedQuantity - item.maintenanceQuantity
+        );
 
-      await tx.inventoryItem.update({
-        where: { id: item.id },
+        await tx.inventoryItem.update({
+          where: { id: item.id },
+          data: {
+            allocatedQuantity: newAllocated,
+            availableQuantity: newAvailable,
+          },
+        });
+
+        // Record movement
+        await tx.inventoryMovement.create({
+          data: {
+            eventId: alloc.eventId,
+            inventoryItemId: item.id,
+            movementType: 'Unallocated',
+            quantity: remainingIssued,
+            previousTotal: item.totalQuantity,
+            newTotal: item.totalQuantity,
+            previousAvailable: item.availableQuantity,
+            newAvailable,
+            performedBy: 'Admin User',
+            reason: `Allocation removed. ${remainingIssued} units returned to available stock pool (Artist: ${alloc.artist?.artistName || 'N/A'}).`,
+          },
+        });
+
+        return { alloc, remainingIssued };
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
+
+    // Safe non-blocking audit log
+    try {
+      await prisma.auditLog.create({
         data: {
-          allocatedQuantity: newAllocated,
-          availableQuantity: newAvailable,
-        },
-      });
-
-      // Record movement
-      await tx.inventoryMovement.create({
-        data: {
-          eventId: alloc.eventId,
-          inventoryItemId: item.id,
-          movementType: 'Unallocated',
-          quantity: remainingIssued,
-          previousTotal: item.totalQuantity,
-          newTotal: item.totalQuantity,
-          previousAvailable: item.availableQuantity,
-          newAvailable,
-          performedBy: 'Admin User',
-          reason: `Allocation removed. ${remainingIssued} units returned to available stock pool (Artist: ${alloc.artist?.artistName || 'N/A'}).`,
-        },
-      });
-
-      await tx.auditLog.create({
-        data: {
-          eventId: alloc.eventId,
+          eventId: result.alloc.eventId,
           userName: 'Admin User',
           userRole: 'SUPER ADMIN',
           entityType: 'INVENTORY_ALLOCATION',
           entityId: id,
           action: 'DELETE',
-          previousValueJson: JSON.stringify(alloc),
+          previousValueJson: JSON.stringify(result.alloc),
         },
       });
-
-      return { alloc, remainingIssued };
-    });
+    } catch (logErr) {
+      console.error('Audit log creation error:', logErr);
+    }
 
     return NextResponse.json({ success: true, deletedId: id, unallocatedQuantity: result.remainingIssued });
   } catch (error: any) {
@@ -428,103 +436,111 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: false, error: 'Allocation ID is required' }, { status: 400 });
     }
 
-    const result = await prisma.$transaction(async (tx) => {
-      const alloc = await tx.inventoryAllocation.findUnique({
-        where: { id: allocationId },
-        include: { inventoryItem: true, artist: true },
-      });
+    const result = await prisma.$transaction(
+      async (tx) => {
+        const alloc = await tx.inventoryAllocation.findUnique({
+          where: { id: allocationId },
+          include: { inventoryItem: true, artist: true },
+        });
 
-      if (!alloc) throw new Error('Allocation record not found');
-      const item = alloc.inventoryItem;
+        if (!alloc) throw new Error('Allocation record not found');
+        const item = alloc.inventoryItem;
 
-      let newIssued = alloc.issuedQuantity;
-      if (newIssuedQuantity !== undefined && newIssuedQuantity !== null) {
-        newIssued = Math.max(1, parseInt(newIssuedQuantity) || 1);
-      }
+        let newIssued = alloc.issuedQuantity;
+        if (newIssuedQuantity !== undefined && newIssuedQuantity !== null) {
+          newIssued = Math.max(1, parseInt(newIssuedQuantity) || 1);
+        }
 
-      const diff = newIssued - alloc.issuedQuantity;
+        const diff = newIssued - alloc.issuedQuantity;
 
-      const currentAvailable = item.totalQuantity - item.reservedQuantity - item.allocatedQuantity - item.damagedQuantity - item.maintenanceQuantity;
+        const currentAvailable = item.totalQuantity - item.reservedQuantity - item.allocatedQuantity - item.damagedQuantity - item.maintenanceQuantity;
 
-      if (diff > 0 && currentAvailable < diff) {
-        throw new Error(`Insufficient available stock. Requested increase of ${diff}, but only ${currentAvailable} available.`);
-      }
+        if (diff > 0 && currentAvailable < diff) {
+          throw new Error(`Insufficient available stock. Requested increase of ${diff}, but only ${currentAvailable} available.`);
+        }
 
-      const newAllocated = Math.max(0, item.allocatedQuantity + diff);
-      const newAvailable = Math.max(
-        0,
-        item.totalQuantity - item.reservedQuantity - newAllocated - item.damagedQuantity - item.maintenanceQuantity
-      );
+        const newAllocated = Math.max(0, item.allocatedQuantity + diff);
+        const newAvailable = Math.max(
+          0,
+          item.totalQuantity - item.reservedQuantity - newAllocated - item.damagedQuantity - item.maintenanceQuantity
+        );
 
-      let newArtistName = alloc.artist?.artistName;
-      if (targetArtistId && targetArtistId !== alloc.artistId) {
-        const targetArtist = await tx.artist.findUnique({ where: { id: targetArtistId } });
-        newArtistName = targetArtist?.artistName;
-      }
+        let newArtistName = alloc.artist?.artistName;
+        if (targetArtistId && targetArtistId !== alloc.artistId) {
+          const targetArtist = await tx.artist.findUnique({ where: { id: targetArtistId } });
+          newArtistName = targetArtist?.artistName;
+        }
 
-      const updatedAlloc = await tx.inventoryAllocation.update({
-        where: { id: allocationId },
-        data: {
-          artistId: targetArtistId !== undefined ? targetArtistId : alloc.artistId,
-          venueId: targetVenueId !== undefined ? targetVenueId : alloc.venueId,
-          roomId: targetRoomId !== undefined ? targetRoomId : alloc.roomId,
-          department: targetDepartment || alloc.department,
-          requestedQuantity: newIssued,
-          approvedQuantity: newIssued,
-          issuedQuantity: newIssued,
-          notes: notes ? `${notes} (Reallocated on ${new Date().toLocaleDateString()})` : alloc.notes,
-        },
-        include: {
-          inventoryItem: true,
-          artist: true,
-          venue: true,
-          room: true,
-        },
-      });
-
-      if (diff !== 0) {
-        await tx.inventoryItem.update({
-          where: { id: item.id },
+        const updatedAlloc = await tx.inventoryAllocation.update({
+          where: { id: allocationId },
           data: {
-            allocatedQuantity: newAllocated,
-            availableQuantity: newAvailable,
+            artistId: targetArtistId !== undefined ? targetArtistId : alloc.artistId,
+            venueId: targetVenueId !== undefined ? targetVenueId : alloc.venueId,
+            roomId: targetRoomId !== undefined ? targetRoomId : alloc.roomId,
+            department: targetDepartment || alloc.department,
+            requestedQuantity: newIssued,
+            approvedQuantity: newIssued,
+            issuedQuantity: newIssued,
+            notes: notes ? `${notes} (Reallocated on ${new Date().toLocaleDateString()})` : alloc.notes,
+          },
+          include: {
+            inventoryItem: true,
+            artist: true,
+            venue: true,
+            room: true,
           },
         });
-      }
 
-      await tx.inventoryMovement.create({
-        data: {
-          eventId: alloc.eventId,
-          inventoryItemId: item.id,
-          movementType: 'Reallocated',
-          quantity: newIssued,
-          previousTotal: item.totalQuantity,
-          newTotal: item.totalQuantity,
-          previousAvailable: currentAvailable,
-          newAvailable,
-          performedBy: reallocatedBy || 'Admin User',
-          reason: `Reallocated stock item to ${newArtistName || 'Target Artist/Location'}. Quantity adjusted: ${alloc.issuedQuantity} -> ${newIssued}.`,
-          allocationId: updatedAlloc.id,
-        },
-      });
+        if (diff !== 0) {
+          await tx.inventoryItem.update({
+            where: { id: item.id },
+            data: {
+              allocatedQuantity: newAllocated,
+              availableQuantity: newAvailable,
+            },
+          });
+        }
 
-      await tx.auditLog.create({
+        await tx.inventoryMovement.create({
+          data: {
+            eventId: alloc.eventId,
+            inventoryItemId: item.id,
+            movementType: 'Reallocated',
+            quantity: newIssued,
+            previousTotal: item.totalQuantity,
+            newTotal: item.totalQuantity,
+            previousAvailable: currentAvailable,
+            newAvailable,
+            performedBy: reallocatedBy || 'Admin User',
+            reason: `Reallocated stock item to ${newArtistName || 'Target Artist/Location'}. Quantity adjusted: ${alloc.issuedQuantity} -> ${newIssued}.`,
+            allocationId: updatedAlloc.id,
+          },
+        });
+
+        return { updatedAlloc, alloc };
+      },
+      { maxWait: 15000, timeout: 30000 }
+    );
+
+    // Safe non-blocking audit logging
+    try {
+      await prisma.auditLog.create({
         data: {
-          eventId: alloc.eventId,
+          eventId: result.alloc.eventId,
           userName: reallocatedBy || 'Admin User',
           userRole: 'SUPER ADMIN',
           entityType: 'INVENTORY_ALLOCATION',
-          entityId: updatedAlloc.id,
+          entityId: result.updatedAlloc.id,
           action: 'REALLOCATE',
-          previousValueJson: JSON.stringify(alloc),
-          newValueJson: JSON.stringify(updatedAlloc),
+          previousValueJson: JSON.stringify(result.alloc),
+          newValueJson: JSON.stringify(result.updatedAlloc),
         },
       });
+    } catch (logErr) {
+      console.error('Audit log creation error on reallocation:', logErr);
+    }
 
-      return updatedAlloc;
-    });
-
-    return NextResponse.json({ success: true, allocation: result });
+    return NextResponse.json({ success: true, allocation: result.updatedAlloc });
   } catch (error: any) {
     console.error('Error reallocating item:', error);
     return NextResponse.json({ success: false, error: error.message || 'Failed to reallocate item' }, { status: 500 });
