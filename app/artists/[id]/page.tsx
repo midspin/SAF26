@@ -5,6 +5,7 @@ import Link from 'next/link';
 import ArtistPdfExportModal from '@/components/ArtistPdfExportModal';
 import {
   Users,
+  User,
   Palette,
   Briefcase,
   UserCheck,
@@ -440,10 +441,15 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  // Reallocate Modal States
+  // Reallocate Modal States & Comprehensive Modes (SWAP, RETURN, REASSIGN)
   const [reallocateModalOpen, setReallocateModalOpen] = useState(false);
   const [reallocatingAlloc, setReallocatingAlloc] = useState<any>(null);
   const [isReallocating, setIsReallocating] = useState(false);
+  const [reallocateMode, setReallocateMode] = useState<'SWAP' | 'RETURN' | 'REASSIGN'>('SWAP');
+  const [reallocSearchQuery, setReallocSearchQuery] = useState('');
+  const [selectedReplacementItem, setSelectedReplacementItem] = useState<any | null>(null);
+  const [replacementQuantity, setReplacementQuantity] = useState(1);
+  const [reallocNotes, setReallocNotes] = useState('');
   const [allArtistsList, setAllArtistsList] = useState<any[]>([]);
   const [reallocForm, setReallocForm] = useState({
     targetArtistId: '',
@@ -453,12 +459,21 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
   const openReallocateModal = async (alloc: any) => {
     setReallocatingAlloc(alloc);
+    setReallocateMode('SWAP');
+    setReallocSearchQuery('');
+    setSelectedReplacementItem(null);
+    setReplacementQuantity(alloc.issuedQuantity || 1);
+    setReallocNotes('');
     setReallocForm({
       targetArtistId: alloc.artistId || '',
       newIssuedQuantity: alloc.issuedQuantity || 1,
       notes: '',
     });
     setReallocateModalOpen(true);
+
+    if (inventoryItems.length === 0) {
+      fetchInventoryPool();
+    }
     if (allArtistsList.length === 0) {
       try {
         const res = await fetch('/api/artists');
@@ -470,6 +485,91 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  // 1. Handle Submit Swap Request for Inventory Approval
+  const handleSubmitSwapRequest = async () => {
+    if (!reallocatingAlloc) return;
+    if (!selectedReplacementItem) {
+      alert('Please search and select a replacement item from the inventory pool.');
+      return;
+    }
+    setIsReallocating(true);
+    try {
+      let requesterName = 'Team Member';
+      try {
+        const session = localStorage.getItem('saf_user_session');
+        if (session) {
+          const parsed = JSON.parse(session);
+          if (parsed.name) requesterName = parsed.name;
+        }
+      } catch (e) {}
+
+      const res = await fetch('/api/inventory/reallocate-swap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          allocationId: reallocatingAlloc.id,
+          replacementInventoryItemId: selectedReplacementItem.id,
+          replacementQuantity,
+          requesterName,
+          requesterRole: userRole,
+          reason: reallocNotes || 'Swapped equipment request',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReallocateModalOpen(false);
+        setReallocatingAlloc(null);
+        setSelectedReplacementItem(null);
+        setToastNotification({
+          show: true,
+          safCode: 'SWAP PENDING',
+          elementName: `Swap Request for "${selectedReplacementItem.element}" submitted to Inventory Team!`,
+          quantity: replacementQuantity,
+        });
+        playSuccessChime();
+      } else {
+        alert(data.error || 'Failed to submit swap request.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error submitting swap request.');
+    } finally {
+      setIsReallocating(false);
+    }
+  };
+
+  // 2. Handle Send Back to Inventory Pool (Direct Return / Unallocate)
+  const handleDirectReturnToInventory = async () => {
+    if (!reallocatingAlloc) return;
+    setIsReallocating(true);
+    try {
+      const res = await fetch(`/api/inventory/allocations?id=${reallocatingAlloc.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.success) {
+        setReallocateModalOpen(false);
+        setReallocatingAlloc(null);
+        await Promise.all([fetchArtistDetails(false), fetchInventoryPool()]);
+        setToastNotification({
+          show: true,
+          safCode: 'RETURNED',
+          elementName: `Returned ${reallocatingAlloc.inventoryItem?.element || 'item'} back to inventory pool`,
+          quantity: reallocatingAlloc.issuedQuantity || 1,
+        });
+        playSuccessChime();
+      } else {
+        alert(data.error || 'Failed to return item to inventory.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Error returning item to inventory.');
+    } finally {
+      setIsReallocating(false);
+    }
+  };
+
+  // 3. Handle Standard Reallocation to Target Artist
   const handleSaveReallocation = async () => {
     if (!reallocatingAlloc) return;
     setIsReallocating(true);
@@ -488,8 +588,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       if (data.success) {
         setReallocateModalOpen(false);
         setReallocatingAlloc(null);
-        await fetchArtistDetails();
-        await fetchInventoryPool();
+        await Promise.all([fetchArtistDetails(false), fetchInventoryPool()]);
 
         setToastNotification({
           show: true,
@@ -3297,59 +3396,307 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      {/* REALLOCATE ALLOCATION MODAL */}
+      {/* REALLOCATE & SWAP ALLOCATION MODAL */}
       {reallocateModalOpen && reallocatingAlloc && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#232334] border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#232334] border border-amber-500/40 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <h3 className="text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-2">
-                <RefreshCw className="w-4 h-4 text-amber-400" /> Reallocate Stock Item
-              </h3>
-              <button onClick={() => setReallocateModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
+              <div>
+                <h3 className="text-sm font-black text-amber-300 uppercase tracking-wider flex items-center gap-2">
+                  <RefreshCw className="w-4 h-4 text-amber-400" /> Reallocate & Equipment Actions
+                </h3>
+                <p className="text-[11px] text-[#8a8d9b] mt-0.5">
+                  Swap with new inventory, return to stock pool, or reassign artist.
+                </p>
+              </div>
+              <button onClick={() => setReallocateModalOpen(false)} className="text-[#8a8d9b] hover:text-white p-1">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="p-3 rounded-xl bg-[#1c1c2a] border border-white/5 space-y-1">
-                <span className="font-mono text-xs font-bold text-[#38bdf8]">{reallocatingAlloc.inventoryItem?.safCode}</span>
-                <p className="font-bold text-white text-sm">{reallocatingAlloc.inventoryItem?.element}</p>
-              </div>
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-3 gap-1.5 p-1 bg-[#1c1c2a] rounded-2xl border border-white/5 text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setReallocateMode('SWAP')}
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
+                  reallocateMode === 'SWAP'
+                    ? 'bg-amber-500 text-slate-950 shadow-md font-black'
+                    : 'text-[#8a8d9b] hover:text-white'
+                }`}
+              >
+                <RefreshCw className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Swap Item</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReallocateMode('RETURN')}
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
+                  reallocateMode === 'RETURN'
+                    ? 'bg-rose-600 text-white shadow-md font-black'
+                    : 'text-[#8a8d9b] hover:text-white'
+                }`}
+              >
+                <Package className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Return to Pool</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setReallocateMode('REASSIGN')}
+                className={`py-2 px-2 rounded-xl transition-all flex items-center justify-center gap-1.5 text-center ${
+                  reallocateMode === 'REASSIGN'
+                    ? 'bg-sky-500 text-slate-950 shadow-md font-black'
+                    : 'text-[#8a8d9b] hover:text-white'
+                }`}
+              >
+                <User className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Reassign Artist</span>
+              </button>
+            </div>
 
+            {/* Current Item Card */}
+            <div className="p-3 rounded-2xl bg-[#1c1c2a] border border-white/10 flex items-center justify-between gap-3 text-xs">
               <div>
-                <label className="text-[#8a8d9b] block font-bold mb-1">Target Artist</label>
-                <select
-                  value={reallocForm.targetArtistId}
-                  onChange={(e) => setReallocForm({ ...reallocForm, targetArtistId: e.target.value })}
-                  className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
-                >
-                  {allArtistsList.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.artistName}
-                    </option>
-                  ))}
-                </select>
+                <span className="text-[10px] text-[#8a8d9b] uppercase font-bold block">Currently Allocated Item</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="font-mono text-xs font-bold text-[#38bdf8] bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-800/60">
+                    {reallocatingAlloc.inventoryItem?.safCode || 'ITEM'}
+                  </span>
+                  <strong className="text-white text-xs">{reallocatingAlloc.inventoryItem?.element}</strong>
+                </div>
               </div>
-
-              <div>
-                <label className="text-[#8a8d9b] block font-bold mb-1">Quantity to Issue</label>
-                <input
-                  type="number"
-                  min={1}
-                  value={reallocForm.newIssuedQuantity}
-                  onChange={(e) => setReallocForm({ ...reallocForm, newIssuedQuantity: parseInt(e.target.value) || 1 })}
-                  className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center"
-                />
+              <div className="text-right shrink-0">
+                <span className="text-[10px] text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg font-bold">
+                  {reallocatingAlloc.issuedQuantity} Issued
+                </span>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
-              <button onClick={() => setReallocateModalOpen(false)} className="px-4 py-2 rounded-xl bg-[#1c1c2a] text-[#8a8d9b] font-bold text-xs">
+            {/* Scrollable Content Body */}
+            <div className="flex-1 overflow-y-auto space-y-3.5 text-xs pr-1">
+              {/* 1. SWAP MODE: SEARCH INVENTORY & REQUEST APPROVAL */}
+              {reallocateMode === 'SWAP' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-slate-300 block font-bold mb-1.5 flex items-center justify-between">
+                      <span>Search Replacement Item in Inventory</span>
+                      <span className="text-[10px] text-amber-400 font-normal">Requires Inventory Approval</span>
+                    </label>
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                      <input
+                        type="text"
+                        value={reallocSearchQuery}
+                        onChange={(e) => setReallocSearchQuery(e.target.value)}
+                        placeholder="Search by code, element name, model, category..."
+                        className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl pl-9 pr-3 py-2 text-white font-medium text-xs focus:border-amber-500 focus:outline-none"
+                      />
+                      {reallocSearchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setReallocSearchQuery('')}
+                          className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Selected Replacement Banner */}
+                  {selectedReplacementItem && (
+                    <div className="p-3 rounded-2xl bg-emerald-950/40 border-2 border-emerald-500/60 flex items-center justify-between gap-2 shadow-lg">
+                      <div className="flex items-center gap-2.5">
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-black text-emerald-400">
+                              {selectedReplacementItem.safCode}
+                            </span>
+                            <span className="text-[10px] text-emerald-300 bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-800">
+                              {selectedReplacementItem.availableQuantity} Available
+                            </span>
+                          </div>
+                          <p className="font-extrabold text-white text-xs mt-0.5">{selectedReplacementItem.element}</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedReplacementItem(null)}
+                        className="text-xs text-rose-400 hover:underline font-bold"
+                      >
+                        Change
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Search Results List */}
+                  <div className="space-y-1.5 max-h-44 overflow-y-auto bg-[#1c1c2a]/80 p-2 rounded-2xl border border-white/5">
+                    {inventoryItems
+                      .filter((item) => {
+                        if (item.id === reallocatingAlloc.inventoryItemId) return false;
+                        if (item.isFaulty) return false;
+                        if (!reallocSearchQuery.trim()) return true;
+                        const q = reallocSearchQuery.toLowerCase().trim();
+                        return (
+                          item.safCode?.toLowerCase().includes(q) ||
+                          item.element?.toLowerCase().includes(q) ||
+                          item.inventoryCategory?.toLowerCase().includes(q) ||
+                          item.model?.toLowerCase().includes(q) ||
+                          item.brand?.toLowerCase().includes(q)
+                        );
+                      })
+                      .slice(0, 15)
+                      .map((item) => {
+                        const isSelected = selectedReplacementItem?.id === item.id;
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => setSelectedReplacementItem(item)}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                              isSelected
+                                ? 'bg-emerald-950/60 border-emerald-400 text-white'
+                                : 'bg-[#232334] hover:bg-[#2c2c40] border-white/5 text-[#8a8d9b] hover:text-white'
+                            }`}
+                          >
+                            <div className="truncate">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-bold text-[11px] text-[#38bdf8]">{item.safCode}</span>
+                                <span className="font-bold text-white text-xs truncate">{item.element}</span>
+                              </div>
+                              <p className="text-[10px] text-slate-400 truncate mt-0.5">
+                                {item.inventoryCategory} • {item.subCategory || 'General'}
+                              </p>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-lg border border-emerald-800">
+                                {item.availableQuantity} Avail
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+
+                  {/* Quantity & Reason */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                      <label className="text-[#8a8d9b] block font-bold mb-1">Swap Quantity</label>
+                      <input
+                        type="number"
+                        min={1}
+                        max={selectedReplacementItem ? selectedReplacementItem.availableQuantity : 999}
+                        value={replacementQuantity}
+                        onChange={(e) => setReplacementQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#8a8d9b] block font-bold mb-1">Reason / Notes</label>
+                      <input
+                        type="text"
+                        value={reallocNotes}
+                        onChange={(e) => setReallocNotes(e.target.value)}
+                        placeholder="e.g. Higher spec required..."
+                        className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white text-xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. RETURN MODE: DIRECT RETURN TO INVENTORY POOL */}
+              {reallocateMode === 'RETURN' && (
+                <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-800/40 space-y-3">
+                  <div className="flex items-center gap-2 text-rose-400">
+                    <ShieldAlert className="w-5 h-5 shrink-0" />
+                    <strong className="text-white text-xs">Return Equipment to Master Stock Pool</strong>
+                  </div>
+                  <p className="text-xs text-[#8a8d9b]">
+                    This will immediately release <strong className="text-white">{reallocatingAlloc.issuedQuantity} units</strong> of{' '}
+                    <strong className="text-white">{reallocatingAlloc.inventoryItem?.element}</strong> back to the available inventory pool for other artists and spaces.
+                  </p>
+                </div>
+              )}
+
+              {/* 3. REASSIGN MODE: TRANSFER TO ANOTHER ARTIST */}
+              {reallocateMode === 'REASSIGN' && (
+                <div className="space-y-3">
+                  <div>
+                    <label className="text-[#8a8d9b] block font-bold mb-1">Target Artist</label>
+                    <select
+                      value={reallocForm.targetArtistId}
+                      onChange={(e) => setReallocForm({ ...reallocForm, targetArtistId: e.target.value })}
+                      className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                    >
+                      {allArtistsList.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.artistName}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[#8a8d9b] block font-bold mb-1">Quantity to Reassign</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={reallocForm.newIssuedQuantity}
+                      onChange={(e) => setReallocForm({ ...reallocForm, newIssuedQuantity: parseInt(e.target.value) || 1 })}
+                      className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold text-center"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex justify-end gap-2 pt-3 border-t border-white/10">
+              <button
+                type="button"
+                onClick={() => setReallocateModalOpen(false)}
+                className="px-4 py-2.5 rounded-xl bg-[#1c1c2a] text-[#8a8d9b] hover:text-white font-bold text-xs cursor-pointer"
+              >
                 Cancel
               </button>
-              <button onClick={handleSaveReallocation} disabled={isReallocating} className="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-extrabold text-xs shadow-md">
-                {isReallocating ? 'Saving...' : 'Confirm Reallocation'}
-              </button>
+
+              {reallocateMode === 'SWAP' && (
+                <button
+                  type="button"
+                  onClick={handleSubmitSwapRequest}
+                  disabled={isReallocating || !selectedReplacementItem}
+                  className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isReallocating ? 'animate-spin' : ''}`} />
+                  {isReallocating ? 'Sending Request...' : 'Submit Swap Request'}
+                </button>
+              )}
+
+              {reallocateMode === 'RETURN' && (
+                <button
+                  type="button"
+                  onClick={handleDirectReturnToInventory}
+                  disabled={isReallocating}
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Package className="w-3.5 h-3.5" />
+                  {isReallocating ? 'Returning...' : 'Confirm Return to Inventory'}
+                </button>
+              )}
+
+              {reallocateMode === 'REASSIGN' && (
+                <button
+                  type="button"
+                  onClick={handleSaveReallocation}
+                  disabled={isReallocating}
+                  className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Check className="w-3.5 h-3.5" />
+                  {isReallocating ? 'Reassigning...' : 'Confirm Reassignment'}
+                </button>
+              )}
             </div>
           </div>
         </div>

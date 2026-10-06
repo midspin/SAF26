@@ -349,6 +349,66 @@ export default function AppLayout({ children }: AppLayoutProps) {
     } catch (e) {}
   };
 
+  const [approvingSwapId, setApprovingSwapId] = useState<string | null>(null);
+
+  const handleApproveSwap = async (notifId: string, swapPayload: any) => {
+    setApprovingSwapId(notifId);
+    try {
+      const res = await fetch('/api/inventory/reallocate-swap', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'APPROVE',
+          swapPayload,
+          approvedBy: userSession?.name || 'Inventory Team',
+          approverRole: activeRole || 'INVENTORY',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Equipment swap successfully approved and executed!');
+        handleClearNotification(notifId);
+        fetchNotifications();
+      } else {
+        alert(data.error || 'Failed to approve swap.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error approving swap.');
+    } finally {
+      setApprovingSwapId(null);
+    }
+  };
+
+  const handleRejectSwap = async (notifId: string, swapPayload: any) => {
+    if (!confirm('Reject this reallocation swap request?')) return;
+    setApprovingSwapId(notifId);
+    try {
+      const res = await fetch('/api/inventory/reallocate-swap', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'REJECT',
+          swapPayload,
+          approvedBy: userSession?.name || 'Inventory Team',
+          approverRole: activeRole || 'INVENTORY',
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        handleClearNotification(notifId);
+        fetchNotifications();
+      } else {
+        alert(data.error || 'Failed to reject swap.');
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert('Error rejecting swap.');
+    } finally {
+      setApprovingSwapId(null);
+    }
+  };
+
   // Live Countdown Timer to 13 Dec 2026, 11:00 AM (Month, Week, Day, Hour, Min, Sec)
   const [countdown, setCountdown] = useState({
     months: 0,
@@ -770,50 +830,92 @@ export default function AppLayout({ children }: AppLayoutProps) {
                         No notifications for your role.
                       </div>
                     ) : (
-                      notifications.map((n) => (
-                        <div
-                          key={n.id}
-                          className={`p-3 rounded-2xl border text-xs transition-colors relative group flex items-start justify-between gap-2 ${
-                            n.isRead ? 'bg-[#1c1c2a]/60 border-white/5 text-[#8a8d9b]' : 'bg-[#1c1c2a] border-[#8b5cf6]/40 text-white shadow-md'
-                          }`}
-                        >
-                          <div className="flex-1 pr-1">
-                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
-                              <span className="text-[9px] font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-800/60">
-                                {n.addedBy ? `By: ${n.addedBy}` : 'By: System'}
-                              </span>
-                              <span className="text-[9px] text-slate-400">
-                                {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Just now')}
-                              </span>
+                      notifications.map((n) => {
+                        const isSwapNotification = n.link && n.link.includes('swapApproval=');
+                        let parsedSwapPayload: any = null;
+                        if (isSwapNotification) {
+                          try {
+                            const raw = n.link.split('swapApproval=')[1];
+                            if (raw) parsedSwapPayload = JSON.parse(decodeURIComponent(raw));
+                          } catch (e) {}
+                        }
+                        const canApproveSwap = [
+                          'SUPER ADMIN',
+                          'SUPERADMIN',
+                          'INVENTORY TEAM',
+                          'INVENTORY MANAGER',
+                          'INVENTORY HEAD',
+                          'INVENTORY',
+                        ].includes((activeRole || '').trim().toUpperCase());
+
+                        return (
+                          <div
+                            key={n.id}
+                            className={`p-3 rounded-2xl border text-xs transition-colors relative group flex items-start justify-between gap-2 ${
+                              n.isRead ? 'bg-[#1c1c2a]/60 border-white/5 text-[#8a8d9b]' : 'bg-[#1c1c2a] border-[#8b5cf6]/40 text-white shadow-md'
+                            }`}
+                          >
+                            <div className="flex-1 pr-1">
+                              <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                <span className="text-[9px] font-bold text-sky-400 bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-800/60">
+                                  {n.addedBy ? `By: ${n.addedBy}` : 'By: System'}
+                                </span>
+                                <span className="text-[9px] text-slate-400">
+                                  {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : (n.time || 'Just now')}
+                                </span>
+                              </div>
+
+                              <p className="font-bold text-white text-xs leading-snug">{n.title}</p>
+                              <p className="text-[11px] text-[#8a8d9b] mt-0.5 leading-snug">{n.message}</p>
+
+                              {/* SWAP APPROVAL ACTIONS FOR INVENTORY TEAM */}
+                              {parsedSwapPayload && canApproveSwap && (
+                                <div className="mt-2.5 pt-2 border-t border-white/10 flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleApproveSwap(n.id, parsedSwapPayload)}
+                                    disabled={approvingSwapId === n.id}
+                                    className="flex-1 px-3 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 text-slate-950 font-black text-[11px] shadow-sm transition-all flex items-center justify-center gap-1 cursor-pointer"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    {approvingSwapId === n.id ? 'Approving...' : 'Approve Swap'}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRejectSwap(n.id, parsedSwapPayload)}
+                                    disabled={approvingSwapId === n.id}
+                                    className="px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 font-bold text-[11px] border border-rose-500/30 transition-all cursor-pointer"
+                                  >
+                                    Reject
+                                  </button>
+                                </div>
+                              )}
+
+                              {n.link && !parsedSwapPayload && (
+                                <Link
+                                  href={n.link}
+                                  onClick={(e) => {
+                                    setNotificationsOpen(false);
+                                    handleClearNotification(n.id, e);
+                                  }}
+                                  className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:underline mt-1.5"
+                                >
+                                  View resource →
+                                </Link>
+                              )}
                             </div>
 
-                            <p className="font-bold text-white text-xs leading-snug">{n.title}</p>
-                            <p className="text-[11px] text-[#8a8d9b] mt-0.5 leading-snug">{n.message}</p>
-
-                            {n.link && (
-                              <Link
-                                href={n.link}
-                                onClick={(e) => {
-                                  setNotificationsOpen(false);
-                                  handleClearNotification(n.id, e);
-                                }}
-                                className="inline-flex items-center gap-1 text-[10px] font-bold text-sky-400 hover:underline mt-1.5"
-                              >
-                                View resource →
-                              </Link>
-                            )}
+                            {/* CLEAR BUTTON FOR EACH NOTIFICATION */}
+                            <button
+                              onClick={(e) => handleClearNotification(n.id, e)}
+                              className="p-1 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors shrink-0 mt-0.5"
+                              title="Clear this notification"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
                           </div>
-
-                          {/* CLEAR BUTTON FOR EACH NOTIFICATION */}
-                          <button
-                            onClick={(e) => handleClearNotification(n.id, e)}
-                            className="p-1 rounded-lg bg-slate-800/80 hover:bg-rose-500/20 text-slate-400 hover:text-rose-400 transition-colors shrink-0 mt-0.5"
-                            title="Clear this notification"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                 </div>
