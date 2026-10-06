@@ -291,25 +291,35 @@ export default function ArtistsPage() {
     fetchArtistsAndVenues();
   }, []);
 
+  const fetchModalDependencies = async () => {
+    if (curatorsList.length > 0 && Object.keys(teamsData).length > 0) return;
+    try {
+      const [curatorsRes, teamsRes] = await Promise.all([
+        fetch('/api/curators'),
+        fetch('/api/team'),
+      ]);
+      const curatorsData = await curatorsRes.json();
+      const teamsDataRes = await teamsRes.json();
+      if (curatorsData.success) setCuratorsList(curatorsData.curators || []);
+      if (teamsDataRes.success) setTeamsData(teamsDataRes.teams || {});
+    } catch (err) {
+      console.error('Error fetching modal dependencies:', err);
+    }
+  };
+
   const fetchArtistsAndVenues = async () => {
     setLoading(true);
     try {
-      const [artistsRes, venuesRes, curatorsRes, teamsRes] = await Promise.all([
+      const [artistsRes, venuesRes] = await Promise.all([
         fetch('/api/artists'),
         fetch('/api/venues'),
-        fetch('/api/curators'),
-        fetch('/api/team'),
       ]);
 
       const artistsData = await artistsRes.json();
       const venuesData = await venuesRes.json();
-      const curatorsData = await curatorsRes.json();
-      const teamsDataRes = await teamsRes.json();
 
       if (artistsData.success) setArtists(artistsData.artists);
       if (venuesData.success) setVenuesList(venuesData.venues);
-      if (curatorsData.success) setCuratorsList(curatorsData.curators || []);
-      if (teamsDataRes.success) setTeamsData(teamsDataRes.teams || {});
     } catch (err) {
       console.error(err);
     } finally {
@@ -450,6 +460,7 @@ export default function ArtistsPage() {
       alert('Access Restricted: Only Super Admin and Programming Team can edit artists.');
       return;
     }
+    fetchModalDependencies();
     setEditingArtist(art);
     setEditFormData({
       artistName: art.artistName || '',
@@ -684,6 +695,7 @@ export default function ArtistsPage() {
             <button
               onClick={() => {
                 resetForm();
+                fetchModalDependencies();
                 setNewModalOpen(true);
               }}
               className="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md cursor-pointer"
