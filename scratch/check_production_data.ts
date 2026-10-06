@@ -3,22 +3,29 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 async function main() {
-  const peopleCount = await prisma.productionPerson.count();
-  const reqsCount = await prisma.productionRequirement.count();
-  const itemsCount = await prisma.inventoryItem.count({ where: { inventoryUsageType: 'PRODUCTION' } });
-  const allocsCount = await prisma.inventoryAllocation.count({ where: { department: 'PRODUCTION' } });
-  const purchaseCount = await prisma.purchaseRequest.count({ where: { department: 'PRODUCTION' } });
-  const rentalCount = await prisma.rentalRecord.count({ where: { department: 'PRODUCTION' } });
+  const count = await prisma.inventoryItem.count({
+    where: { inventoryUsageType: 'PRODUCTION' },
+  });
+  console.log('Total Production Items in Database:', count);
 
-  console.log('Production Data Counts:');
-  console.log(`- Production Persons (Staff): ${peopleCount}`);
-  console.log(`- Production Requirements: ${reqsCount}`);
-  console.log(`- Production Inventory Items: ${itemsCount}`);
-  console.log(`- Production Inventory Allocations: ${allocsCount}`);
-  console.log(`- Production Purchase Requests: ${purchaseCount}`);
-  console.log(`- Production Rental Records: ${rentalCount}`);
+  const sample = await prisma.inventoryItem.findMany({
+    where: { inventoryUsageType: 'PRODUCTION' },
+    take: 5,
+    select: {
+      safCode: true,
+      inventoryCategory: true,
+      subCategory: true,
+      element: true,
+      location: true,
+      totalQuantity: true,
+      condition: true,
+    },
+  });
+
+  console.log('Sample Items:');
+  console.table(sample);
 }
 
 main()
-  .catch((e) => console.error(e))
+  .catch(console.error)
   .finally(() => prisma.$disconnect());
