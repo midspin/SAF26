@@ -13,8 +13,8 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('Admin');
-  const [password, setPassword] = useState('Admin');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,7 +121,7 @@ export default function LoginPage() {
                   required
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. Admin or event_manager"
+                  placeholder="Enter your username or email"
                   className="w-full bg-[#232334] text-white text-xs font-semibold rounded-2xl pl-10 pr-4 py-3 border border-white/10 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] placeholder:text-slate-500 transition-all"
                 />
               </div>
