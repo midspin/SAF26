@@ -25,9 +25,19 @@ export async function GET(req: Request) {
     const hasMore = skip + logs.length < totalCount;
     const nextPage = hasMore ? page + 1 : null;
 
+    // Truncate heavy JSON dumps in list views to prevent MB-sized transfers
+    const sanitizedLogs = logs.map((log) => ({
+      ...log,
+      newValueJson: log.newValueJson
+        ? log.newValueJson.length > 200
+          ? log.newValueJson.slice(0, 200) + '... (truncated)'
+          : log.newValueJson
+        : null,
+    }));
+
     return NextResponse.json({
       success: true,
-      logs,
+      logs: sanitizedLogs,
       totalCount,
       hasMore,
       nextPage,

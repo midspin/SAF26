@@ -16,16 +16,26 @@ export async function GET(req: Request) {
       orderBy: { venueName: 'asc' },
       include: {
         rooms: {
+          orderBy: { roomNumber: 'asc' },
           include: {
             installations: {
-              include: {
-                artist: true,
-                artwork: true,
-              },
-            },
-            allocations: {
-              include: {
-                inventoryItem: true,
+              select: {
+                id: true,
+                artistId: true,
+                artworkId: true,
+                installationStatus: true,
+                artist: {
+                  select: {
+                    id: true,
+                    artistName: true,
+                  },
+                },
+                artwork: {
+                  select: {
+                    id: true,
+                    artworkName: true,
+                  },
+                },
               },
             },
           },
