@@ -288,6 +288,9 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     setAssignItemNotes('');
     setAssignModalSearch('');
     setModalItemQuantities({});
+    if (inventoryItems.length === 0) {
+      fetchInventoryPool();
+    }
     setAssignItemModalOpen(true);
   };
 
@@ -330,11 +333,14 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
             allocations: [data.allocation, ...(prev?.allocations || [])],
           }));
         }
+        const deptLabel = assignItemModalDepartment === 'PRODUCTION' ? 'Production Allotment' : 'Technical Stock Allotment';
         setToastNotification({
           show: true,
+          title: `Item Allocated to ${deptLabel}`,
           safCode: itemToAssign.safCode,
           elementName: itemToAssign.element,
           quantity: targetQty,
+          category: deptLabel,
         });
         playSuccessChime();
         // Fetch fresh details concurrently in background
@@ -559,6 +565,43 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       const data = await res.json();
       if (data.success) {
         setRentPurchaseModalOpen(false);
+
+        // Optimistically update local artist state
+        const isRent = rentPurchaseForm.itemType === 'Rent';
+        const newItem = data.record || data.item || {
+          id: `temp-${Date.now()}`,
+          itemName: rentPurchaseForm.itemName,
+          brand: rentPurchaseForm.brand,
+          model: rentPurchaseForm.model,
+          itemType: rentPurchaseForm.itemType,
+          quantity: rentPurchaseForm.quantity,
+          purchaseLink: rentPurchaseForm.purchaseLink,
+          notes: rentPurchaseForm.notes,
+        };
+
+        if (isRent) {
+          setArtistData((prev: any) => ({
+            ...prev,
+            rentalRecords: [newItem, ...(prev?.rentalRecords || [])],
+          }));
+        } else {
+          setArtistData((prev: any) => ({
+            ...prev,
+            purchaseRequests: [newItem, ...(prev?.purchaseRequests || [])],
+          }));
+        }
+
+        const catLabel = isRent ? 'Rent List' : 'Purchase List';
+        setToastNotification({
+          show: true,
+          title: `Item Added to ${catLabel}`,
+          safCode: isRent ? 'RENT' : 'PURCHASE',
+          elementName: rentPurchaseForm.itemName,
+          quantity: rentPurchaseForm.quantity,
+          category: 'Rent | Purchase List',
+        });
+        playSuccessChime();
+
         setRentPurchaseForm({
           itemType: 'Purchase',
           itemName: '',
@@ -568,7 +611,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           purchaseLink: '',
           notes: '',
         });
-        await fetchArtistDetails();
+        fetchArtistDetails(false);
       } else {
         alert(data.error || 'Failed to save item');
       }
@@ -767,14 +810,18 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   // Popup Toast Notification State
   const [toastNotification, setToastNotification] = useState<{
     show: boolean;
+    title?: string;
     safCode: string;
     elementName: string;
     quantity: number;
+    category?: string;
   }>({
     show: false,
+    title: 'Stock Allocated Successfully',
     safCode: '',
     elementName: '',
     quantity: 1,
+    category: 'Production Allotment',
   });
 
   const playSuccessChime = () => {
@@ -1181,16 +1228,37 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
         </div>
       </div>
 
-      {/* POPUP TOAST NOTIFICATION */}
+      {/* POPUP TOAST NOTIFICATION WITH ANIMATED TICK MARK */}
       {toastNotification.show && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce bg-[#10b981] text-slate-950 px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-white/20">
-          <div className="w-8 h-8 rounded-xl bg-slate-950/20 flex items-center justify-center font-black">✓</div>
-          <div>
-            <h4 className="text-xs font-black uppercase">Stock Allocated Successfully</h4>
-            <p className="text-[11px] font-semibold">
-              {toastNotification.quantity}x {toastNotification.elementName} ({toastNotification.safCode})
+        <div className="fixed bottom-6 right-6 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300 bg-slate-900/95 backdrop-blur-md border border-emerald-500/40 text-slate-100 p-4 rounded-2xl shadow-2xl flex items-center gap-3.5 min-w-[320px] max-w-md">
+          {/* Animated Checkmark Icon with Pulse Ring */}
+          <div className="relative flex-shrink-0">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center animate-pulse">
+              <svg className="w-6 h-6 text-emerald-400 stroke-[3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                {toastNotification.category || 'Allocated'}
+              </span>
+              {toastNotification.safCode && (
+                <span className="text-[10px] text-slate-400 font-mono">{toastNotification.safCode}</span>
+              )}
+            </div>
+            <h4 className="text-xs font-bold text-slate-100 truncate">{toastNotification.title || 'Item Allocated Successfully'}</h4>
+            <p className="text-xs text-emerald-400 font-semibold truncate mt-0.5">
+              {toastNotification.quantity}x {toastNotification.elementName}
             </p>
           </div>
+          <button
+            onClick={() => setToastNotification((prev) => ({ ...prev, show: false }))}
+            className="text-slate-400 hover:text-slate-200 p-1 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
