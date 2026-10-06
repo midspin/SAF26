@@ -6,9 +6,6 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const results = await Promise.all([
-      prisma.artist.findMany({
-        select: { id: true, status: true },
-      }),
       prisma.artwork.findMany({
         select: {
           id: true,
@@ -44,29 +41,50 @@ export async function GET() {
         },
       }),
       prisma.artist.findMany({
-        include: {
+        select: {
+          id: true,
+          artistName: true,
+          status: true,
           artworks: {
-            include: {
-              venue: true,
-              room: true,
+            select: {
+              id: true,
+              artworkName: true,
+              installationType: true,
+              techProdLayout: true,
+              venue: { select: { venueDocument: true } },
+              room: { select: { techProdLayout: true, floorplan: true } },
             },
           },
           allocations: {
-            include: {
-              inventoryItem: true,
+            select: {
+              artworkId: true,
+              department: true,
+              inventoryItem: {
+                select: {
+                  inventoryCategory: true,
+                  inventoryUsageType: true,
+                },
+              },
             },
           },
         },
       }),
-      prisma.artistInstallation.findMany(),
+      prisma.artistInstallation.findMany({
+        select: {
+          id: true,
+          artistId: true,
+          artworkId: true,
+          installationStatus: true,
+        },
+      }),
     ]);
 
-    const artists = results[0];
-    const artworks = results[1];
-    const items = results[2];
-    const venues = results[3];
-    const allArtists = results[4];
-    const allInstallations = results[5];
+    const artworks = results[0];
+    const items = results[1];
+    const venues = results[2];
+    const allArtists = results[3];
+    const allInstallations = results[4];
+    const artists = allArtists;
 
     // 1. Artist stats
     const totalArtists = artists.length;
