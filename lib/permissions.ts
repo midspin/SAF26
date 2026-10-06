@@ -113,6 +113,18 @@ const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
   return perm;
 };
 
+const techLayoutDesignerPermissions = (): Record<string, ModulePermission> => {
+  const perm = readOnlyPermissions();
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
+    if (perm[id]) {
+      perm[id].canView = true;
+      perm[id].canEdit = true;
+      perm[id].canDelete = false;
+    }
+  });
+  return perm;
+};
+
 const installationTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
   ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
@@ -165,6 +177,14 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     badgeColor: 'purple',
     isSystem: true,
     permissions: spatialDesignerPermissions(),
+  },
+  {
+    id: 'TECH LAYOUT DESIGNER',
+    name: 'TECH LAYOUT DESIGNER',
+    description: 'Technical layout & drawing focus: CAD/technical drawings, spatial layout diagrams, venue & room technical plans, and artist tech requirements.',
+    badgeColor: 'sky',
+    isSystem: true,
+    permissions: techLayoutDesignerPermissions(),
   },
   {
     id: 'INSTALLATION TEAM',

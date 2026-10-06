@@ -813,7 +813,7 @@ model User {
   password           String?  @default("password")
   email              String   @unique
   phone              String?
-  role               String   @default("SUPER ADMIN") // SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION & LAYOUT, SPATIAL DESIGNER, TECHNICAL INSTALLATION, TECH INSTALL TEAM, INVENTORY MANAGER, PROCUREMENT MANAGER, VENUE MANAGER, VIEWER
+  role               String   @default("SUPER ADMIN") // SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION & LAYOUT, SPATIAL DESIGNER, TECH LAYOUT DESIGNER, TECHNICAL INSTALLATION, TECH INSTALL TEAM, INVENTORY MANAGER, PROCUREMENT MANAGER, VENUE MANAGER, VIEWER
   department         String?  // Technical, Production, Inventory, Programming, Curatorial, Management
   avatar             String?
   mustChangePassword Boolean  @default(false)
