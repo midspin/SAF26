@@ -123,6 +123,30 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   // Can assign items to Technical Stock Allotment: Super Admin, Technical Team, Inventory Team
   const canAssignTechnicalAllotment = isTechnicalOrInventoryTeam;
 
+  // Permission to Upload Final Layout: Production Team, Spatial Designer, Tech Layout Designer, Super Admin
+  const canUploadFinalLayout = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+    'PRODUCTION TEAM',
+    'PRODUCTION HEAD',
+    'PRODUCTION',
+    'PRODUCTION & LAYOUT',
+    'SPATIAL DESIGNER',
+    'SPATIAL DESIGN',
+    'SPATIAL DESIGN TEAM',
+    'TECH LAYOUT DESIGNER',
+    'TECHNICAL LAYOUT DESIGNER',
+    'LAYOUT DESIGNER',
+  ].includes(normalizedRole);
+
+  // Upload Final Layout Modal State (PDF, JPEG, JPG, PNG)
+  const [uploadFinalLayoutModalOpen, setUploadFinalLayoutModalOpen] = useState(false);
+  const [selectedRoomForLayout, setSelectedRoomForLayout] = useState('');
+  const [uploadingFinalLayout, setUploadingFinalLayout] = useState(false);
+  const [selectedLayoutFile, setSelectedLayoutFile] = useState<File | null>(null);
+  const [layoutFilePreviewUrl, setLayoutFilePreviewUrl] = useState<string | null>(null);
+
   const parseImageList = (rawImages: string | null | undefined): string[] => {
     if (!rawImages) return [];
     try {
@@ -261,6 +285,144 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     }
     const updated = uploadedFiles.filter((f) => f.id !== fileId);
     updateAndSaveFiles(updated);
+  };
+
+  // Upload Final Layout Handlers (PDF, JPEG, JPG, PNG)
+  const openUploadFinalLayoutModal = (targetRoomId?: string) => {
+    const roomId = targetRoomId || artistData?.installations?.[0]?.roomId || artistData?.installations?.[0]?.room?.id || '';
+    setSelectedRoomForLayout(roomId);
+    setSelectedLayoutFile(null);
+    setLayoutFilePreviewUrl(null);
+    setUploadFinalLayoutModalOpen(true);
+  };
+
+  const handleSelectLayoutFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    if (!['pdf', 'jpeg', 'jpg', 'png'].includes(ext)) {
+      alert('Invalid file format. Please upload a PDF, JPEG, JPG, or PNG file.');
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedLayoutFile(file);
+    if (['jpeg', 'jpg', 'png'].includes(ext)) {
+      setLayoutFilePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setLayoutFilePreviewUrl(null);
+    }
+  };
+
+  const handleExecuteUploadFinalLayout = async () => {
+    if (!selectedLayoutFile) {
+      alert('Please select a PDF, JPEG, JPG, or PNG file to upload.');
+      return;
+    }
+    const roomId = selectedRoomForLayout || artistData?.installations?.[0]?.roomId || artistData?.installations?.[0]?.room?.id;
+    if (!roomId) {
+      alert('No valid room selected. Please allocate a venue & room first.');
+      return;
+    }
+
+    setUploadingFinalLayout(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedLayoutFile);
+
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const uploadData = await uploadRes.json();
+
+      if (!uploadData.success || !uploadData.url) {
+        throw new Error(uploadData.error || 'Failed to upload layout file');
+      }
+
+      const finalUrl = uploadData.url;
+      const ext = selectedLayoutFile.name.split('.').pop()?.toLowerCase() || '';
+      const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+
+      // Update room in database
+      const roomRes = await fetch(`/api/rooms/${roomId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          techProdLayout: finalUrl,
+          ...(isImage ? { roomImage: finalUrl } : {}),
+          userRole,
+          userName: userRole ? `${userRole} User` : 'Production / Spatial Designer',
+        }),
+      });
+
+      const roomData = await roomRes.json();
+      if (!roomData.success) {
+        throw new Error(roomData.error || 'Failed to update room layout');
+      }
+
+      // Also update primary artwork if available
+      if (artistData?.artworks && artistData.artworks.length > 0) {
+        try {
+          const primaryArt = artistData.artworks[0];
+          await fetch(`/api/artworks/${primaryArt.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              techProdLayout: finalUrl,
+              userRole,
+              userName: userRole ? `${userRole} User` : 'Production / Spatial Designer',
+            }),
+          });
+        } catch (artErr) {
+          console.warn('Artwork layout sync notice:', artErr);
+        }
+      }
+
+      // Optimistically update local artist state so thumbnails and viewers update immediately
+      setArtistData((prev: any) => {
+        if (!prev) return prev;
+        const updatedInstallations = (prev.installations || []).map((inst: any) => {
+          if (inst.roomId === roomId || inst.room?.id === roomId) {
+            return {
+              ...inst,
+              room: {
+                ...inst.room,
+                techProdLayout: finalUrl,
+                ...(isImage ? { roomImage: finalUrl } : {}),
+              },
+            };
+          }
+          return inst;
+        });
+        return {
+          ...prev,
+          installations: updatedInstallations,
+        };
+      });
+
+      setUploadFinalLayoutModalOpen(false);
+      setSelectedLayoutFile(null);
+      setLayoutFilePreviewUrl(null);
+
+      setToastNotification({
+        show: true,
+        title: 'Final Layout Uploaded',
+        safCode: 'LAYOUT',
+        elementName: selectedLayoutFile.name,
+        quantity: 1,
+        category: 'Production & Spatial Design',
+      });
+      playSuccessChime();
+
+      fetchArtistDetails(false);
+    } catch (err: any) {
+      console.error('Failed to upload final layout:', err);
+      alert(err.message || 'Failed to upload final layout');
+    } finally {
+      setUploadingFinalLayout(false);
+    }
   };
 
   // Live Technical Specs Inventory Search & Pool Filter State
@@ -1458,18 +1620,28 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
           {/* LINE SEPARATION & SPATIAL ALLOCATION DETAILS */}
           <div className="pt-4 border-t border-white/10 space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-xs font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
                 <Building2 className="w-4 h-4 text-[#38bdf8]" /> Venue & Room Spatial Allocation
               </h3>
-              {canEditProgrammingCards && (
-                <button
-                  onClick={openAssignVenueModal}
-                  className="bg-[#38bdf8]/10 hover:bg-[#38bdf8] hover:text-slate-950 text-[#38bdf8] font-extrabold text-[11px] px-3 py-1 rounded-xl border border-[#38bdf8]/30 transition-all flex items-center gap-1 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" /> Assign Venue & Room
-                </button>
-              )}
+              <div className="flex items-center gap-2">
+                {canUploadFinalLayout && artistData.installations?.length > 0 && (
+                  <button
+                    onClick={() => openUploadFinalLayoutModal()}
+                    className="bg-emerald-500/15 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 font-extrabold text-[11px] px-3 py-1 rounded-xl border border-emerald-500/40 transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Upload Final Layout
+                  </button>
+                )}
+                {canEditProgrammingCards && (
+                  <button
+                    onClick={openAssignVenueModal}
+                    className="bg-[#38bdf8]/10 hover:bg-[#38bdf8] hover:text-slate-950 text-[#38bdf8] font-extrabold text-[11px] px-3 py-1 rounded-xl border border-[#38bdf8]/30 transition-all flex items-center gap-1 shadow-sm"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Assign Venue & Room
+                  </button>
+                )}
+              </div>
             </div>
 
             {artistData.installations?.length === 0 ? (
@@ -1489,7 +1661,8 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 <div className="space-y-2.5 pt-1">
                   {artistData.installations.map((inst: any) => {
                     const roomLayoutUrl = inst.room?.techProdLayout || inst.room?.roomImage || inst.room?.floorplan;
-                    const isPdf = roomLayoutUrl?.endsWith('.pdf');
+                    const isPdf = roomLayoutUrl?.endsWith('.pdf') || roomLayoutUrl?.includes('.pdf');
+                    const hasFinalLayout = Boolean(inst.room?.techProdLayout);
 
                     return (
                       <div key={inst.id} className="p-3 rounded-2xl bg-[#232334] border border-white/5 space-y-2">
@@ -1502,41 +1675,96 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                               Floor: {inst.room?.floor || 'Ground'} | Area: {inst.room?.area || 'N/A'} | Height: {inst.room?.height || '4.0m'}
                             </span>
                           </div>
+                          {hasFinalLayout && (
+                            <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                              ✓ Final Layout
+                            </span>
+                          )}
                         </div>
 
                         {/* Technical & Production Layout Thumbnail & Interactive Popup Button */}
                         {roomLayoutUrl ? (
-                          <div
-                            onClick={() =>
-                              setSpatialDrawingModal({
-                                title: `Room ${inst.room?.roomNumber} (${inst.room?.roomName}) - Technical & Production Layout`,
-                                url: roomLayoutUrl,
-                                type: isPdf ? 'PDF' : 'IMAGE',
-                              })
-                            }
-                            className="mt-1.5 p-2 rounded-xl bg-[#1c1c2a] hover:bg-[#26263a] border border-emerald-500/30 hover:border-emerald-400 transition-all flex items-center justify-between cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-2 overflow-hidden">
-                              <span className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 font-bold shrink-0">
-                                {isPdf ? <FileText className="w-4 h-4" /> : <ImageIcon className="w-4 h-4" />}
-                              </span>
+                          <div className="mt-1.5 p-2 rounded-xl bg-[#1c1c2a] border border-emerald-500/30 hover:border-emerald-400 transition-all flex items-center justify-between gap-3 group">
+                            <div
+                              onClick={() =>
+                                setSpatialDrawingModal({
+                                  title: `Room ${inst.room?.roomNumber} (${inst.room?.roomName}) - ${hasFinalLayout ? 'Final Technical & Production Layout' : 'Spatial Floorplan'}`,
+                                  url: roomLayoutUrl,
+                                  type: isPdf ? 'PDF' : 'IMAGE',
+                                })
+                              }
+                              className="flex items-center gap-3 overflow-hidden cursor-pointer flex-1"
+                            >
+                              {/* Rich Thumbnail Preview */}
+                              <div className="relative w-14 h-14 rounded-lg bg-slate-900 overflow-hidden border border-emerald-500/40 shrink-0 flex items-center justify-center group/img">
+                                {isPdf ? (
+                                  <div className="w-full h-full flex flex-col items-center justify-center text-emerald-400 p-1">
+                                    <FileText className="w-5 h-5 mb-0.5" />
+                                    <span className="text-[7px] font-black">PDF</span>
+                                  </div>
+                                ) : (
+                                  <img
+                                    src={roomLayoutUrl}
+                                    alt="Final Layout Thumbnail"
+                                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform"
+                                  />
+                                )}
+                                <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                                  <Maximize2 className="w-3.5 h-3.5 text-emerald-400" />
+                                </div>
+                              </div>
+
                               <div className="truncate">
                                 <span className="text-[11px] font-bold text-white block group-hover:text-emerald-300 transition-colors">
-                                  🖼️ Technical & Production Layout
+                                  📐 {hasFinalLayout ? 'Final Layout (Tech & Production)' : 'Room Spatial Floorplan'}
                                 </span>
                                 <span className="text-[9px] text-[#8a8d9b] truncate block">
-                                  Click to view full layout document ({isPdf ? 'PDF' : 'Image'})
+                                  Visible to all roles • Click to view full layout ({isPdf ? 'PDF' : 'Image'})
                                 </span>
                               </div>
                             </div>
-                            <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20 shrink-0 flex items-center gap-1 group-hover:bg-emerald-500 group-hover:text-slate-950 transition-all shadow-sm">
-                              <Maximize2 className="w-3 h-3" /> View Drawing
-                            </span>
+
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setSpatialDrawingModal({
+                                    title: `Room ${inst.room?.roomNumber} (${inst.room?.roomName}) - ${hasFinalLayout ? 'Final Technical & Production Layout' : 'Spatial Floorplan'}`,
+                                    url: roomLayoutUrl,
+                                    type: isPdf ? 'PDF' : 'IMAGE',
+                                  })
+                                }
+                                className="text-[10px] font-extrabold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500 hover:text-slate-950 px-2.5 py-1 rounded-lg border border-emerald-500/30 transition-all flex items-center gap-1 shadow-sm"
+                              >
+                                <Maximize2 className="w-3 h-3" /> View Drawing
+                              </button>
+                              {canUploadFinalLayout && (
+                                <button
+                                  type="button"
+                                  onClick={() => openUploadFinalLayoutModal(inst.roomId || inst.room?.id)}
+                                  className="text-[10px] font-bold text-sky-400 bg-sky-500/10 hover:bg-sky-500 hover:text-slate-950 px-2 py-1 rounded-lg border border-sky-500/30 transition-all flex items-center gap-1 shadow-sm"
+                                  title="Upload new layout revision"
+                                >
+                                  <Upload className="w-3 h-3" /> Replace
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-[10px] text-[#8a8d9b] italic block pt-1">
-                            No Technical & Production Layout uploaded for this room yet.
-                          </span>
+                          <div className="p-2.5 rounded-xl bg-[#1c1c2a] border border-dashed border-white/10 space-y-1.5">
+                            <span className="text-[10px] text-[#8a8d9b] italic block">
+                              No Technical & Production Layout uploaded for this room yet.
+                            </span>
+                            {canUploadFinalLayout && (
+                              <button
+                                type="button"
+                                onClick={() => openUploadFinalLayoutModal(inst.roomId || inst.room?.id)}
+                                className="px-3 py-1 bg-emerald-500/15 hover:bg-emerald-500 hover:text-slate-950 text-emerald-400 font-extrabold text-[10px] rounded-lg border border-emerald-500/30 flex items-center gap-1 transition-all"
+                              >
+                                <Upload className="w-3 h-3" /> Upload Final Layout (PDF, JPEG, JPG, PNG)
+                              </button>
+                            )}
+                          </div>
                         )}
                       </div>
                     );
@@ -4016,6 +4244,150 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                   }`}
                 >
                   {submittingAssign ? 'Allocating...' : 'Confirm Allocation'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* UPLOAD FINAL LAYOUT MODAL (PDF, JPEG, JPG, PNG) */}
+      {uploadFinalLayoutModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#232334] border border-emerald-500/30 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
+                <Upload className="w-4 h-4 text-emerald-400" /> Upload Final Layout Drawing
+              </h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setUploadFinalLayoutModalOpen(false);
+                  setSelectedLayoutFile(null);
+                  setLayoutFilePreviewUrl(null);
+                }}
+                className="text-[#8a8d9b] hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Target Room Selection (if multiple installations) */}
+              {artistData.installations?.length > 1 && (
+                <div>
+                  <label className="text-[#8a8d9b] block font-bold mb-1">Target Room *</label>
+                  <select
+                    value={selectedRoomForLayout}
+                    onChange={(e) => setSelectedRoomForLayout(e.target.value)}
+                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  >
+                    {artistData.installations.map((inst: any) => (
+                      <option key={inst.id} value={inst.roomId || inst.room?.id}>
+                        Room {inst.room?.roomNumber} - {inst.room?.roomName} ({inst.venue?.venueName || 'Venue'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Upload Drop Area */}
+              <div>
+                <label className="text-[#8a8d9b] block font-bold mb-1.5">
+                  Select Layout File (PDF, JPEG, JPG, PNG) *
+                </label>
+                <label className="flex flex-col items-center justify-center p-6 rounded-2xl border-2 border-dashed border-emerald-500/40 hover:border-emerald-400 bg-[#1c1c2a] hover:bg-[#232334] cursor-pointer transition-all space-y-2 group">
+                  <input
+                    type="file"
+                    accept=".pdf,.jpeg,.jpg,.png,image/jpeg,image/png,application/pdf"
+                    onChange={handleSelectLayoutFile}
+                    className="hidden"
+                  />
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                    <Upload className="w-6 h-6" />
+                  </div>
+                  <div className="text-center">
+                    <span className="font-bold text-white block">Click or Drag & Drop file here</span>
+                    <span className="text-[10px] text-[#8a8d9b] block mt-0.5">
+                      Supports PDF, JPEG, JPG, and PNG (up to 50MB)
+                    </span>
+                  </div>
+                </label>
+              </div>
+
+              {/* Selected File Preview Card */}
+              {selectedLayoutFile && (
+                <div className="p-3 rounded-2xl bg-[#1c1c2a] border border-emerald-500/30 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    {layoutFilePreviewUrl ? (
+                      <img
+                        src={layoutFilePreviewUrl}
+                        alt="Preview"
+                        className="w-12 h-12 object-cover rounded-xl border border-emerald-500/40 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                        <FileText className="w-6 h-6" />
+                      </div>
+                    )}
+                    <div className="truncate">
+                      <span className="font-bold text-white block text-xs truncate">
+                        {selectedLayoutFile.name}
+                      </span>
+                      <span className="text-[10px] text-[#8a8d9b] block">
+                        {(selectedLayoutFile.size / (1024 * 1024)).toFixed(2)} MB • {selectedLayoutFile.name.split('.').pop()?.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLayoutFile(null);
+                      setLayoutFilePreviewUrl(null);
+                    }}
+                    className="text-[#8a8d9b] hover:text-rose-400 p-1"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Information Note */}
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] text-emerald-300/90 leading-relaxed flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <span>
+                  Once uploaded, this final layout diagram becomes immediately visible to all user roles and will be set as the primary room thumbnail across all modules.
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  disabled={uploadingFinalLayout}
+                  onClick={() => {
+                    setUploadFinalLayoutModalOpen(false);
+                    setSelectedLayoutFile(null);
+                    setLayoutFilePreviewUrl(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#1c1c2a] text-[#8a8d9b] font-bold text-xs hover:text-white transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={!selectedLayoutFile || uploadingFinalLayout}
+                  onClick={handleExecuteUploadFinalLayout}
+                  className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 font-black text-xs shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition-all"
+                >
+                  {uploadingFinalLayout ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploading Layout...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-3.5 h-3.5" /> Upload & Publish Final Layout
+                    </>
+                  )}
                 </button>
               </div>
             </div>

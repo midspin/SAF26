@@ -496,48 +496,71 @@ export default function RoomsPage() {
                     </div>
                   </div>
 
-                  {/* Main Room Floorplan Thumbnail */}
+                  {/* Main Room Layout Thumbnail */}
                   <div className="space-y-1">
-                    <span className="text-[9px] font-bold text-sky-400 uppercase tracking-wider block truncate">
-                      📐 Room Floorplan (Thumbnail)
-                    </span>
-                    {r.floorplan || r.roomImage ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-[9px] font-bold text-sky-400 uppercase tracking-wider block truncate">
+                        📐 {r.techProdLayout ? 'Final Layout (Thumbnail)' : 'Room Floorplan (Thumbnail)'}
+                      </span>
+                      {r.techProdLayout && (
+                        <span className="text-[8px] font-extrabold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.2 rounded">
+                          Final Layout
+                        </span>
+                      )}
+                    </div>
+                    {r.techProdLayout || r.floorplan || r.roomImage ? (
                       <div
-                        onClick={() =>
+                        onClick={() => {
+                          const url = r.techProdLayout || r.floorplan || r.roomImage;
                           setFullViewModal({
-                            title: `Room ${r.roomNumber} - Floorplan Layout`,
-                            url: r.floorplan || r.roomImage,
-                            type: (r.floorplan || r.roomImage)?.endsWith('.pdf') ? 'PDF' : 'IMAGE',
-                          })
-                        }
+                            title: `Room ${r.roomNumber} - ${r.techProdLayout ? 'Final Technical & Production Layout' : 'Floorplan Layout'}`,
+                            url,
+                            type: (url?.endsWith('.pdf') || url?.includes('.pdf')) ? 'PDF' : 'IMAGE',
+                          });
+                        }}
                         className="relative rounded-xl overflow-hidden border border-sky-500/30 bg-slate-950 h-24 cursor-pointer group/thumb hover:border-sky-400 transition-all shadow-md"
                       >
-                        {(r.floorplan || r.roomImage)?.endsWith('.pdf') ? (
+                        {(r.techProdLayout || r.floorplan || r.roomImage)?.endsWith('.pdf') || (r.techProdLayout || r.floorplan || r.roomImage)?.includes('.pdf') ? (
                           <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 text-sky-400 p-2">
                             <FileText className="w-6 h-6 mb-0.5" />
-                            <span className="text-[10px] font-bold">Floorplan PDF</span>
+                            <span className="text-[10px] font-bold">
+                              {r.techProdLayout ? 'Final Layout PDF' : 'Floorplan PDF'}
+                            </span>
                           </div>
                         ) : (
                           <img
-                            src={r.floorplan || r.roomImage}
-                            alt="Room Floorplan Thumbnail"
+                            src={r.techProdLayout || r.floorplan || r.roomImage}
+                            alt="Room Layout Thumbnail"
                             className="w-full h-full object-cover group-hover/thumb:scale-105 transition-transform duration-300 opacity-90 group-hover/thumb:opacity-100"
                           />
                         )}
                         <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center text-slate-100 text-[10px] font-bold">
-                          <Maximize2 className="w-3.5 h-3.5 text-sky-400 mr-1" /> View Floorplan
+                          <Maximize2 className="w-3.5 h-3.5 text-sky-400 mr-1" /> View {r.techProdLayout ? 'Final Layout' : 'Floorplan'}
                         </div>
                       </div>
                     ) : (
                       <div className="rounded-xl border border-dashed border-slate-800/80 bg-slate-950/40 h-20 flex flex-col items-center justify-center text-slate-600 text-[10px]">
-                        <span>No floorplan thumbnail</span>
+                        <span>No layout thumbnail</span>
                       </div>
                     )}
                   </div>
 
                   {/* Interactive Drawing Buttons */}
                   <div className="grid grid-cols-2 gap-1.5 pt-1">
-                    {r.floorplan ? (
+                    {r.techProdLayout ? (
+                      <button
+                        onClick={() =>
+                          setFullViewModal({
+                            title: `Room ${r.roomNumber} - Final Technical Layout`,
+                            url: r.techProdLayout,
+                            type: (r.techProdLayout?.endsWith('.pdf') || r.techProdLayout?.includes('.pdf')) ? 'PDF' : 'IMAGE',
+                          })
+                        }
+                        className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 hover:text-emerald-300 text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer"
+                      >
+                        <FileText className="w-3 h-3" /> Final Layout
+                      </button>
+                    ) : r.floorplan ? (
                       <button
                         onClick={() =>
                           setFullViewModal({
