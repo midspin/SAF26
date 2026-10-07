@@ -217,36 +217,7 @@ export default function ArtistDocketModal({
     hour12: true,
   });
 
-  // Decorative Motif Graphic Component
-  const DecorativeBarMotif = ({ position = 'top-left' }: { position?: 'top-left' | 'bottom-right' }) => (
-    <div
-      className={`absolute ${
-        position === 'top-left' ? 'top-0 left-0' : 'bottom-0 right-0'
-      } flex gap-1.5 opacity-90 select-none pointer-events-none z-0`}
-      style={{
-        transform: position === 'bottom-right' ? 'rotate(180deg)' : 'none',
-      }}
-    >
-      <div className="flex flex-col gap-1 items-start">
-        <span className="w-2.5 h-12 bg-[#1d3557] rounded-sm block" />
-        <span className="w-2.5 h-6 bg-[#9e472a] rounded-sm block" />
-        <span className="w-2.5 h-16 bg-[#0f1f38] rounded-sm block" />
-      </div>
-      <div className="flex flex-col gap-1 items-start mt-2">
-        <span className="w-2.5 h-8 bg-[#738c35] rounded-sm block" />
-        <span className="w-2.5 h-14 bg-[#457b9d] rounded-sm block" />
-        <span className="w-2.5 h-10 bg-[#e76f51] rounded-sm block" />
-      </div>
-      <div className="flex flex-col gap-1 items-start mt-4">
-        <span className="w-2.5 h-14 bg-[#3a5a40] rounded-sm block" />
-        <span className="w-2.5 h-6 bg-[#d4a373] rounded-sm block" />
-      </div>
-      <div className="flex flex-col gap-1 items-start mt-1">
-        <span className="w-2.5 h-10 bg-[#9e472a] rounded-sm block" />
-        <span className="w-2.5 h-12 bg-[#1d3557] rounded-sm block" />
-      </div>
-    </div>
-  );
+
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -328,26 +299,25 @@ export default function ArtistDocketModal({
             {/* ========================================================================= */}
             {(activePage === 'all' || activePage === '1') && (
               <div className="docket-page-sheet relative bg-white text-slate-900 rounded-2xl p-8 sm:p-10 shadow-2xl overflow-hidden min-h-[620px] flex flex-col justify-between border border-slate-200">
-                {/* Decorative Motif */}
-                <DecorativeBarMotif position="top-left" />
+                {/* Top-Left PNG Motif */}
+                <img
+                  src="/images/docket_motif_top_left.png"
+                  alt="Decorative motif"
+                  className="absolute top-0 left-0 w-36 sm:w-44 h-auto object-contain pointer-events-none select-none z-0"
+                />
 
-                <div>
-                  {/* Top Right Header: Event Title & Date */}
-                  <div className="flex justify-end text-right pl-32 mb-4">
+                <div className="relative z-10">
+                  {/* Top Right Header: Event Title (without date below it) */}
+                  <div className="flex justify-end text-right pl-32 mb-2">
                     <div>
                       <h3 className="font-extrabold text-sm sm:text-base text-slate-800 tracking-wider uppercase">
                         {artistData.event?.name || 'SERENDIPITY ARTS FESTIVAL 2026'}
                       </h3>
-                      <p className="text-[11px] font-semibold text-slate-500">
-                        {artistData.event?.startDate && artistData.event?.endDate
-                          ? `${artistData.event.startDate} - ${artistData.event.endDate}`
-                          : '15 - 23 Dec 2026 (DD - DD / MM/ YY)'}
-                      </p>
                     </div>
                   </div>
 
-                  {/* Artist Name & Artwork Title */}
-                  <div className="pl-24 sm:pl-28 mb-4">
+                  {/* Artist Name & Artwork Title (Properly left-aligned) */}
+                  <div className="mb-4 mt-8 sm:mt-10">
                     <h1 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-tight">
                       {artistData.artistName || 'Artist Name'}
                     </h1>
@@ -722,8 +692,12 @@ export default function ArtistDocketModal({
                   </div>
                 </div>
 
-                {/* Decorative Motif on Bottom Right */}
-                <DecorativeBarMotif position="bottom-right" />
+                {/* Bottom-Right PNG Motif */}
+                <img
+                  src="/images/docket_motif_bottom_right.png"
+                  alt="Decorative motif"
+                  className="absolute bottom-0 right-0 w-36 sm:w-44 h-auto object-contain pointer-events-none select-none z-0"
+                />
 
                 {/* Footer of Page 3 */}
                 <div className="pt-4 border-t border-slate-200 text-[10px] text-slate-400 flex justify-between items-center mt-6">

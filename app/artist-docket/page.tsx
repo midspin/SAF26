@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import AppLayout from '@/components/AppLayout';
 import ArtistDocketModal from '@/components/ArtistDocketModal';
 import {
   FileText,
@@ -117,21 +116,20 @@ export default function ArtistDocketPage() {
   }).length;
 
   return (
-    <AppLayout>
-      <div className="p-4 sm:p-8 space-y-6 max-w-7xl mx-auto">
-        {/* HEADER SECTION */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
-              <Building2 className="w-4 h-4" /> Spaces & Production • Documentation
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
-              <FileText className="w-8 h-8 text-emerald-400" /> Artist Docket Generator
-            </h1>
-            <p className="text-xs sm:text-sm text-[#8a8d9b] mt-1 max-w-2xl">
-              Generate, preview, and print official 3-page production dockets with venue allocations, curatorial concepts, itemized inventory tables, and uploaded final spatial layout drawings.
-            </p>
+    <div className="space-y-6 pb-16">
+      {/* HEADER SECTION */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-6">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider mb-1">
+            <Building2 className="w-4 h-4" /> Spaces & Production • Documentation
           </div>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <FileText className="w-8 h-8 text-emerald-400" /> Artist Docket Generator
+          </h1>
+          <p className="text-xs sm:text-sm text-[#8a8d9b] mt-1 max-w-2xl">
+            Generate, preview, and print official 3-page production dockets with venue allocations, curatorial concepts, itemized inventory tables, and uploaded final spatial layout drawings.
+          </p>
+        </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
@@ -426,6 +424,5 @@ export default function ArtistDocketPage() {
           />
         )}
       </div>
-    </AppLayout>
-  );
+    );
 }
