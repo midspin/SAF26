@@ -27,6 +27,7 @@ export const MODULE_DEFINITIONS: { id: string; name: string; category: ModulePer
   { id: 'venues', name: 'Venues', category: 'SPACES & PRODUCTION' },
   { id: 'rooms', name: 'Rooms', category: 'SPACES & PRODUCTION' },
   { id: 'installations', name: 'Installations', category: 'SPACES & PRODUCTION' },
+  { id: 'artist-docket', name: 'Artist Docket', category: 'SPACES & PRODUCTION' },
   { id: 'inventory', name: 'Master Inventory Pool', category: 'INVENTORY & PROCUREMENT' },
   { id: 'import', name: 'Excel Migration Wizard', category: 'INVENTORY & PROCUREMENT' },
   { id: 'procurement', name: 'Purchase & Rentals', category: 'INVENTORY & PROCUREMENT' },
@@ -55,7 +56,7 @@ const readOnlyPermissions = (): Record<string, ModulePermission> => {
 
 const techTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -67,7 +68,7 @@ const techTeamPermissions = (): Record<string, ModulePermission> => {
 
 const prodTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -79,7 +80,7 @@ const prodTeamPermissions = (): Record<string, ModulePermission> => {
 
 const progTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'curators', 'teams', 'venues', 'rooms'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'curators', 'teams', 'venues', 'rooms', 'artist-docket'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -91,7 +92,7 @@ const progTeamPermissions = (): Record<string, ModulePermission> => {
 
 const invTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'inventory', 'import', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'inventory', 'import', 'procurement', 'vendors', 'artist-docket'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -103,7 +104,7 @@ const invTeamPermissions = (): Record<string, ModulePermission> => {
 
 const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'artist-docket'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -115,7 +116,7 @@ const spatialDesignerPermissions = (): Record<string, ModulePermission> => {
 
 const techLayoutDesignerPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -127,7 +128,7 @@ const techLayoutDesignerPermissions = (): Record<string, ModulePermission> => {
 
 const installationTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'inventory'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;

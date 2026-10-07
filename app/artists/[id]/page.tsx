@@ -3,6 +3,7 @@
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import ArtistPdfExportModal from '@/components/ArtistPdfExportModal';
+import ArtistDocketModal from '@/components/ArtistDocketModal';
 import {
   Users,
   User,
@@ -203,6 +204,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   ].includes(normalizedRole);
 
   const [pdfExportModalOpen, setPdfExportModalOpen] = useState(false);
+  const [docketModalOpen, setDocketModalOpen] = useState(false);
 
   const [artistData, setArtistData] = useState<any>(null);
   const [completenessScore, setCompletenessScore] = useState<number>(0);
@@ -1542,11 +1544,17 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   return (
     <div className="space-y-6 pb-24 select-none">
       {/* Top Navigation & Header Utility */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link href="/artists" className="text-xs font-semibold text-[#38bdf8] hover:underline flex items-center gap-1">
           <ArrowLeft className="w-4 h-4" /> Back to Artists Directory
         </Link>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setDocketModalOpen(true)}
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs px-3.5 py-1.5 rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+          >
+            <FileText className="w-3.5 h-3.5" /> Generate Docket
+          </button>
           <span className="text-[10px] font-mono text-[#8a8d9b] bg-[#232334] px-2.5 py-1 rounded-lg border border-white/10">
             Role: <strong className="text-[#38bdf8]">{userRole}</strong>
           </span>
@@ -4467,6 +4475,14 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
         artistId={id}
         isOpen={pdfExportModalOpen}
         onClose={() => setPdfExportModalOpen(false)}
+        initialArtistData={artistData}
+      />
+
+      {/* ARTIST DOCKET 3-PAGE MODAL */}
+      <ArtistDocketModal
+        artistId={id}
+        isOpen={docketModalOpen}
+        onClose={() => setDocketModalOpen(false)}
         initialArtistData={artistData}
       />
     </div>

@@ -558,6 +558,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       items: [
         { name: 'Venues', href: '/venues', icon: Building2, moduleId: 'venues' },
         { name: 'Rooms', href: '/rooms', icon: DoorOpen, moduleId: 'rooms' },
+        { name: 'Artist Docket', href: '/artist-docket', icon: FileSpreadsheet, moduleId: 'artist-docket' },
       ],
     },
     {
