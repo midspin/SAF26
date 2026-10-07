@@ -344,32 +344,39 @@ export async function GET() {
       installationStages: installationStagesCount,
     };
 
-    return NextResponse.json({
-      success: true,
-      stats: {
-        totalArtists,
-        confirmedArtists,
-        totalArtworks,
-        assignedArtworks,
-        totalTechnicalInventory,
-        allocatedTechnicalInventory,
-        availableTechnicalInventory,
-        totalProjectors,
-        allocatedProjectors,
-        balanceProjectors,
-        totalHSSpeakers,
-        allocatedHSSpeakers,
-        balanceHSSpeakers,
-        totalMediaPlayers,
-        allocatedMediaPlayers,
-        balanceMediaPlayers,
+    return NextResponse.json(
+      {
+        success: true,
+        stats: {
+          totalArtists,
+          confirmedArtists,
+          totalArtworks,
+          assignedArtworks,
+          totalTechnicalInventory,
+          allocatedTechnicalInventory,
+          availableTechnicalInventory,
+          totalProjectors,
+          allocatedProjectors,
+          balanceProjectors,
+          totalHSSpeakers,
+          allocatedHSSpeakers,
+          balanceHSSpeakers,
+          totalMediaPlayers,
+          allocatedMediaPlayers,
+          balanceMediaPlayers,
+        },
+        projectorsList,
+        speakersBreakdown: hsMap,
+        mediaPlayersList,
+        venueDistribution,
+        progressTrackerData,
       },
-      projectorsList,
-      speakersBreakdown: hsMap,
-      mediaPlayersList,
-      venueDistribution,
-      progressTrackerData,
-    });
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=60',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Dashboard API Error:', error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });

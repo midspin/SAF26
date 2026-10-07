@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState, use } from 'react';
 import Link from 'next/link';
-import ArtistPdfExportModal from '@/components/ArtistPdfExportModal';
-import ArtistDocketModal from '@/components/ArtistDocketModal';
+import dynamic from 'next/dynamic';
+
+const ArtistPdfExportModal = dynamic(() => import('@/components/ArtistPdfExportModal'), { ssr: false });
+const ArtistDocketModal = dynamic(() => import('@/components/ArtistDocketModal'), { ssr: false });
 import {
   Users,
   User,

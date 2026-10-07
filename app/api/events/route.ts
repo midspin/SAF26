@@ -18,7 +18,14 @@ export async function GET() {
         },
       },
     });
-    return NextResponse.json({ success: true, events });
+    return NextResponse.json(
+      { success: true, events },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=15, stale-while-revalidate=120',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

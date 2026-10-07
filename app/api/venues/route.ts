@@ -44,7 +44,14 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, venues });
+    return NextResponse.json(
+      { success: true, venues },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }

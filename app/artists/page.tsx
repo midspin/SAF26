@@ -1,8 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import ImageUploadInput from '@/components/ImageUploadInput';
-import ArtistPdfExportModal from '@/components/ArtistPdfExportModal';
-import SuggestImagesModal from '@/components/SuggestImagesModal';
+
+const ArtistPdfExportModal = dynamic(() => import('@/components/ArtistPdfExportModal'), { ssr: false });
+const SuggestImagesModal = dynamic(() => import('@/components/SuggestImagesModal'), { ssr: false });
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';

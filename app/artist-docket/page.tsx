@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import ArtistDocketModal from '@/components/ArtistDocketModal';
+import dynamic from 'next/dynamic';
+
+const ArtistDocketModal = dynamic(() => import('@/components/ArtistDocketModal'), { ssr: false });
 import {
   FileText,
   Search,

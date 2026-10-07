@@ -452,6 +452,22 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }, []);
 
   useEffect(() => {
+    // 1. Instant hydration from local cache
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('saf_cached_events');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setEvents(parsed);
+            const activeEvt = parsed.find((e: any) => e.status === 'Active') || parsed[0];
+            setSelectedEventId(activeEvt.id);
+            setSelectedEvent(activeEvt);
+          }
+        }
+      } catch (e) {}
+    }
+    // 2. Background refresh
     fetchEvents();
   }, []);
 
@@ -459,9 +475,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
     try {
       const res = await fetch('/api/events');
       const data = await res.json();
-      if (data.success) {
-        setEvents(data.events || []);
-        if (data.events && data.events.length > 0) {
+      if (data.success && Array.isArray(data.events)) {
+        setEvents(data.events);
+        try {
+          localStorage.setItem('saf_cached_events', JSON.stringify(data.events));
+        } catch (e) {}
+        if (data.events.length > 0) {
           const activeEvt = data.events.find((e: any) => e.status === 'Active') || data.events[0];
           setSelectedEventId(activeEvt.id);
           setSelectedEvent(activeEvt);
