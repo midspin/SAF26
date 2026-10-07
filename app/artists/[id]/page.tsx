@@ -48,6 +48,60 @@ import {
   Maximize2,
 } from 'lucide-react';
 
+function DeferredImage({
+  src,
+  alt,
+  className,
+  fallback,
+  imgClassName,
+  ...props
+}: {
+  src?: string | null;
+  alt?: string;
+  className?: string;
+  imgClassName?: string;
+  fallback?: React.ReactNode;
+  [key: string]: any;
+}) {
+  const [ready, setReady] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    // Text-First Priority: Defer image requests slightly to let DOM and typography paint instantly
+    const timer = setTimeout(() => setReady(true), 30);
+    return () => clearTimeout(timer);
+  }, [src]);
+
+  if (!src || error) {
+    return fallback ? <>{fallback}</> : null;
+  }
+
+  return (
+    <div className={`relative overflow-hidden ${className || ''}`}>
+      {!loaded && (
+        <div className="absolute inset-0 bg-[#1c1c2a] animate-pulse flex items-center justify-center text-slate-600">
+          <ImageIcon className="w-4 h-4 opacity-25" />
+        </div>
+      )}
+      {ready && (
+        <img
+          src={src}
+          alt={alt || ''}
+          loading="lazy"
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setError(true)}
+          className={`w-full h-full object-cover transition-opacity duration-300 ${
+            loaded ? 'opacity-100' : 'opacity-0'
+          } ${imgClassName || ''}`}
+          {...props}
+        />
+      )}
+    </div>
+  );
+}
+
 export default function Artist360FormPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
 
@@ -1197,8 +1251,15 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   }, [toastNotification.show]);
 
   useEffect(() => {
+    // 1. Instantly fetch artist details to render text & metadata immediately
     fetchArtistDetails(true);
-    fetchInventoryPool();
+
+    // 2. Defer heavy inventory master table fetch to background after text has rendered
+    const timer = setTimeout(() => {
+      fetchInventoryPool();
+    }, 450);
+
+    return () => clearTimeout(timer);
   }, [id]);
 
   const fetchArtistDetails = async (isInitial = false) => {
@@ -1610,13 +1671,18 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
             <div className="flex items-center justify-between border-b border-white/10 pb-4">
               <div className="flex items-center gap-3">
                 {artistData.artistPhoto ? (
-                  <img
+                  <DeferredImage
                     src={artistData.artistPhoto}
                     alt={artistData.artistName}
-                    className="w-16 h-16 rounded-2xl object-cover border-2 border-[#8b5cf6]/50 shadow-md"
+                    className="w-16 h-16 rounded-2xl border-2 border-[#8b5cf6]/50 shadow-md shrink-0"
+                    fallback={
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white font-black text-2xl shadow-md shrink-0">
+                        {artistData.artistName.charAt(0)}
+                      </div>
+                    }
                   />
                 ) : (
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white font-black text-2xl shadow-md">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#6366f1] to-[#8b5cf6] flex items-center justify-center text-white font-black text-2xl shadow-md shrink-0">
                     {artistData.artistName.charAt(0)}
                   </div>
                 )}
@@ -1778,10 +1844,11 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                                     <span className="text-[7px] font-black">PDF</span>
                                   </div>
                                 ) : (
-                                  <img
+                                  <DeferredImage
                                     src={roomLayoutUrl}
                                     alt="Final Layout Thumbnail"
-                                    className="w-full h-full object-cover group-hover/img:scale-105 transition-transform"
+                                    className="w-full h-full rounded-lg"
+                                    imgClassName="group-hover/img:scale-105 transition-transform"
                                   />
                                 )}
                                 <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
@@ -1956,10 +2023,11 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                                         </span>
                                       </div>
                                     ) : (
-                                      <img
+                                      <DeferredImage
                                         src={fileUrl}
                                         alt={`${art.artworkName} #${idx + 1}`}
-                                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform"
+                                        className="w-full h-full rounded-lg"
+                                        imgClassName="group-hover:scale-105 transition-transform"
                                       />
                                     )}
                                     <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -2134,7 +2202,11 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 {artistData.programmingAssignments.map((pa: any) => (
                   <div key={pa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
                     {pa.programmingPerson?.photo ? (
-                      <img src={pa.programmingPerson.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+                      <DeferredImage
+                        src={pa.programmingPerson.photo}
+                        alt=""
+                        className="w-8 h-8 rounded-lg border border-white/10 shrink-0"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-[#6366f1]/20 border border-[#6366f1]/40 text-[#6366f1] font-extrabold flex items-center justify-center shrink-0">
                         {pa.programmingPerson?.name?.charAt(0) || 'P'}
@@ -2175,7 +2247,11 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 {artistData.productionAssignments.map((pa: any) => (
                   <div key={pa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
                     {pa.productionPerson?.photo ? (
-                      <img src={pa.productionPerson.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+                      <DeferredImage
+                        src={pa.productionPerson.photo}
+                        alt=""
+                        className="w-8 h-8 rounded-lg border border-white/10 shrink-0"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-purple-500/20 border border-purple-500/40 text-purple-300 font-extrabold flex items-center justify-center shrink-0">
                         {pa.productionPerson?.name?.charAt(0) || 'PR'}
@@ -2216,7 +2292,11 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 {artistData.spatialAssignments.map((sa: any) => (
                   <div key={sa.id} className="p-2.5 rounded-xl bg-[#1c1c2a] border border-white/5 flex items-center gap-2.5 text-xs">
                     {sa.spatialDesigner?.photo ? (
-                      <img src={sa.spatialDesigner.photo} alt="" className="w-8 h-8 rounded-lg object-cover border border-white/10" />
+                      <DeferredImage
+                        src={sa.spatialDesigner.photo}
+                        alt=""
+                        className="w-8 h-8 rounded-lg border border-white/10 shrink-0"
+                      />
                     ) : (
                       <div className="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-extrabold flex items-center justify-center shrink-0">
                         {sa.spatialDesigner?.name?.charAt(0) || 'S'}

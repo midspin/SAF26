@@ -110,22 +110,38 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const completenessScore = Math.round((earnedPoints / totalPoints) * 100);
 
-    // Activity Log for Artist
+    // Activity Log for Artist - Lean selection for speed
     const activityLogs = await prisma.auditLog.findMany({
       where: {
         entityId: artist.id,
       },
+      select: {
+        id: true,
+        action: true,
+        entityType: true,
+        entityId: true,
+        userName: true,
+        userRole: true,
+        createdAt: true,
+      },
       orderBy: { createdAt: 'desc' },
-      take: 20,
+      take: 10,
     });
 
-    return NextResponse.json({
-      success: true,
-      artist,
-      completenessScore,
-      missingFields,
-      activityLogs,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        artist,
+        completenessScore,
+        missingFields,
+        activityLogs,
+      },
+      {
+        headers: {
+          'Cache-Control': 'private, max-age=5, stale-while-revalidate=30',
+        },
+      }
+    );
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
