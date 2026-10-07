@@ -144,6 +144,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   const [uploadFinalLayoutModalOpen, setUploadFinalLayoutModalOpen] = useState(false);
   const [selectedRoomForLayout, setSelectedRoomForLayout] = useState('');
   const [uploadingFinalLayout, setUploadingFinalLayout] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState('');
   const [selectedLayoutFile, setSelectedLayoutFile] = useState<File | null>(null);
   const [layoutFilePreviewUrl, setLayoutFilePreviewUrl] = useState<string | null>(null);
 
@@ -287,12 +288,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     updateAndSaveFiles(updated);
   };
 
-  // Upload Final Layout Handlers (PDF, JPEG, JPG, PNG)
+  // Upload Final Layout Handlers (PDF, JPEG, JPG, PNG) with resilient chunking support for large files
   const openUploadFinalLayoutModal = (targetRoomId?: string) => {
     const roomId = targetRoomId || artistData?.installations?.[0]?.roomId || artistData?.installations?.[0]?.room?.id || '';
     setSelectedRoomForLayout(roomId);
     setSelectedLayoutFile(null);
     setLayoutFilePreviewUrl(null);
+    setUploadProgress('');
     setUploadFinalLayoutModalOpen(true);
   };
 
@@ -315,6 +317,79 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     }
   };
 
+  const uploadFileWithChunking = async (file: File): Promise<string> => {
+    const CHUNK_SIZE = 2 * 1024 * 1024; // 2 MB chunk size (well below Vercel's 4.5 MB limit)
+    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    const uploadId = `upl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+
+    if (totalChunks <= 1) {
+      setUploadProgress('Uploading file...');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('filename', file.name);
+      formData.append('mimeType', file.type || 'application/octet-stream');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Upload failed (${res.status}): ${errText.substring(0, 120)}`);
+      }
+
+      const data = await res.json();
+      if (!data.success || !data.url) {
+        throw new Error(data.error || 'Failed to upload layout file');
+      }
+      return data.url;
+    }
+
+    // Multi-chunk sequential upload
+    let finalUrl = '';
+    for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+      const start = chunkIndex * CHUNK_SIZE;
+      const end = Math.min(start + CHUNK_SIZE, file.size);
+      const chunkBlob = file.slice(start, end);
+
+      const percent = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+      setUploadProgress(`Uploading ${percent}% (Chunk ${chunkIndex + 1}/${totalChunks})...`);
+
+      const formData = new FormData();
+      formData.append('uploadId', uploadId);
+      formData.append('chunkIndex', chunkIndex.toString());
+      formData.append('totalChunks', totalChunks.toString());
+      formData.append('filename', file.name);
+      formData.append('mimeType', file.type || 'application/octet-stream');
+      formData.append('chunk', chunkBlob, file.name);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(`Upload error on chunk ${chunkIndex + 1}/${totalChunks} (${res.status}): ${errText.substring(0, 120)}`);
+      }
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || `Chunk ${chunkIndex + 1} upload failed`);
+      }
+
+      if (data.complete && data.url) {
+        finalUrl = data.url;
+      }
+    }
+
+    if (!finalUrl) {
+      throw new Error('All chunks uploaded but server did not return final file URL');
+    }
+    return finalUrl;
+  };
+
   const handleExecuteUploadFinalLayout = async () => {
     if (!selectedLayoutFile) {
       alert('Please select a PDF, JPEG, JPG, or PNG file to upload.');
@@ -328,22 +403,12 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
     setUploadingFinalLayout(true);
     try {
-      const formData = new FormData();
-      formData.append('file', selectedLayoutFile);
+      const finalUrl = await uploadFileWithChunking(selectedLayoutFile);
 
-      const uploadRes = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const uploadData = await uploadRes.json();
-
-      if (!uploadData.success || !uploadData.url) {
-        throw new Error(uploadData.error || 'Failed to upload layout file');
-      }
-
-      const finalUrl = uploadData.url;
       const ext = selectedLayoutFile.name.split('.').pop()?.toLowerCase() || '';
-      const isImage = ['jpg', 'jpeg', 'png'].includes(ext);
+      const isImage = ['jpg', 'jpeg', 'png', 'webp'].includes(ext);
+
+      setUploadProgress('Saving to database...');
 
       // Update room in database
       const roomRes = await fetch(`/api/rooms/${roomId}`, {
@@ -405,6 +470,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       setUploadFinalLayoutModalOpen(false);
       setSelectedLayoutFile(null);
       setLayoutFilePreviewUrl(null);
+      setUploadProgress('');
 
       setToastNotification({
         show: true,
@@ -422,6 +488,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
       alert(err.message || 'Failed to upload final layout');
     } finally {
       setUploadingFinalLayout(false);
+      setUploadProgress('');
     }
   };
 
@@ -4381,7 +4448,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 >
                   {uploadingFinalLayout ? (
                     <>
-                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploading Layout...
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> {uploadProgress || 'Uploading Layout...'}
                     </>
                   ) : (
                     <>
