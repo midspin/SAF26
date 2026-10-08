@@ -61,7 +61,7 @@ const DEFAULT_CARDS = [
 
 // Card column spans in 12-column grid
 const CARD_COL_SPANS: Record<string, string> = {
-  card_progress_tracker: 'lg:col-span-12',
+  card_progress_tracker: 'lg:col-span-6',
   card_project_status_by_venue: 'lg:col-span-6',
   card_active_production_projects: 'lg:col-span-6',
   card_projectors: 'lg:col-span-4',
