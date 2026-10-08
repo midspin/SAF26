@@ -72,10 +72,24 @@ export default function CuratorsPage() {
     };
   }, []);
 
-  // ONLY SUPER ADMIN CAN CREATE / EDIT / DELETE CURATORS
-  const canManageCurators = ['SUPER ADMIN'].includes(
-    (userRole || '').trim().toUpperCase()
-  );
+  const normalizedRole = (userRole || '').trim().toUpperCase();
+
+  // PROGRAMMING TEAM has Full Access [FA] to Add & Edit Curators, but View Only [VO] on Delete Curator
+  const canEditCurators = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+    'PROGRAMMING TEAM',
+    'PROGRAMMING',
+    'PROGRAMMER',
+    'PROGRAMMERS',
+  ].includes(normalizedRole);
+
+  const canDeleteCurators = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+  ].includes(normalizedRole);
 
   // Success Tick Animation State
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
@@ -311,14 +325,14 @@ export default function CuratorsPage() {
             <span>Official festival curators & discipline leaders</span>
             <span
               className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
-                canManageCurators
+                canEditCurators
                   ? 'bg-emerald-950 text-emerald-400 border-emerald-800'
                   : 'bg-slate-900 text-slate-400 border-slate-800'
               }`}
             >
-              {canManageCurators ? (
+              {canEditCurators ? (
                 <>
-                  <ShieldCheck className="w-3 h-3 text-emerald-400" /> Role: {userRole} (Full Access)
+                  <ShieldCheck className="w-3 h-3 text-emerald-400" /> Role: {userRole} (Curator Edit Access)
                 </>
               ) : (
                 <>
@@ -329,8 +343,8 @@ export default function CuratorsPage() {
           </p>
         </div>
 
-        {/* ADD CURATOR BUTTON - ONLY VISIBLE FOR SUPER ADMIN & EVENT MANAGER */}
-        {canManageCurators && (
+        {/* ADD CURATOR BUTTON */}
+        {canEditCurators && (
           <button
             onClick={() => {
               resetForm();
@@ -458,23 +472,27 @@ export default function CuratorsPage() {
                   </div>
                 </div>
 
-                {/* EDIT & DELETE BUTTONS - ONLY SHOWN FOR SUPER ADMIN & EVENT MANAGER */}
-                {canManageCurators && (
+                {/* EDIT & DELETE BUTTONS */}
+                {(canEditCurators || canDeleteCurators) && (
                   <div className="flex items-center gap-2 pt-3 mt-4 border-t border-slate-800/80">
-                    <button
-                      onClick={() => openEditModal(c)}
-                      className="flex-1 bg-slate-800/90 hover:bg-sky-600 hover:text-white text-sky-400 text-xs font-semibold py-1.5 px-3 rounded-xl border border-sky-500/30 transition-all flex items-center justify-center gap-1.5"
-                      title="Edit Curator Information"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
-                    </button>
-                    <button
-                      onClick={() => openDeleteModal(c)}
-                      className="bg-red-950/80 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl border border-red-800/60 transition-all flex items-center justify-center gap-1.5"
-                      title="Delete Curator"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                    {canEditCurators && (
+                      <button
+                        onClick={() => openEditModal(c)}
+                        className="flex-1 bg-slate-800/90 hover:bg-sky-600 hover:text-white text-sky-400 text-xs font-semibold py-1.5 px-3 rounded-xl border border-sky-500/30 transition-all flex items-center justify-center gap-1.5"
+                        title="Edit Curator Information"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" /> Edit
+                      </button>
+                    )}
+                    {canDeleteCurators && (
+                      <button
+                        onClick={() => openDeleteModal(c)}
+                        className="bg-red-950/80 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold py-1.5 px-3 rounded-xl border border-red-800/60 transition-all flex items-center justify-center gap-1.5"
+                        title="Delete Curator"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

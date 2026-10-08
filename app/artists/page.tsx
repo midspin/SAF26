@@ -155,10 +155,13 @@ export default function ArtistsPage() {
     'PROGRAMMING HEAD',
   ].includes(normalizedRole);
 
-  // Export PDF permission: Super admin, Technical team, Inventory team
+  // Export PDF permission: Super admin, Programming team, Technical team, Inventory team
   const canExportPDF = [
     'SUPER ADMIN',
     'SUPERADMIN',
+    'PROGRAMMING TEAM',
+    'PROGRAMMING',
+    'PROGRAMMING HEAD',
     'TECHNICAL TEAM',
     'TECHNICAL HEAD',
     'TECH HEAD',

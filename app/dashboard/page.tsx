@@ -1309,7 +1309,7 @@ export default function DashboardPage() {
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2.5">
-            <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> Super Admin Dashboard
+            <ShieldCheck className="w-6 h-6 text-[#8b5cf6]" /> {activeRole || 'Super Admin'} Dashboard
           </h1>
           <p className="text-xs text-[#8a8d9b] mt-0.5">
             Master operations monitoring center — Drag & arrange cards in whatever layout you prefer.
@@ -1485,6 +1485,14 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {cardOrder
           .filter((key) => !hiddenCards.includes(key))
+          .filter((key) => {
+            if ((activeRole || '').trim().toUpperCase() === 'PROGRAMMING TEAM') {
+              // [NV] Live Equipment Stock Allocation Gauges & Progress Bars (card_equipment_allotment, card_allocation_graph)
+              // [NV] Venue-wise Spatial Allocation Distribution Charts (card_artwork_distribution)
+              return !['card_equipment_allotment', 'card_allocation_graph', 'card_artwork_distribution'].includes(key);
+            }
+            return true;
+          })
           .map((cardKey, index) => (
             <div
               key={cardKey}

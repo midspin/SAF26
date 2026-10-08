@@ -137,18 +137,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     'PROGRAMMERS',
   ].includes(normalizedRole);
 
-  const isProductionOrProgrammingTeam = [
+  const isProductionTeam = [
     'SUPER ADMIN',
     'SUPERADMIN',
     'ADMIN',
     'PRODUCTION TEAM',
     'PRODUCTION HEAD',
     'PRODUCTION',
-    'PROGRAMMING TEAM',
-    'PROGRAMMING HEAD',
-    'PROGRAMMING',
-    'PROGRAMMER',
-    'PROGRAMMERS',
   ].includes(normalizedRole);
 
   const isTechnicalOrInventoryTeam = [
@@ -174,8 +169,8 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     ['TECHNICAL TEAM', 'TECHNICAL HEAD', 'TECH HEAD', 'INSTALLATION TEAM', 'INVENTORY TEAM', 'INVENTORY HEAD', 'INVENTORY MANAGER', 'INVENTORY'].includes(normalizedRole) &&
     !['PRODUCTION TEAM', 'PRODUCTION HEAD', 'PRODUCTION', 'PROGRAMMING TEAM', 'PROGRAMMING HEAD', 'PROGRAMMING'].includes(normalizedRole);
 
-  // Can assign items to Production Allotment: Super Admin, Production Team, Programming Team
-  const canAssignProductionAllotment = isProductionOrProgrammingTeam;
+  // Can assign items to Production Allotment: Super Admin, Production Team only (PROGRAMMING TEAM is VO)
+  const canAssignProductionAllotment = isProductionTeam;
 
   // Can assign items to Technical Stock Allotment: Super Admin, Technical Team, Inventory Team
   const canAssignTechnicalAllotment = isTechnicalOrInventoryTeam;

@@ -1,0 +1,192 @@
+====================================================================================================
+                        WEAVE PLATFORM - SIDE MENU & FUNCTION PERMISSIONS MATRIX
+====================================================================================================
+Instructions:
+For each role (e.g. SUPER ADMIN, PROGRAMMING, TECHNICAL HEAD, PRODUCTION, SPATIAL DESIGNER, 
+INVENTORY MANAGER, PROCUREMENT, VIEWER), mark each feature/function as:
+  [FA] = Full Access (View, Create, Edit, Delete, Upload, Approve)
+  [VO] = View Only (Can read and browse, but cannot modify or delete)
+  [NV] = No View (Hidden completely from menu and unauthorized)
+====================================================================================================
+
+----------------------------------------------------------------------------------------------------
+1. OVERVIEW
+----------------------------------------------------------------------------------------------------
+1.1 Dashboard (/dashboard)
+    [ ] Global Festival KPI Summary Cards (Total Artists, Artworks, Stock, Venues)
+    [ ] Live Equipment Stock Allocation Gauges & Progress Bars
+    [ ] Equipment Breakdown Tables (Projectors, Speakers, Media Players, etc.)
+    [ ] Venue-wise Spatial Allocation Distribution Charts
+    [ ] Real-time Operational Activity Feed & Status Alerts
+
+1.2 Progress Tracker (/progress-tracker)
+    [ ] Interactive Venue & Room Milestone Matrix
+    [ ] 7-Stage Milestone Tracking (Curatorial, Programming, Tech Allotment, Prod Allotment, Spatial Layout, Installation, Completed)
+    [ ] Filter & Search by Venue, Stage, Discipline
+    [ ] Quick Stage Status Update / Toggle Action
+
+1.3 Events Module (/events)
+    [ ] View All Active & Archived Events
+    [ ] Switch Active Event Context
+    [ ] Create New Festival Event (Modal)
+    [ ] Edit Event Details (Dates, Description, Theme, Logo, Cover)
+    [ ] Archive / Delete Event
+
+
+----------------------------------------------------------------------------------------------------
+2. CURATORIAL & PROGRAMMING
+----------------------------------------------------------------------------------------------------
+2.1 Artists Directory (/artists)
+    [ ] View Artists Directory Table & Filter by Discipline, Country, Venue
+    [ ] Add New Artist (Personal Details, Bio, Contacts, Travel, Hotel)
+    [ ] Edit Existing Artist Information
+    [ ] Delete Artist Record
+    [ ] Export Quick Technical Docket PDF
+    [ ] AI Suggest / Search Reference Artwork Images
+    [ ] Quick Access to Artist 360° Master View
+
+2.2 Artist 360° Master View (/artists/[id])
+    [ ] Card #1: View Artist Profile, Bio & Contact Information
+    [ ] Card #1: Edit Artist Profile Details
+    [ ] Card #1: View Venue & Room Spatial Allocation
+    [ ] Card #1: Assign / Reassign Venue & Room
+    [ ] Card #2: View Artwork Registration, Concept & Technical Medium
+    [ ] Card #2: Add / Edit / Remove Artwork Records
+    [ ] Card #2: Upload Reference Documents (PDF, Word, Excel, Images)
+    [ ] Card #2: Delete / Manage Reference Documents
+    [ ] Card #3: View Assigned Curators & Programming Liaisons
+    [ ] Card #3: Assign / Edit Curators (Modal)
+    [ ] Card #3: Assign / Edit Programming Staff (Modal)
+    [ ] Card #3: Assign / Edit Production Team (Modal)
+    [ ] Card #3: Assign / Edit Spatial Designers (Modal)
+    [ ] Card #4: View Production Allotment Matrix
+    [ ] Card #4: View Technical Stock Allotment Matrix
+    [ ] Card #4: Assign Stock / Materials to Production Allotment
+    [ ] Card #4: Assign Stock / Materials to Technical Allotment
+    [ ] Card #4: Live Search & Quick Allocate from Master Inventory Pool
+    [ ] Card #4: Request Equipment Reallocation / Swap
+    [ ] Upload Final Layout Drawing (PDF, JPEG, JPG, PNG)
+    [ ] Generate & Preview Official 3-Page Artist Docket
+    [ ] Export Full Technical Docket PDF
+
+2.3 Artworks Directory (/artworks)
+    [ ] View Artworks Directory & Visual Gallery Grid
+    [ ] Add New Artwork (Name, Medium, Dimensions, Installation Type, Images)
+    [ ] Edit Artwork Details & Concept Descriptions
+    [ ] Delete Artwork
+    [ ] Allocate Venue & Room to Artwork
+    [ ] View / Download Artwork Technical Drawings & Riders
+
+2.4 Curators Directory (/curators)
+    [ ] View Curator Directory & Discipline Roster
+    [ ] Add New Curator Profile (Photo, Bio, Contact, Organisation)
+    [ ] Edit Curator Profile
+    [ ] Delete Curator Record
+    [ ] Assign Curator to Artists & Exhibitions
+
+2.5 Teams & Staff Directory (/teams)
+    [ ] View Staff Directory across all 5 Departments (Programming, Tech, Production, Spatial, Inventory)
+    [ ] Add New Staff / Team Member
+    [ ] Edit Staff Details & Contact Information
+    [ ] Delete Team Member
+    [ ] View Role Permission Matrix
+    [ ] Create / Edit Custom Roles & Module Permissions
+
+
+----------------------------------------------------------------------------------------------------
+3. SPACES & PRODUCTION
+----------------------------------------------------------------------------------------------------
+3.1 Venues Management (/venues)
+    [ ] View Venues Grid & Capacity / Infrastructure Overview
+    [ ] Add New Venue (Address, Contact, Power/Internet Specs, Access Info)
+    [ ] Upload Venue Master Document / Floorplan PDF
+    [ ] Edit Venue Specifications
+    [ ] Delete Venue Record
+    [ ] View Venue-associated Rooms & Artwork Assignments
+
+3.2 Rooms Management (/rooms)
+    [ ] View Rooms Directory with Dimensions, Height, Power & Lighting Specs
+    [ ] Add New Room (Room Number, Floor, Dimensions, Capacity, Specs)
+    [ ] Edit Room Specifications & Infrastructure Notes
+    [ ] Delete Room Record
+    [ ] Upload Room Floorplan & Elevation Drawings (PDF/Image)
+    [ ] Upload Final Technical & Production Layout Drawing
+    [ ] Open & View 360° Interactive Panorama View Modal
+    [ ] View Live Inventory Allotments Inside Room
+
+3.3 Artist Docket Generator (/artist-docket)
+    [ ] View Artist Docket Master Directory Table
+    [ ] Filter Artists by Venue & Final Layout Status (Ready / Pending)
+    [ ] Generate Interactive 3-Page Production Docket Modal
+    [ ] Page 1: Overview, Curators, Team, Concept & Production Allotment Table
+    [ ] Page 2: Technical Stock Allotment Table & Purchase/Rental Itemized List
+    [ ] Page 3: Final Technical & Spatial Layout Drawing Viewer
+    [ ] Print / Save Official Landscape PDF
+
+
+----------------------------------------------------------------------------------------------------
+4. INVENTORY & PROCUREMENT
+----------------------------------------------------------------------------------------------------
+4.1 Venue Tech Inventory (/venue-tech-inventory)
+    [ ] View Fixed Venue Equipment & Permanent Asset Registry
+    [ ] Add New Fixed Venue Tech Asset (Audio, Lighting, Power, Truss)
+    [ ] Edit Venue Tech Equipment Specs & Location
+    [ ] Delete Venue Tech Asset
+    [ ] Allocate Fixed Assets to Festival Rooms
+
+4.2 Technical Inventory (/inventory?tab=TECHNICAL)
+    [ ] View Master Technical Equipment Pool (Audio, Video, Lights, Rigging, IT)
+    [ ] Add New Technical Equipment Item (SAF Code, Brand, Model, Specs, Qty)
+    [ ] Edit Technical Inventory Record
+    [ ] Delete Technical Inventory Item
+    [ ] Excel / CSV Bulk Import with Template Download
+    [ ] Allocate Technical Stock to Artist / Room
+    [ ] Request Equipment Swap / Reallocation
+    [ ] Approve / Reject Equipment Swap Requests (Inventory Team Only)
+    [ ] Update Equipment Condition & Repair Status (Good, Minor Damage, In Repair, Retired)
+    [ ] Track Asset Serial Numbers & Barcodes
+
+4.3 Production Inventory (/inventory?tab=PRODUCTION)
+    [ ] View Master Production Materials Pool (Fabrication, Display, Furniture, Tools)
+    [ ] Add New Production Material / Item
+    [ ] Edit Production Inventory Item
+    [ ] Delete Production Inventory Item
+    [ ] Bulk Import Production Materials via Excel
+    [ ] Allocate Materials to Artist / Room
+    [ ] Monitor Total vs Available Stock Balances
+
+4.4 Purchase & Rentals Procurement (/procurement)
+    [ ] View Purchase Requests Table & Status Tracking (Pending, Approved, Ordered, Delivered)
+    [ ] Create New Purchase Request (Item Name, Model, Supplier URL, Quantity, Cost)
+    [ ] Edit / Update Purchase Request Status
+    [ ] Delete Purchase Request
+    [ ] View Rental Equipment Records & Return Deadlines
+    [ ] Create / Log Equipment Rental Record (Vendor, Duration, Cost, Return Date)
+    [ ] Edit / Return Rental Record
+    [ ] Manage Vendor Directory & Contact Roster
+
+
+----------------------------------------------------------------------------------------------------
+5. INTEGRATIONS & GOVERNANCE
+----------------------------------------------------------------------------------------------------
+5.1 Reports & Analytics (/reports)
+    [ ] View Inventory Utilization, Stock Deficit & High-demand Reports
+    [ ] View Spatial Allocation & Room Readiness Audit Reports
+    [ ] View Technical Allotment Master Summary
+    [ ] Export Reports to Excel (XLSX) & PDF
+
+5.2 Audit Logs (/audit-logs)
+    [ ] View Real-time System Audit Trail (Timestamp, User, Role, Action, Entity)
+    [ ] Filter Audit Logs by User, Role, Action Type (Create, Update, Delete, Allocate, Swap)
+    [ ] View Field-level Diff (Previous Value vs New Value)
+    [ ] Export Audit Trail Log
+
+5.3 Settings & User Management (/settings)
+    [ ] View System Users Roster
+    [ ] Create New User Account & Set Initial Credentials
+    [ ] Edit User Role, Assigned Events & Department
+    [ ] Reset User Passwords / Force Password Change on Login
+    [ ] Delete / Deactivate User Account
+    [ ] Configure Global Event Preferences & Master Variables
+    [ ] View & Trigger Google Sheets Live Bi-directional Synchronization
+====================================================================================================

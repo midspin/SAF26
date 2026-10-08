@@ -68,6 +68,28 @@ export default function ProgressTrackerPage() {
   const [updateNotes, setUpdateNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // User Role State & Permissions
+  const [userRole, setUserRole] = useState<string>('SUPER ADMIN');
+
+  useEffect(() => {
+    const readRole = () => {
+      if (typeof window !== 'undefined') {
+        const role = localStorage.getItem('saf_user_role') || 'SUPER ADMIN';
+        setUserRole(role);
+      }
+    };
+    readRole();
+    window.addEventListener('saf-role-changed', readRole);
+    window.addEventListener('storage', readRole);
+    return () => {
+      window.removeEventListener('saf-role-changed', readRole);
+      window.removeEventListener('storage', readRole);
+    };
+  }, []);
+
+  const normalizedRole = (userRole || '').trim().toUpperCase();
+  const isProgTeam = normalizedRole === 'PROGRAMMING TEAM';
+
   // Detailed View Workflow Expansion State
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
   const [artistDetailsMap, setArtistDetailsMap] = useState<Record<string, { activityLogs: any[]; fullArtist?: any }>>({});
@@ -329,53 +351,55 @@ export default function ProgressTrackerPage() {
         </div>
       </div>
 
-      {/* Filter Controls Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-md">
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search artist or artwork..."
-            className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
-          />
-        </div>
-
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
-          <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 flex-1 sm:flex-none">
-            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={selectedVenue}
-              onChange={(e) => setSelectedVenue(e.target.value)}
-              className="bg-transparent text-slate-200 font-bold focus:outline-none cursor-pointer"
-            >
-              <option value="ALL" className="bg-slate-900 text-white">All Venues ({venues.length})</option>
-              {venues.map((v) => (
-                <option key={v.id} value={v.id} className="bg-slate-900 text-white">
-                  {v.venueName}
-                </option>
-              ))}
-            </select>
+      {/* Filter Controls Bar (Hidden for PROGRAMMING TEAM [NV]) */}
+      {!isProgTeam && (
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-md">
+          <div className="relative w-full sm:w-72">
+            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search artist or artwork..."
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-slate-100 focus:border-sky-500 focus:outline-none"
+            />
           </div>
 
-          <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 flex-1 sm:flex-none">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="bg-transparent text-slate-200 font-bold focus:outline-none cursor-pointer"
-            >
-              <option value="ALL" className="bg-slate-900 text-white">All Statuses</option>
-              {statusesList.map((s) => (
-                <option key={s} value={s} className="bg-slate-900 text-white">
-                  {s}
-                </option>
-              ))}
-            </select>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 flex-1 sm:flex-none">
+              <Building2 className="w-3.5 h-3.5 text-slate-400" />
+              <select
+                value={selectedVenue}
+                onChange={(e) => setSelectedVenue(e.target.value)}
+                className="bg-transparent text-slate-200 font-bold focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-slate-900 text-white">All Venues ({venues.length})</option>
+                {venues.map((v) => (
+                  <option key={v.id} value={v.id} className="bg-slate-900 text-white">
+                    {v.venueName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 flex-1 sm:flex-none">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400" />
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="bg-transparent text-slate-200 font-bold focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-slate-900 text-white">All Statuses</option>
+                {statusesList.map((s) => (
+                  <option key={s} value={s} className="bg-slate-900 text-white">
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Projects Timeline List */}
       {loading ? (
@@ -557,15 +581,22 @@ export default function ProgressTrackerPage() {
                         {expandedProjects.has(proj.id) ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => handleOpenUpdate(proj)}
-                        className="px-3.5 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
-                        title="Click to update installation status & notes"
-                      >
-                        <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
-                        <span>{proj.installationStatus}</span>
-                      </button>
+                      {!isProgTeam ? (
+                        <button
+                          type="button"
+                          onClick={() => handleOpenUpdate(proj)}
+                          className="px-3.5 py-1.5 rounded-full bg-sky-950 hover:bg-sky-900 text-sky-300 border border-sky-700/80 font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
+                          title="Click to update installation status & notes"
+                        >
+                          <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse" />
+                          <span>{proj.installationStatus}</span>
+                        </button>
+                      ) : (
+                        <div className="px-3.5 py-1.5 rounded-full bg-sky-950/60 text-sky-300 border border-sky-800/60 font-bold text-xs flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-sky-400" />
+                          <span>{proj.installationStatus}</span>
+                        </div>
+                      )}
                     </div>
 
                     <div className="text-right">

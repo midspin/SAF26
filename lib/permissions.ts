@@ -79,14 +79,28 @@ const prodTeamPermissions = (): Record<string, ModulePermission> => {
 };
 
 const progTeamPermissions = (): Record<string, ModulePermission> => {
-  const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'artworks', 'curators', 'teams', 'venues', 'rooms', 'artist-docket'].forEach((id) => {
-    if (perm[id]) {
-      perm[id].canView = true;
-      perm[id].canEdit = true;
-      perm[id].canDelete = false;
-    }
+  const perm: Record<string, ModulePermission> = {};
+  MODULE_DEFINITIONS.forEach((mod) => {
+    perm[mod.id] = { id: mod.id, name: mod.name, category: mod.category, canView: false, canEdit: false, canDelete: false };
   });
+
+  // OVERVIEW
+  perm['dashboard'] = { id: 'dashboard', name: 'Dashboard', category: 'OVERVIEW', canView: true, canEdit: false, canDelete: false };
+  perm['progress-tracker'] = { id: 'progress-tracker', name: 'Progress Tracker', category: 'OVERVIEW', canView: true, canEdit: false, canDelete: false };
+  perm['events'] = { id: 'events', name: 'Events', category: 'OVERVIEW', canView: false, canEdit: false, canDelete: false };
+
+  // CURATORIAL & PROGRAMMING
+  perm['artists'] = { id: 'artists', name: 'Artists', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
+  perm['artworks'] = { id: 'artworks', name: 'Artworks', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: false };
+  perm['curators'] = { id: 'curators', name: 'Curators', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: false };
+  perm['teams'] = { id: 'teams', name: 'Teams & Staff', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: false, canDelete: false };
+
+  // SPACES & PRODUCTION
+  perm['venues'] = { id: 'venues', name: 'Venues', category: 'SPACES & PRODUCTION', canView: true, canEdit: false, canDelete: false };
+  perm['rooms'] = { id: 'rooms', name: 'Rooms', category: 'SPACES & PRODUCTION', canView: true, canEdit: false, canDelete: false };
+  perm['artist-docket'] = { id: 'artist-docket', name: 'Artist Docket', category: 'SPACES & PRODUCTION', canView: true, canEdit: true, canDelete: true };
+
+  // INVENTORY & PROCUREMENT and INTEGRATIONS & GOVERNANCE: all false [NV]
   return perm;
 };
 

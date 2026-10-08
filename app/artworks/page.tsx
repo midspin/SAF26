@@ -109,9 +109,23 @@ export default function ArtworksPage() {
     };
   }, []);
 
-  const canManage = ['SUPER ADMIN', 'PROGRAMMING', 'PROGRAMMER', 'PROGRAMMERS'].includes(
-    (userRole || '').trim().toUpperCase()
-  );
+  const normalizedRole = (userRole || '').trim().toUpperCase();
+
+  const canManage = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+    'PROGRAMMING TEAM',
+    'PROGRAMMING',
+    'PROGRAMMER',
+    'PROGRAMMERS',
+  ].includes(normalizedRole);
+
+  const canDeleteArtwork = [
+    'SUPER ADMIN',
+    'SUPERADMIN',
+    'ADMIN',
+  ].includes(normalizedRole);
 
   const fetchArtworks = async () => {
     try {
@@ -537,13 +551,15 @@ export default function ArtworksPage() {
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
-                        <button
-                          onClick={() => setDeleteModal(art)}
-                          title="Delete Artwork"
-                          className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {canDeleteArtwork && (
+                          <button
+                            onClick={() => setDeleteModal(art)}
+                            title="Delete Artwork"
+                            className="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     )}
                   </div>

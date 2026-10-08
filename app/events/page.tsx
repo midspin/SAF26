@@ -25,6 +25,8 @@ import {
   Info,
 } from 'lucide-react';
 
+import { canUserViewModule } from '@/lib/permissions';
+
 export default function EventsPage() {
   const [loading, setLoading] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
@@ -102,6 +104,18 @@ export default function EventsPage() {
       window.removeEventListener('storage', syncRole);
     };
   }, []);
+
+  if (!canUserViewModule(activeRole, 'events')) {
+    return (
+      <div className="p-12 text-center bg-[#1c1c2a] rounded-3xl border border-rose-500/30 my-8 space-y-3">
+        <ShieldCheck className="w-12 h-12 text-rose-500 mx-auto" />
+        <h2 className="text-lg font-black text-white">Access Denied — Events Module [NV]</h2>
+        <p className="text-xs text-slate-400">
+          The Events module is hidden completely and unauthorized for your assigned role (<strong>{activeRole}</strong>).
+        </p>
+      </div>
+    );
+  }
 
   useEffect(() => {
     fetchEvents();
