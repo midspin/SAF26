@@ -30,13 +30,10 @@ export default function ArtistDocketModal({
 
   useEffect(() => {
     if (isOpen && artistId) {
-      if (initialArtistData && initialArtistData.id === artistId && initialArtistData.allocations) {
-        setArtistData(initialArtistData);
-      } else {
-        fetchArtistDetails(artistId);
-      }
+      // Always fetch complete details from /api/artists/[id] to ensure all allocations (Production + Tech), purchase requests, rental records, and layout diagrams are loaded
+      fetchArtistDetails(artistId);
     }
-  }, [isOpen, artistId, initialArtistData]);
+  }, [isOpen, artistId]);
 
   const fetchArtistDetails = async (id: string) => {
     setLoading(true);
@@ -166,32 +163,38 @@ export default function ArtistDocketModal({
     (p: any) => p.productionPerson?.name || p.name
   ).filter(Boolean);
 
-  // Allocations
-  const productionAllotments = (artistData?.allocations || []).filter(
-    (a: any) => (a.department || '').toUpperCase() === 'PRODUCTION'
-  );
+  // Allocations (Production Allotment & Tech Allotment)
+  const productionAllotments = (artistData?.allocations || []).filter((a: any) => {
+    const dept = (a.department || '').toUpperCase();
+    const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+    const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+    return dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION';
+  });
 
-  const techAllotments = (artistData?.allocations || []).filter(
-    (a: any) => (a.department || '').toUpperCase() === 'TECHNICAL'
-  );
+  const techAllotments = (artistData?.allocations || []).filter((a: any) => {
+    const dept = (a.department || '').toUpperCase();
+    const cat = (a.inventoryItem?.inventoryCategory || '').toUpperCase();
+    const usage = (a.inventoryItem?.inventoryUsageType || '').toUpperCase();
+    return dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL' || (!dept && cat !== 'PRODUCTION' && usage !== 'PRODUCTION');
+  });
 
-  // Purchase / Rentals
+  // Purchase / Rentals (Rent | Purchase item LIST)
   const purchaseList = (artistData?.purchaseRequests || []).map((p: any) => ({
     type: 'PURCHASE',
-    name: p.itemName || p.description,
-    brand: p.brand || p.vendor?.vendorName || 'Na',
-    model: p.model || 'Na',
+    name: p.itemName || p.description || p.name || 'Purchased Equipment',
+    brand: p.brand || p.vendor?.vendorName || '-',
+    model: p.model || '-',
     qty: p.quantity || 1,
-    link: p.supplierLink || p.purchaseLink || p.notes || '-',
+    link: p.supplierLink || p.purchaseLink || p.vendor?.contactEmail || p.notes || '-',
   }));
 
   const rentalList = (artistData?.rentalRecords || []).map((r: any) => ({
     type: 'RENTAL',
-    name: r.equipmentName || r.description,
-    brand: r.brand || r.vendor?.vendorName || 'Na',
-    model: r.model || 'Na',
+    name: r.equipmentName || r.description || r.name || 'Rental Equipment',
+    brand: r.brand || r.vendor?.vendorName || '-',
+    model: r.model || '-',
     qty: r.quantity || 1,
-    link: r.supplierLink || r.vendor?.contactEmail || '-',
+    link: r.supplierLink || r.vendor?.contactEmail || r.notes || '-',
   }));
 
   const combinedRentPurchaseList = [...purchaseList, ...rentalList];
@@ -200,8 +203,11 @@ export default function ArtistDocketModal({
   const finalLayoutUrl =
     primaryInstallation?.room?.techProdLayout ||
     primaryArtwork?.techProdLayout ||
-    primaryInstallation?.room?.roomImage ||
     primaryInstallation?.room?.floorplan ||
+    primaryInstallation?.room?.roomImage ||
+    artistData?.artworks?.find((a: any) => a.techProdLayout)?.techProdLayout ||
+    artistData?.installations?.find((i: any) => i.room?.techProdLayout)?.room?.techProdLayout ||
+    artistData?.installations?.find((i: any) => i.room?.floorplan)?.room?.floorplan ||
     null;
 
   const isPdfLayout = finalLayoutUrl?.endsWith('.pdf') || finalLayoutUrl?.includes('.pdf');

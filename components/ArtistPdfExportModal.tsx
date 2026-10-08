@@ -21,13 +21,10 @@ export default function ArtistPdfExportModal({
 
   useEffect(() => {
     if (isOpen && artistId) {
-      if (initialArtistData && initialArtistData.id === artistId && initialArtistData.allocations) {
-        setArtistData(initialArtistData);
-      } else {
-        fetchArtistDetails(artistId);
-      }
+      // Always fetch complete artist details from /api/artists/[id] to ensure all allocations, purchase requests, rental records & layout URLs are present
+      fetchArtistDetails(artistId);
     }
-  }, [isOpen, artistId, initialArtistData]);
+  }, [isOpen, artistId]);
 
   const fetchArtistDetails = async (id: string) => {
     setLoading(true);
