@@ -28,6 +28,7 @@ export const MODULE_DEFINITIONS: { id: string; name: string; category: ModulePer
   { id: 'rooms', name: 'Rooms', category: 'SPACES & PRODUCTION' },
   { id: 'installations', name: 'Installations', category: 'SPACES & PRODUCTION' },
   { id: 'artist-docket', name: 'Artist Docket', category: 'SPACES & PRODUCTION' },
+  { id: 'venue-tech-inventory', name: 'Venue Tech Inventory', category: 'INVENTORY & PROCUREMENT' },
   { id: 'inventory', name: 'Master Inventory Pool', category: 'INVENTORY & PROCUREMENT' },
   { id: 'import', name: 'Excel Migration Wizard', category: 'INVENTORY & PROCUREMENT' },
   { id: 'procurement', name: 'Purchase & Rentals', category: 'INVENTORY & PROCUREMENT' },
@@ -56,7 +57,7 @@ const readOnlyPermissions = (): Record<string, ModulePermission> => {
 
 const techTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'venues', 'rooms', 'installations', 'artist-docket', 'venue-tech-inventory', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -68,7 +69,7 @@ const techTeamPermissions = (): Record<string, ModulePermission> => {
 
 const prodTeamPermissions = (): Record<string, ModulePermission> => {
   const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'artist-docket', 'inventory', 'procurement', 'vendors'].forEach((id) => {
+  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'artist-docket', 'venue-tech-inventory', 'inventory', 'procurement', 'vendors'].forEach((id) => {
     if (perm[id]) {
       perm[id].canView = true;
       perm[id].canEdit = true;
@@ -84,23 +85,26 @@ const progTeamPermissions = (): Record<string, ModulePermission> => {
     perm[mod.id] = { id: mod.id, name: mod.name, category: mod.category, canView: false, canEdit: false, canDelete: false };
   });
 
-  // OVERVIEW
+  // OVERVIEW: Hide progress Tracker & Events for Programming Team
   perm['dashboard'] = { id: 'dashboard', name: 'Dashboard', category: 'OVERVIEW', canView: true, canEdit: false, canDelete: false };
-  perm['progress-tracker'] = { id: 'progress-tracker', name: 'Progress Tracker', category: 'OVERVIEW', canView: true, canEdit: false, canDelete: false };
+  perm['progress-tracker'] = { id: 'progress-tracker', name: 'Progress Tracker', category: 'OVERVIEW', canView: false, canEdit: false, canDelete: false };
   perm['events'] = { id: 'events', name: 'Events', category: 'OVERVIEW', canView: false, canEdit: false, canDelete: false };
 
-  // CURATORIAL & PROGRAMMING
+  // CURATORIAL & PROGRAMMING: Hide Team & Staff for Programming Team
   perm['artists'] = { id: 'artists', name: 'Artists', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
   perm['artworks'] = { id: 'artworks', name: 'Artworks', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: false };
   perm['curators'] = { id: 'curators', name: 'Curators', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: false };
-  perm['teams'] = { id: 'teams', name: 'Teams & Staff', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: false, canDelete: false };
+  perm['teams'] = { id: 'teams', name: 'Teams & Staff', category: 'CURATORIAL & PROGRAMMING', canView: false, canEdit: false, canDelete: false };
 
   // SPACES & PRODUCTION
   perm['venues'] = { id: 'venues', name: 'Venues', category: 'SPACES & PRODUCTION', canView: true, canEdit: false, canDelete: false };
   perm['rooms'] = { id: 'rooms', name: 'Rooms', category: 'SPACES & PRODUCTION', canView: true, canEdit: false, canDelete: false };
   perm['artist-docket'] = { id: 'artist-docket', name: 'Artist Docket', category: 'SPACES & PRODUCTION', canView: true, canEdit: true, canDelete: true };
 
-  // INVENTORY & PROCUREMENT and INTEGRATIONS & GOVERNANCE: all false [NV]
+  // INVENTORY & PROCUREMENT: Hide Venue Tech inventory for Programming Team
+  perm['venue-tech-inventory'] = { id: 'venue-tech-inventory', name: 'Venue Tech Inventory', category: 'INVENTORY & PROCUREMENT', canView: false, canEdit: false, canDelete: false };
+  perm['inventory'] = { id: 'inventory', name: 'Master Inventory Pool', category: 'INVENTORY & PROCUREMENT', canView: true, canEdit: false, canDelete: false };
+  
   return perm;
 };
 

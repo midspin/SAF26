@@ -44,6 +44,7 @@ export async function GET() {
         select: {
           id: true,
           artistName: true,
+          artistPhoto: true,
           status: true,
           artworks: {
             select: {
@@ -51,8 +52,15 @@ export async function GET() {
               artworkName: true,
               installationType: true,
               techProdLayout: true,
-              venue: { select: { venueDocument: true } },
-              room: { select: { techProdLayout: true, floorplan: true } },
+              venue: { select: { id: true, venueName: true, venueDocument: true } },
+              room: { select: { id: true, roomNumber: true, roomName: true, techProdLayout: true, floorplan: true } },
+            },
+          },
+          productionAssignments: {
+            select: {
+              productionPerson: {
+                select: { name: true },
+              },
             },
           },
           allocations: {
@@ -247,6 +255,23 @@ export async function GET() {
 
     const mediaPlayersList = Object.values(mpGroupMap);
 
+    // 3b. Production inventory stats
+    const prodItems = items.filter(
+      (i) =>
+        (i.inventoryUsageType && i.inventoryUsageType.toUpperCase() === 'PRODUCTION') ||
+        (i.inventoryCategory && i.inventoryCategory.toLowerCase().includes('prod'))
+    );
+
+    let totalProductionInventory = 0;
+    let allocatedProductionInventory = 0;
+    let availableProductionInventory = 0;
+
+    prodItems.forEach((item) => {
+      totalProductionInventory += item.totalQuantity || 0;
+      allocatedProductionInventory += item.allocatedQuantity || 0;
+      availableProductionInventory += item.availableQuantity || 0;
+    });
+
     // 7. Venue Distribution
     const venueDistribution = venues.map((v) => {
       let count = v._count?.installations || 0;
@@ -256,6 +281,62 @@ export async function GET() {
         });
       }
       return { name: v.venueName || 'Venue', artworkCount: count };
+    });
+
+    // 7b. Project Status by Venue
+    const projectStatusByVenue = venues.map((v) => {
+      const venueArtworks = artworks.filter((aw) => aw.venueId === v.id);
+      const venueArtworkIds = new Set(venueArtworks.map((aw) => aw.id));
+
+      const venueInstallations = allInstallations.filter((i) =>
+        i.artworkId ? venueArtworkIds.has(i.artworkId) : false
+      );
+
+      const totalProjects = Math.max(venueArtworks.length, venueInstallations.length);
+      const planned = venueInstallations.filter((i) => i.installationStatus === 'Planned').length;
+      const ready = venueInstallations.filter((i) => i.installationStatus === 'Ready').length;
+      const inProgress = venueInstallations.filter(
+        (i) => i.installationStatus === 'Installation In Progress' || i.installationStatus === 'In Progress'
+      ).length;
+      const installed = venueInstallations.filter((i) => i.installationStatus === 'Installed').length;
+      const completed = venueInstallations.filter((i) => i.installationStatus === 'Completed').length;
+
+      return {
+        id: v.id,
+        venueName: v.venueName || 'Venue',
+        totalProjects,
+        planned,
+        ready,
+        inProgress,
+        installed,
+        completed,
+      };
+    });
+
+    // 7c. Active Production Projects (projects in progress / active)
+    const activeProductionProjects: any[] = [];
+    allArtists.forEach((artist) => {
+      (artist.artworks || []).forEach((art: any) => {
+        const inst = allInstallations.find((i) => i.artistId === artist.id && i.artworkId === art.id) || allInstallations.find((i) => i.artistId === artist.id);
+        const status = inst?.installationStatus || 'Planned';
+        const venue = art.venue;
+        const room = art.room;
+        const prodTeam = (artist.productionAssignments || [])
+          .map((p: any) => p.productionPerson?.name)
+          .filter(Boolean);
+
+        activeProductionProjects.push({
+          id: inst?.id || art.id,
+          artistId: artist.id,
+          artistName: artist.artistName || 'Unassigned Artist',
+          artistPhoto: artist.artistPhoto || null,
+          artworkName: art.artworkName || 'Artwork Pending',
+          venueName: venue?.venueName || 'Unassigned Venue',
+          roomNumber: room?.roomNumber ? `Room ${room.roomNumber}` : room?.roomName || 'Gallery Space',
+          status,
+          productionTeam: prodTeam.length > 0 ? prodTeam : ['Production Lead'],
+        });
+      });
     });
 
     // 8. Progress Tracker Artwork Stages
@@ -355,6 +436,9 @@ export async function GET() {
           totalTechnicalInventory,
           allocatedTechnicalInventory,
           availableTechnicalInventory,
+          totalProductionInventory,
+          allocatedProductionInventory,
+          availableProductionInventory,
           totalProjectors,
           allocatedProjectors,
           balanceProjectors,
@@ -369,6 +453,8 @@ export async function GET() {
         speakersBreakdown: hsMap,
         mediaPlayersList,
         venueDistribution,
+        projectStatusByVenue,
+        activeProductionProjects,
         progressTrackerData,
       },
       {
