@@ -68,14 +68,36 @@ const techTeamPermissions = (): Record<string, ModulePermission> => {
 };
 
 const prodTeamPermissions = (): Record<string, ModulePermission> => {
-  const perm = readOnlyPermissions();
-  ['dashboard', 'progress-tracker', 'events', 'artists', 'venues', 'rooms', 'installations', 'artist-docket', 'venue-tech-inventory', 'inventory', 'procurement', 'vendors'].forEach((id) => {
-    if (perm[id]) {
-      perm[id].canView = true;
-      perm[id].canEdit = true;
-      perm[id].canDelete = false;
-    }
+  const perm: Record<string, ModulePermission> = {};
+  MODULE_DEFINITIONS.forEach((mod) => {
+    perm[mod.id] = { id: mod.id, name: mod.name, category: mod.category, canView: false, canEdit: false, canDelete: false };
   });
+
+  // OVERVIEW - Dashboard, progress tracker, Events (can view & edit existing, cannot create/delete)
+  perm['dashboard'] = { id: 'dashboard', name: 'Dashboard', category: 'OVERVIEW', canView: true, canEdit: true, canDelete: false };
+  perm['progress-tracker'] = { id: 'progress-tracker', name: 'Progress Tracker', category: 'OVERVIEW', canView: true, canEdit: true, canDelete: false };
+  perm['events'] = { id: 'events', name: 'Events', category: 'OVERVIEW', canView: true, canEdit: true, canDelete: false };
+
+  // CURATORIAL & PROGRAMMING - show full menu with all access
+  perm['artists'] = { id: 'artists', name: 'Artists', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
+  perm['artworks'] = { id: 'artworks', name: 'Artworks', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
+  perm['curators'] = { id: 'curators', name: 'Curators', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
+  perm['teams'] = { id: 'teams', name: 'Teams & Staff', category: 'CURATORIAL & PROGRAMMING', canView: true, canEdit: true, canDelete: true };
+
+  // SPACES & PRODUCTION - venues (add/remove, edit), Rooms (Hide), Artist Docket (full control)
+  perm['venues'] = { id: 'venues', name: 'Venues', category: 'SPACES & PRODUCTION', canView: true, canEdit: true, canDelete: true };
+  perm['rooms'] = { id: 'rooms', name: 'Rooms', category: 'SPACES & PRODUCTION', canView: false, canEdit: false, canDelete: false };
+  perm['installations'] = { id: 'installations', name: 'Installations', category: 'SPACES & PRODUCTION', canView: true, canEdit: true, canDelete: true };
+  perm['artist-docket'] = { id: 'artist-docket', name: 'Artist Docket', category: 'SPACES & PRODUCTION', canView: true, canEdit: true, canDelete: true };
+
+  // INVENTORY & PROCUREMENT - Hide Venue Tech inventory
+  perm['venue-tech-inventory'] = { id: 'venue-tech-inventory', name: 'Venue Tech Inventory', category: 'INVENTORY & PROCUREMENT', canView: false, canEdit: false, canDelete: false };
+  perm['inventory'] = { id: 'inventory', name: 'Master Inventory Pool', category: 'INVENTORY & PROCUREMENT', canView: true, canEdit: true, canDelete: true };
+  perm['procurement'] = { id: 'procurement', name: 'Purchase & Rentals', category: 'INVENTORY & PROCUREMENT', canView: true, canEdit: true, canDelete: true };
+  perm['vendors'] = { id: 'vendors', name: 'Vendors Directory', category: 'INVENTORY & PROCUREMENT', canView: true, canEdit: true, canDelete: true };
+
+  // INTEGRATIONS & GOVERNANCE - hide full (all canView: false)
+
   return perm;
 };
 
@@ -241,8 +263,8 @@ export function getRoles(): RoleDefinition[] {
     const parsed: RoleDefinition[] = JSON.parse(saved);
     // Ensure default system roles are present
     const map = new Map<string, RoleDefinition>();
-    DEFAULT_ROLES.forEach((r) => map.set(r.id, r));
     parsed.forEach((r) => map.set(r.id, r));
+    DEFAULT_ROLES.forEach((r) => map.set(r.id, r));
     return Array.from(map.values());
   } catch (e) {
     console.error('Error reading custom roles:', e);

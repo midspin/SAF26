@@ -25,7 +25,7 @@ import {
   Info,
 } from 'lucide-react';
 
-import { canUserViewModule } from '@/lib/permissions';
+import { canUserViewModule, canUserEditModule, canUserDeleteModule } from '@/lib/permissions';
 
 export default function EventsPage() {
   const [loading, setLoading] = useState(true);
@@ -291,13 +291,17 @@ export default function EventsPage() {
         </div>
       </div>
 
-      {/* SUPER ADMIN RESTRICTION NOTICE IF NOT SUPER ADMIN */}
+      {/* ROLE PERMISSION NOTICE IF NOT SUPER ADMIN */}
       {!isSuperAdmin && (
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <ShieldCheck className="w-5 h-5 text-amber-400 shrink-0" />
             <span>
-              <strong>Read-Only Access:</strong> Event creation, editing, and deletion features are restricted strictly to <strong>SUPER ADMIN</strong> accounts.
+              {canUserEditModule(activeRole, 'events') ? (
+                <><strong>Event Edit Access:</strong> You can edit existing event configurations. New event creation is restricted to <strong>SUPER ADMIN</strong>.</>
+              ) : (
+                <><strong>Read-Only Access:</strong> Event creation, editing, and deletion features are restricted strictly to <strong>SUPER ADMIN</strong> accounts.</>
+              )}
             </span>
           </div>
           <span className="text-[10px] uppercase font-bold bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30 shrink-0">
@@ -494,8 +498,8 @@ export default function EventsPage() {
                     <Layers className="w-3.5 h-3.5" /> Select Context
                   </button>
 
-                  {isSuperAdmin && (
-                    <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5">
+                    {(isSuperAdmin || canUserEditModule(activeRole, 'events')) && (
                       <button
                         onClick={() => handleOpenEditModal(evt)}
                         className="p-2 rounded-xl bg-[#232334] hover:bg-[#2c2c40] text-white border border-white/10 transition-all cursor-pointer"
@@ -503,6 +507,8 @@ export default function EventsPage() {
                       >
                         <Edit2 className="w-3.5 h-3.5 text-[#38bdf8]" />
                       </button>
+                    )}
+                    {(isSuperAdmin || canUserDeleteModule(activeRole, 'events')) && (
                       <button
                         onClick={() => {
                           setEventToDelete(evt);
@@ -513,8 +519,8 @@ export default function EventsPage() {
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               </div>
             );
