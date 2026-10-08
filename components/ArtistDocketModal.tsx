@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Printer, X, FileText, Sparkles, Layers, Building2, Palette, Download, ExternalLink, Maximize2 } from 'lucide-react';
+import { Printer, X, FileText, Sparkles, Layers, Building2, Palette, Download, ExternalLink, Maximize2, FileSpreadsheet, PackageCheck, ShoppingCart } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface ArtistDocketModalProps {
   artistId: string | null;
@@ -212,6 +213,199 @@ export default function ArtistDocketModal({
 
   const isPdfLayout = finalLayoutUrl?.endsWith('.pdf') || finalLayoutUrl?.includes('.pdf');
 
+  const exportArtistTechExcel = () => {
+    if (!techAllotments || techAllotments.length === 0) {
+      alert('No Technical Allotment records found for this artist.');
+      return;
+    }
+    const rows = techAllotments.map((alloc: any) => {
+      const item = alloc.inventoryItem || {};
+      return {
+        'SAF Code': item.safCode || 'N/A',
+        'Inventory Category': item.inventoryCategory || 'N/A',
+        'Sub Category': item.subCategory || 'N/A',
+        'Element / Item Description': item.element || 'N/A',
+        'Year of Purchase': item.yearOfPurchase || 'N/A',
+        'Brand / Project': item.brandProject || 'N/A',
+        'Model': item.model || 'N/A',
+        'Size LWH': item.sizeLwh || 'N/A',
+        'UOM': item.uom || 'Nos',
+        'Serial No': item.serialNo || 'N/A',
+        'Total Stock Qty': item.totalQuantity ?? 'N/A',
+        'Location': item.location || 'N/A',
+        'Condition': item.condition || 'N/A',
+        'Throw Ratio': item.throwRatio || 'N/A',
+        'Remarks / Notes': item.remarks || 'N/A',
+        'Inventory Usage Type': item.inventoryUsageType || 'N/A',
+        'Inventory Source': item.inventorySource || 'N/A',
+        'Ownership Type': item.ownershipType || 'N/A',
+        'Inventory Status': item.inventoryStatus || 'N/A',
+        'Asset ID': item.assetId || 'N/A',
+        'Purchase Date': item.purchaseDate || 'N/A',
+        'Purchase Cost': item.purchaseCost ? `₹${item.purchaseCost}` : 'N/A',
+        'Purchase Link': item.purchaseLink || 'N/A',
+        'Artist Name': artistData?.artistName || 'N/A',
+        'Artwork Name': primaryArtwork?.artworkName || 'N/A',
+        'Venue Name': venueName,
+        'Room Name': roomName,
+        'Allocation Department': alloc.department || 'TECHNICAL',
+        'Requested Quantity': alloc.requestedQuantity ?? 1,
+        'Approved Quantity': alloc.approvedQuantity ?? 1,
+        'Issued Quantity': alloc.issuedQuantity ?? 0,
+        'Allocation Status': alloc.status || 'Approved',
+        'Dispatched By': alloc.dispatchedByName || 'N/A',
+        'Transported By': alloc.transportedByName || 'N/A',
+        'Dispatched Date': alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString() : 'N/A',
+        'Allocation Notes': alloc.notes || '',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Tech Allotments');
+    const safeArtistName = (artistData?.artistName || 'Artist').replace(/[^a-zA-Z0-9]/g, '_');
+    XLSX.writeFile(workbook, `SAF_Tech_Allotments_${safeArtistName}_${Date.now()}.xlsx`);
+  };
+
+  const exportArtistProdExcel = () => {
+    if (!productionAllotments || productionAllotments.length === 0) {
+      alert('No Production Allotment records found for this artist.');
+      return;
+    }
+    const rows = productionAllotments.map((alloc: any) => {
+      const item = alloc.inventoryItem || {};
+      return {
+        'SAF Code': item.safCode || 'N/A',
+        'Inventory Category': item.inventoryCategory || 'N/A',
+        'Sub Category': item.subCategory || 'N/A',
+        'Element / Item Description': item.element || 'N/A',
+        'Year of Purchase': item.yearOfPurchase || 'N/A',
+        'Brand / Project': item.brandProject || 'N/A',
+        'Model': item.model || 'N/A',
+        'Size LWH': item.sizeLwh || 'N/A',
+        'UOM': item.uom || 'Nos',
+        'Serial No': item.serialNo || 'N/A',
+        'Total Stock Qty': item.totalQuantity ?? 'N/A',
+        'Location': item.location || 'N/A',
+        'Condition': item.condition || 'N/A',
+        'Throw Ratio': item.throwRatio || 'N/A',
+        'Remarks / Notes': item.remarks || 'N/A',
+        'Inventory Usage Type': item.inventoryUsageType || 'N/A',
+        'Inventory Source': item.inventorySource || 'N/A',
+        'Ownership Type': item.ownershipType || 'N/A',
+        'Inventory Status': item.inventoryStatus || 'N/A',
+        'Asset ID': item.assetId || 'N/A',
+        'Purchase Date': item.purchaseDate || 'N/A',
+        'Purchase Cost': item.purchaseCost ? `₹${item.purchaseCost}` : 'N/A',
+        'Purchase Link': item.purchaseLink || 'N/A',
+        'Artist Name': artistData?.artistName || 'N/A',
+        'Artwork Name': primaryArtwork?.artworkName || 'N/A',
+        'Venue Name': venueName,
+        'Room Name': roomName,
+        'Allocation Department': alloc.department || 'PRODUCTION',
+        'Requested Quantity': alloc.requestedQuantity ?? 1,
+        'Approved Quantity': alloc.approvedQuantity ?? 1,
+        'Issued Quantity': alloc.issuedQuantity ?? 0,
+        'Allocation Status': alloc.status || 'Approved',
+        'Dispatched By': alloc.dispatchedByName || 'N/A',
+        'Transported By': alloc.transportedByName || 'N/A',
+        'Dispatched Date': alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString() : 'N/A',
+        'Allocation Notes': alloc.notes || '',
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Production Allotments');
+    const safeArtistName = (artistData?.artistName || 'Artist').replace(/[^a-zA-Z0-9]/g, '_');
+    XLSX.writeFile(workbook, `SAF_Production_Allotments_${safeArtistName}_${Date.now()}.xlsx`);
+  };
+
+  const exportArtistRentPurchaseExcel = () => {
+    const purchases = artistData?.purchaseRequests || [];
+    const rentals = artistData?.rentalRecords || [];
+
+    if (purchases.length === 0 && rentals.length === 0) {
+      alert('No Rent | Purchase item records found for this artist.');
+      return;
+    }
+
+    const rows: any[] = [];
+
+    purchases.forEach((p: any) => {
+      rows.push({
+        'Procurement Type': 'PURCHASE',
+        'Department': p.department || 'TECHNICAL',
+        'Item Name': p.itemName || 'N/A',
+        'Category': p.category || 'N/A',
+        'Specification': p.specification || 'N/A',
+        'Brand': p.brand || p.vendor?.vendorName || 'N/A',
+        'Model': p.model || 'N/A',
+        'Quantity': p.quantity ?? 1,
+        'UOM': p.uom || 'Nos',
+        'Priority': p.priority || 'Medium',
+        'Required Date': p.requiredDate || 'N/A',
+        'Rental Start Date': 'N/A',
+        'Rental End Date': 'N/A',
+        'Rate Type': 'N/A',
+        'Estimated Unit Cost': p.estimatedUnitCost ? `₹${p.estimatedUnitCost}` : 'N/A',
+        'Estimated Total Cost': p.estimatedTotal ? `₹${p.estimatedTotal}` : 'N/A',
+        'Approved / Final Cost':
+          p.finalCost || p.actualCost || p.approvedCost
+            ? `₹${p.finalCost || p.actualCost || p.approvedCost}`
+            : 'N/A',
+        'Vendor Name': p.vendor?.vendorName || 'N/A',
+        'Purchase / Supplier Link': p.purchaseLink || 'N/A',
+        'Status': p.status || 'Request Raised',
+        'Artist Name': artistData?.artistName || 'N/A',
+        'Artwork Name': primaryArtwork?.artworkName || 'N/A',
+        'Venue Name': venueName,
+        'Room Name': roomName,
+        'Requested By': p.requestedBy || 'N/A',
+        'Approved By': p.approvedBy || 'N/A',
+        'Notes / Remarks': p.notes || '',
+      });
+    });
+
+    rentals.forEach((r: any) => {
+      rows.push({
+        'Procurement Type': 'RENTAL',
+        'Department': r.department || 'TECHNICAL',
+        'Item Name': r.itemName || 'N/A',
+        'Category': r.category || 'N/A',
+        'Specification': r.specification || 'N/A',
+        'Brand': r.brand || r.vendor?.vendorName || 'N/A',
+        'Model': r.model || 'N/A',
+        'Quantity': r.quantity ?? 1,
+        'UOM': r.uom || 'Nos',
+        'Priority': 'N/A',
+        'Required Date': 'N/A',
+        'Rental Start Date': r.rentalStart || 'N/A',
+        'Rental End Date': r.rentalEnd || 'N/A',
+        'Rate Type': r.rateType || 'Daily',
+        'Estimated Unit Cost': r.rentalRate ? `₹${r.rentalRate}` : 'N/A',
+        'Estimated Total Cost': r.estimatedTotal ? `₹${r.estimatedTotal}` : 'N/A',
+        'Approved / Final Cost': r.actualTotal ? `₹${r.actualTotal}` : 'N/A',
+        'Vendor Name': r.vendor?.vendorName || 'N/A',
+        'Purchase / Supplier Link': r.rentalLink || 'N/A',
+        'Status': r.status || 'Request Raised',
+        'Artist Name': artistData?.artistName || 'N/A',
+        'Artwork Name': primaryArtwork?.artworkName || 'N/A',
+        'Venue Name': venueName,
+        'Room Name': roomName,
+        'Requested By': r.requestedBy || 'N/A',
+        'Approved By': r.approvedBy || 'N/A',
+        'Notes / Remarks': r.notes || '',
+      });
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(rows);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Rent & Purchase Items');
+    const safeArtistName = (artistData?.artistName || 'Artist').replace(/[^a-zA-Z0-9]/g, '_');
+    XLSX.writeFile(workbook, `SAF_Rent_Purchase_Items_${safeArtistName}_${Date.now()}.xlsx`);
+  };
+
   const generatedDateStr = new Date().toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
@@ -222,8 +416,6 @@ export default function ArtistDocketModal({
     minute: '2-digit',
     hour12: true,
   });
-
-
 
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
@@ -278,6 +470,31 @@ export default function ArtistDocketModal({
                 }`}
               >
                 Page 3 (Layout)
+              </button>
+            </div>
+
+            {/* Excel Download Options */}
+            <div className="hidden md:flex items-center gap-1.5">
+              <button
+                onClick={exportArtistTechExcel}
+                className="bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/30 text-[11px] font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                title="Export Tech Allotment Excel with Master Inventory parameters"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Tech Excel
+              </button>
+              <button
+                onClick={exportArtistProdExcel}
+                className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 text-[11px] font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                title="Export Production Allotment Excel with Master Inventory parameters"
+              >
+                <PackageCheck className="w-3.5 h-3.5" /> Prod Excel
+              </button>
+              <button
+                onClick={exportArtistRentPurchaseExcel}
+                className="bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 text-[11px] font-bold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer"
+                title="Export Rent | Purchase Item LIST Excel"
+              >
+                <ShoppingCart className="w-3.5 h-3.5" /> Rent/Purchase Excel
               </button>
             </div>
 
