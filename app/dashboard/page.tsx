@@ -690,9 +690,9 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {projectorsList.length === 0 ? (
-                  <div className="p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
+                  <div className="col-span-full p-6 rounded-2xl bg-[#1c1c2a] border border-white/5 text-center text-[#8a8d9b] text-xs space-y-1">
                     <p className="font-semibold text-white">No projectors in database</p>
                     <p className="text-[11px]">Database is empty. Import projector items to view breakdown.</p>
                   </div>
@@ -700,29 +700,29 @@ export default function DashboardPage() {
                   projectorsList.map((p, idx) => (
                     <div
                       key={idx}
-                      className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
+                      className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-2.5 hover:border-[#f97316]/40 transition-colors"
                     >
-                        <div>
-                          <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
-                            {p.element}
-                          </h4>
-                          <p className="text-[10px] text-[#8a8d9b] mt-0.5">
-                            {p.brand && p.brand !== 'Item' ? `${p.brand} ${p.model}`.trim() : 'Projector'}
-                          </p>
-                        </div>
+                      <div>
+                        <h4 className="text-xs font-extrabold text-white">
+                          {p.element}
+                        </h4>
+                        <p className="text-[10px] text-[#8a8d9b] mt-0.5">
+                          {p.brand && p.brand !== 'Item' ? `${p.brand} ${p.model}`.trim() : 'Projector'}
+                        </p>
+                      </div>
 
-                      <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
+                      <div className="flex items-center gap-2.5 text-xs shrink-0">
                         <div className="text-center">
-                          <span className="text-[9px] text-[#8a8d9b] block uppercase">Total</span>
-                          <span className="font-extrabold text-white"><AnimatedNumber value={p.total} /></span>
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold">Total</span>
+                          <span className="font-extrabold text-white text-xs block"><AnimatedNumber value={p.total} /></span>
                         </div>
                         <div className="text-center">
-                          <span className="text-[9px] text-[#8a8d9b] block uppercase">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8]"><AnimatedNumber value={p.allocated} /></span>
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8] text-xs block"><AnimatedNumber value={p.allocated} /></span>
                         </div>
-                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2.5 py-1 rounded-xl">
-                          <span className="text-[9px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981]"><AnimatedNumber value={p.balance} /></span>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
+                          <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
+                          <span className="font-extrabold text-[#10b981] text-xs block"><AnimatedNumber value={p.balance} /></span>
                         </div>
                       </div>
                     </div>
