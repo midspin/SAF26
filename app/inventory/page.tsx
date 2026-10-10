@@ -25,6 +25,7 @@ import {
   Layers,
   UserCheck,
   Edit3,
+  Copy,
 } from 'lucide-react';
 
 export default function InventoryPage() {
@@ -468,6 +469,38 @@ export default function InventoryPage() {
       isFaulty: item.isFaulty || /faulty|damaged|red/i.test(item.condition || ''),
     });
     setEditModalOpen(true);
+  };
+
+  // Duplicate Inventory Item (Pre-fill Add Form with item details & new SAF Code)
+  const handleDuplicateItem = (item: any) => {
+    if (!canEditInventory) {
+      alert('Access Restricted: Only Super Admin and Inventory Manager can duplicate items.');
+      return;
+    }
+    const baseCode = item.safCode || 'ITEM';
+    const newSafCode = baseCode.endsWith('-COPY') ? `${baseCode}-1` : `${baseCode}-COPY`;
+    setFormData({
+      safCode: newSafCode,
+      inventoryCategory: item.inventoryCategory || (usageFilter === 'PRODUCTION' ? 'Production' : 'Technical'),
+      subCategory: item.subCategory || 'General',
+      element: `${item.element || ''} (Copy)`.trim(),
+      yearOfPurchase: item.yearOfPurchase || '2026',
+      brandProject: item.brandProject || 'Na',
+      model: item.model || 'Na',
+      sizeLwh: item.sizeLwh || 'Na',
+      uom: item.uom || 'Nos',
+      serialNo: item.serialNo || 'Na',
+      totalQuantity: item.totalQuantity || 1,
+      location: item.location || 'Central Warehouse',
+      condition: item.condition || 'OK',
+      throwRatio: item.throwRatio || 'Na',
+      remarks: item.remarks || '',
+      inventoryUsageType: item.inventoryUsageType || (usageFilter === 'PRODUCTION' ? 'PRODUCTION' : 'TECHNICAL'),
+      inventorySource: item.inventorySource || 'Owned',
+      ownershipType: item.ownershipType || 'SAF',
+      isFaulty: item.isFaulty || /faulty|damaged|red/i.test(item.condition || ''),
+    });
+    setAddModalOpen(true);
   };
 
   // Submit Product Edits
@@ -1030,13 +1063,22 @@ export default function InventoryPage() {
                             <ArrowUpRight className="w-3.5 h-3.5" />
                           </Link>
                           {canEditInventory && (
-                            <button
-                              onClick={() => handleOpenEditModal(item)}
-                              className="p-1.5 rounded bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 transition-colors cursor-pointer"
-                              title="Edit Product Details (Super Admin & Inventory Manager)"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleOpenEditModal(item)}
+                                className="p-1.5 rounded bg-slate-800 hover:bg-amber-500 hover:text-slate-950 text-amber-400 transition-colors cursor-pointer"
+                                title="Edit Product Details (Super Admin & Inventory Manager)"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDuplicateItem(item)}
+                                className="p-1.5 rounded bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 transition-colors cursor-pointer"
+                                title="Duplicate Item (Pre-fill new product form with item details)"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => {
