@@ -700,29 +700,29 @@ export default function DashboardPage() {
                   projectorsList.map((p, idx) => (
                     <div
                       key={idx}
-                      className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-2.5 hover:border-[#f97316]/40 transition-colors"
+                      className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col justify-between overflow-hidden min-w-0 hover:border-[#f97316]/40 transition-colors"
                     >
-                      <div>
-                        <h4 className="text-xs font-extrabold text-white">
+                      <div className="min-w-0 mb-2">
+                        <h4 className="text-xs font-extrabold text-white truncate" title={p.element}>
                           {p.element}
                         </h4>
-                        <p className="text-[10px] text-[#8a8d9b] mt-0.5">
+                        <p className="text-[10px] text-[#8a8d9b] truncate mt-0.5">
                           {p.brand && p.brand !== 'Item' ? `${p.brand} ${p.model}`.trim() : 'Projector'}
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2.5 text-xs shrink-0">
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold">Total</span>
-                          <span className="font-extrabold text-white text-xs block"><AnimatedNumber value={p.total} /></span>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs pt-2 border-t border-white/5 min-w-0">
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Total</span>
+                          <span className="font-extrabold text-white text-xs block truncate"><AnimatedNumber value={p.total} /></span>
                         </div>
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8] text-xs block"><AnimatedNumber value={p.allocated} /></span>
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8] text-xs block truncate"><AnimatedNumber value={p.allocated} /></span>
                         </div>
-                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
-                          <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981] text-xs block"><AnimatedNumber value={p.balance} /></span>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-1 py-0.5 rounded-lg min-w-0">
+                          <span className="text-[8px] text-[#10b981] block uppercase font-bold truncate">Balance</span>
+                          <span className="font-extrabold text-[#10b981] text-xs block truncate"><AnimatedNumber value={p.balance} /></span>
                         </div>
                       </div>
                     </div>
@@ -756,7 +756,7 @@ export default function DashboardPage() {
                 </span>
               </div>
 
-              <div className="space-y-5">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* SECTION 1: YAMAHA HS SPEAKERS */}
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -770,85 +770,85 @@ export default function DashboardPage() {
 
                   <div className="space-y-2.5">
                     {/* HS5 Card */}
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-[11px] shrink-0">
+                    <div className="p-3 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col justify-between overflow-hidden min-w-0 hover:border-[#10b981]/40 transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#10b981]/10 border border-[#10b981]/20 flex items-center justify-center text-[#10b981] font-bold text-[10px] shrink-0">
                           HS5
                         </div>
-                        <div>
-                          <h4 className="text-xs font-extrabold text-white">Yamaha HS5</h4>
-                          <p className="text-[9px] text-[#8a8d9b]">5" 70W Active Monitor</p>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-extrabold text-white truncate">Yamaha HS5</h4>
+                          <p className="text-[9px] text-[#8a8d9b] truncate">5" 70W Active Monitor</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5 text-xs shrink-0">
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Total</span>
-                          <span className="font-extrabold text-white text-xs"><AnimatedNumber value={speakersBreakdown.hs5.total} /></span>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs pt-2 border-t border-white/5 min-w-0">
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Total</span>
+                          <span className="font-extrabold text-white text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs5.total} /></span>
                         </div>
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8] text-xs"><AnimatedNumber value={speakersBreakdown.hs5.allocated} /></span>
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs5.allocated} /></span>
                         </div>
-                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
-                          <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981] text-xs"><AnimatedNumber value={speakersBreakdown.hs5.balance} /></span>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-1 py-0.5 rounded-lg min-w-0">
+                          <span className="text-[8px] text-[#10b981] block uppercase font-bold truncate">Balance</span>
+                          <span className="font-extrabold text-[#10b981] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs5.balance} /></span>
                         </div>
                       </div>
                     </div>
 
                     {/* HS8 Card */}
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-3 hover:border-[#10b981]/40 transition-colors">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-[11px] shrink-0">
+                    <div className="p-3 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col justify-between overflow-hidden min-w-0 hover:border-[#10b981]/40 transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#38bdf8]/10 border border-[#38bdf8]/20 flex items-center justify-center text-[#38bdf8] font-bold text-[10px] shrink-0">
                           HS8
                         </div>
-                        <div>
-                          <h4 className="text-xs font-extrabold text-white">Yamaha HS8</h4>
-                          <p className="text-[9px] text-[#8a8d9b]">8" 120W Studio Monitor</p>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-extrabold text-white truncate">Yamaha HS8</h4>
+                          <p className="text-[9px] text-[#8a8d9b] truncate">8" 120W Studio Monitor</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5 text-xs shrink-0">
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Total</span>
-                          <span className="font-extrabold text-white text-xs"><AnimatedNumber value={speakersBreakdown.hs8.total} /></span>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs pt-2 border-t border-white/5 min-w-0">
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Total</span>
+                          <span className="font-extrabold text-white text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8.total} /></span>
                         </div>
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8] text-xs"><AnimatedNumber value={speakersBreakdown.hs8.allocated} /></span>
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8.allocated} /></span>
                         </div>
-                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
-                          <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981] text-xs"><AnimatedNumber value={speakersBreakdown.hs8.balance} /></span>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-1 py-0.5 rounded-lg min-w-0">
+                          <span className="text-[8px] text-[#10b981] block uppercase font-bold truncate">Balance</span>
+                          <span className="font-extrabold text-[#10b981] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8.balance} /></span>
                         </div>
                       </div>
                     </div>
 
                     {/* HS8S Card */}
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-3 hover:border-[#a855f7]/40 transition-colors">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7] font-bold text-[11px] shrink-0">
+                    <div className="p-3 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col justify-between overflow-hidden min-w-0 hover:border-[#a855f7]/40 transition-colors">
+                      <div className="flex items-center gap-2.5 min-w-0 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-[#a855f7]/10 border border-[#a855f7]/20 flex items-center justify-center text-[#a855f7] font-bold text-[10px] shrink-0">
                           HS8S
                         </div>
-                        <div>
-                          <h4 className="text-xs font-extrabold text-white">Yamaha HS8S Subwoofer</h4>
-                          <p className="text-[9px] text-[#8a8d9b]">8" 150W Powered Sub</p>
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-extrabold text-white truncate">Yamaha HS8S Subwoofer</h4>
+                          <p className="text-[9px] text-[#8a8d9b] truncate">8" 150W Powered Sub</p>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2.5 text-xs shrink-0">
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Total</span>
-                          <span className="font-extrabold text-white text-xs"><AnimatedNumber value={speakersBreakdown.hs8s.total} /></span>
+                      <div className="grid grid-cols-3 gap-1.5 text-xs pt-2 border-t border-white/5 min-w-0">
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Total</span>
+                          <span className="font-extrabold text-white text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8s.total} /></span>
                         </div>
-                        <div className="text-center">
-                          <span className="text-[8px] text-[#8a8d9b] block uppercase">Allocated</span>
-                          <span className="font-extrabold text-[#38bdf8] text-xs"><AnimatedNumber value={speakersBreakdown.hs8s.allocated} /></span>
+                        <div className="text-center min-w-0">
+                          <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Allocated</span>
+                          <span className="font-extrabold text-[#38bdf8] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8s.allocated} /></span>
                         </div>
-                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
-                          <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
-                          <span className="font-extrabold text-[#10b981] text-xs"><AnimatedNumber value={speakersBreakdown.hs8s.balance} /></span>
+                        <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-1 py-0.5 rounded-lg min-w-0">
+                          <span className="text-[8px] text-[#10b981] block uppercase font-bold truncate">Balance</span>
+                          <span className="font-extrabold text-[#10b981] text-xs block truncate"><AnimatedNumber value={speakersBreakdown.hs8s.balance} /></span>
                         </div>
                       </div>
                     </div>
@@ -856,10 +856,10 @@ export default function DashboardPage() {
                 </div>
 
                 {/* SECTION 2: MEDIA PLAYERS */}
-                <div className="space-y-2.5 pt-2 border-t border-white/10">
+                <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] font-black uppercase text-[#38bdf8] tracking-wider flex items-center gap-1.5">
-                      <Tv className="w-3.5 h-3.5" /> Media Players (BrightSign & Cubetech)
+                      <Tv className="w-3.5 h-3.5" /> Media Players
                     </span>
                     <span className="text-[10px] font-extrabold text-[#8a8d9b]">
                       <AnimatedNumber value={stats.balanceMediaPlayers} suffix=" Balance" />
@@ -884,32 +884,32 @@ export default function DashboardPage() {
                         return (
                           <div
                             key={idx}
-                            className={`p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 flex items-center justify-between gap-3 ${hoverClass} transition-colors`}
+                            className={`p-3 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col justify-between overflow-hidden min-w-0 ${hoverClass} transition-colors`}
                           >
-                            <div className="flex items-center gap-2.5">
-                              <div className={`w-9 h-9 rounded-xl border flex items-center justify-center font-bold text-[11px] shrink-0 ${badgeClass}`}>
+                            <div className="flex items-center gap-2.5 min-w-0 mb-2">
+                              <div className={`w-8 h-8 rounded-xl border flex items-center justify-center font-bold text-[10px] shrink-0 ${badgeClass}`}>
                                 {mp.badge}
                               </div>
-                              <div>
-                                <h4 className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-extrabold text-white truncate">
                                   {mp.brand} {mp.model}
                                 </h4>
-                                <p className="text-[9px] text-[#8a8d9b]">{mp.element}</p>
+                                <p className="text-[9px] text-[#8a8d9b] truncate">{mp.element}</p>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2.5 text-xs shrink-0">
-                              <div className="text-center">
-                                <span className="text-[8px] text-[#8a8d9b] block uppercase">Total</span>
-                                <span className="font-extrabold text-white text-xs"><AnimatedNumber value={mp.total} /></span>
+                            <div className="grid grid-cols-3 gap-1.5 text-xs pt-2 border-t border-white/5 min-w-0">
+                              <div className="text-center min-w-0">
+                                <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Total</span>
+                                <span className="font-extrabold text-white text-xs block truncate"><AnimatedNumber value={mp.total} /></span>
                               </div>
-                              <div className="text-center">
-                                <span className="text-[8px] text-[#8a8d9b] block uppercase">Allocated</span>
-                                <span className="font-extrabold text-[#38bdf8] text-xs"><AnimatedNumber value={mp.allocated} /></span>
+                              <div className="text-center min-w-0">
+                                <span className="text-[8px] text-[#8a8d9b] block uppercase font-bold truncate">Allocated</span>
+                                <span className="font-extrabold text-[#38bdf8] text-xs block truncate"><AnimatedNumber value={mp.allocated} /></span>
                               </div>
-                              <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-2 py-0.5 rounded-lg">
-                                <span className="text-[8px] text-[#10b981] block uppercase font-bold">Balance</span>
-                                <span className="font-extrabold text-[#10b981] text-xs"><AnimatedNumber value={mp.balance} /></span>
+                              <div className="text-center bg-[#10b981]/10 border border-[#10b981]/20 px-1 py-0.5 rounded-lg min-w-0">
+                                <span className="text-[8px] text-[#10b981] block uppercase font-bold truncate">Balance</span>
+                                <span className="font-extrabold text-[#10b981] text-xs block truncate"><AnimatedNumber value={mp.balance} /></span>
                               </div>
                             </div>
                           </div>
@@ -918,7 +918,6 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-
               </div>
             </div>
           </div>
