@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { determineInventoryCategory } from '@/lib/inventory-categorizer';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -51,12 +52,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Formula: AVAILABLE = TOTAL - RESERVED - ALLOCATED - DAMAGED - MAINTENANCE
     const calculatedAvailable = Math.max(0, totalQty - reservedQty - allocatedQty - damagedQty - maintenanceQty);
 
+    const targetSubCategory = body.subCategory || existing.subCategory;
+    const { inventoryCategory: computedCat, inventoryUsageType: computedUsage } = determineInventoryCategory(
+      targetSubCategory,
+      body.inventoryCategory || existing.inventoryCategory
+    );
+
     const updated = await prisma.inventoryItem.update({
       where: { id },
       data: {
         safCode: body.safCode || existing.safCode,
-        inventoryCategory: body.inventoryCategory || existing.inventoryCategory,
-        subCategory: body.subCategory || existing.subCategory,
+        inventoryCategory: computedCat,
+        subCategory: targetSubCategory,
         element: body.element || existing.element,
         yearOfPurchase: body.yearOfPurchase || existing.yearOfPurchase,
         brandProject: body.brandProject || existing.brandProject,
@@ -73,7 +80,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         condition: body.condition || existing.condition,
         throwRatio: body.throwRatio || existing.throwRatio,
         remarks: body.remarks !== undefined ? body.remarks : existing.remarks,
-        inventoryUsageType: body.inventoryUsageType || existing.inventoryUsageType,
+        inventoryUsageType: computedUsage,
         inventorySource: body.inventorySource || existing.inventorySource,
         ownershipType: body.ownershipType || existing.ownershipType,
         vendorId: body.vendorId !== undefined ? body.vendorId : existing.vendorId,

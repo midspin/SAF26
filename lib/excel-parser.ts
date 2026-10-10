@@ -1,5 +1,7 @@
 import * as XLSX from 'xlsx';
 
+import { determineInventoryCategory } from './inventory-categorizer';
+
 export interface ProcessedInventoryRow {
   rowNum: number;
   safCode: string;
@@ -146,8 +148,9 @@ export function parseSmartInventoryExcel(worksheet: XLSX.WorkSheet): { rows: Pro
     }
 
     const rowNum = i + 1; // 1-indexed row number in Excel
-    const category = getVal('inventoryCategory', ['category', 'cat', 'type'], 'Technical');
+    const rawCategory = getVal('inventoryCategory', ['category', 'cat', 'type'], '');
     const subCategory = getVal('subCategory', ['subcategory', 'subcat', 'sub'], 'General');
+    const { inventoryCategory: category } = determineInventoryCategory(subCategory, rawCategory);
     const yearOfPurchase = getVal('yearOfPurchase', ['year', 'yop', 'purchase'], 'Na');
     const brandProject = getVal('brandProject', ['brand', 'make', 'project', 'manufacturer'], 'Na');
     const model = getVal('model', ['model', 'spec'], 'Na');

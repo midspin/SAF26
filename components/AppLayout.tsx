@@ -584,8 +584,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       title: 'INVENTORY & PROCUREMENT',
       items: [
         { name: 'Venue Tech Inventory', href: '/venue-tech-inventory', icon: Building2, moduleId: 'venue-tech-inventory' },
-        { name: 'Technical Inventory', href: '/inventory?tab=TECHNICAL', icon: Wrench, moduleId: 'inventory' },
-        { name: 'Production Inventory', href: '/inventory?tab=PRODUCTION', icon: Layers, moduleId: 'inventory' },
+        { name: 'Inventory', href: '/inventory', icon: Package, moduleId: 'inventory' },
         { name: 'Purchase & Rentals', href: '/procurement', icon: ShoppingCart, moduleId: 'procurement' },
       ],
     },

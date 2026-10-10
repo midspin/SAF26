@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { determineInventoryCategory } from '@/lib/inventory-categorizer';
 
 export const dynamic = 'force-dynamic';
 
@@ -132,6 +133,11 @@ export async function POST(req: Request) {
     const maintenanceQty = 0;
     const availableQty = totalQty - reservedQty - allocatedQty - damagedQty - maintenanceQty;
 
+    const { inventoryCategory: computedCat, inventoryUsageType: computedUsage } = determineInventoryCategory(
+      subCategory,
+      inventoryCategory
+    );
+
     // Generate internal asset ID
     const itemCount = await prisma.inventoryItem.count();
     const assetId = `INV-${String(itemCount + 1).padStart(6, '0')}`;
@@ -140,7 +146,7 @@ export async function POST(req: Request) {
       data: {
         eventId,
         safCode: safCode || `SAF-${Date.now()}`,
-        inventoryCategory: inventoryCategory || 'Technical',
+        inventoryCategory: computedCat,
         subCategory: subCategory || 'General',
         element: element || 'Item',
         yearOfPurchase: yearOfPurchase || '2026',
@@ -159,7 +165,7 @@ export async function POST(req: Request) {
         condition: condition || 'OK',
         throwRatio: throwRatio || 'Na',
         remarks: remarks || '',
-        inventoryUsageType: inventoryUsageType || 'TECHNICAL',
+        inventoryUsageType: computedUsage,
         inventorySource: inventorySource || 'Owned',
         ownershipType: ownershipType || 'SAF',
         isFaulty: body.isFaulty !== undefined ? Boolean(body.isFaulty) : Boolean(/faulty|damaged|red/i.test(condition || '')),

@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { determineInventoryCategory } from '@/lib/inventory-categorizer';
 
 function extractRowFields(raw: any, idx: number) {
   const safCode = (raw.safCode || raw['SAF Code'] || raw['saf_code'] || raw['SafCode'] || raw['code'] || `SAF-${idx + 1}`).toString().trim();
-  const inventoryCategory = (raw.inventoryCategory || raw['Inventory Category'] || raw['inventory_category'] || raw['category'] || 'Technical').toString().trim();
+  const rawCategory = (raw.inventoryCategory || raw['Inventory Category'] || raw['inventory_category'] || raw['category'] || '').toString().trim();
   const subCategory = (raw.subCategory || raw['Sub Category'] || raw['sub_category'] || raw['subcategory'] || 'General').toString().trim();
+  const { inventoryCategory, inventoryUsageType } = determineInventoryCategory(subCategory, rawCategory);
+
   const element = (raw.element || raw['Element'] || raw['description'] || raw['Description'] || raw['element/description'] || raw['Item'] || raw['equipment'] || '').toString().trim();
   const yearOfPurchase = (raw.yearOfPurchase || raw['Year of Purchase'] || raw['year_of_purchase'] || raw['year'] || 'Na').toString().trim();
   const brandProject = (raw.brandProject || raw['Brand | Project'] || raw['Brand/Project'] || raw['brand_project'] || raw['brand'] || raw['make'] || raw['project'] || 'Na').toString().trim();
@@ -28,6 +31,7 @@ function extractRowFields(raw: any, idx: number) {
     safCode,
     inventoryCategory,
     subCategory,
+    inventoryUsageType,
     element: element || 'Unnamed Element',
     yearOfPurchase,
     brandProject,
@@ -247,7 +251,7 @@ export async function POST(req: Request) {
               data: {
                 eventId,
                 safCode,
-                inventoryCategory: itemData.inventoryCategory || 'Technical',
+                inventoryCategory: itemData.inventoryCategory || 'Production',
                 subCategory: itemData.subCategory || 'General',
                 element: itemData.element,
                 yearOfPurchase: itemData.yearOfPurchase || 'Na',
@@ -264,7 +268,7 @@ export async function POST(req: Request) {
                 condition: isFaulty ? 'Faulty (Red Flagged)' : (itemData.condition || 'OK'),
                 throwRatio: itemData.throwRatio || 'Na',
                 remarks: itemData.remarks || '',
-                inventoryUsageType: defaultUsageType,
+                inventoryUsageType: itemData.inventoryUsageType || defaultUsageType || 'PRODUCTION',
                 assetId,
                 createdBy: 'Excel Import Wizard',
               },

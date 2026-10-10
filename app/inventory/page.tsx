@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import * as XLSX from 'xlsx';
 import { parseSmartInventoryExcel } from '@/lib/excel-parser';
+import { determineInventoryCategory, TECHNICAL_SUB_CATEGORIES } from '@/lib/inventory-categorizer';
 import {
   Package,
   Plus,
@@ -567,34 +568,14 @@ export default function InventoryPage() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-extrabold text-slate-100 flex items-center gap-2.5">
-              {usageFilter === 'PRODUCTION' ? (
-                <>
-                  <Layers className="w-7 h-7 text-amber-400" /> Production Team Inventory & Allocations
-                </>
-              ) : usageFilter === 'TECHNICAL' ? (
-                <>
-                  <Wrench className="w-7 h-7 text-sky-400" /> Technical Team Inventory
-                </>
-              ) : (
-                <>
-                  <Package className="w-7 h-7 text-sky-400" /> Master Inventory Pool
-                </>
-              )}
+              <Package className="w-7 h-7 text-sky-400" /> Unified Master Inventory
             </h1>
-            <span
-              className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border ${
-                usageFilter === 'PRODUCTION'
-                  ? 'bg-amber-950 text-amber-400 border-amber-800'
-                  : 'bg-sky-950 text-sky-400 border-sky-800'
-              }`}
-            >
+            <span className="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full border bg-sky-950 text-sky-400 border-sky-800">
               {filteredItems.length} Items
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            {usageFilter === 'PRODUCTION'
-              ? 'Complete Production Team inventory table (Easel, Furniture, Pedestals, Light Boxes, Screens, AC units, etc.) with allocation controls'
-              : 'Preserving exact legacy fields from Inventory sheets + Red Flagged Faulty item allocation protection'}
+            Single unified inventory pool. Tech items are automatically categorized based on SubCategory (Amp, Camera, Cables, Display, Headphone, IT, Media Player, Mic, Misc., Mobile Device, Mount, PC, Screen, Speaker, Sound, Splitter, Tab, WiFi, Appliance).
           </p>
         </div>
 
@@ -614,25 +595,37 @@ export default function InventoryPage() {
           </Link>
           <button
             onClick={() => {
-              setFormData((prev) => ({
-                ...prev,
-                inventoryUsageType: usageFilter === 'PRODUCTION' ? 'PRODUCTION' : 'TECHNICAL',
-                inventoryCategory: usageFilter === 'PRODUCTION' ? 'Production' : 'Technical',
-              }));
+              setFormData({
+                safCode: '',
+                inventoryCategory: 'Production',
+                subCategory: 'General',
+                element: '',
+                yearOfPurchase: '2026',
+                brandProject: 'Na',
+                model: 'Na',
+                sizeLwh: 'Na',
+                uom: 'Nos',
+                serialNo: 'Na',
+                totalQuantity: 1,
+                location: 'Central Warehouse',
+                condition: 'OK',
+                throwRatio: 'Na',
+                remarks: '',
+                inventoryUsageType: 'PRODUCTION',
+                inventorySource: 'Owned',
+                ownershipType: 'SAF',
+                isFaulty: false,
+              });
               setAddModalOpen(true);
             }}
-            className={`font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-2 ${
-              usageFilter === 'PRODUCTION'
-                ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-amber-500/20'
-                : 'bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sky-500/20'
-            }`}
+            className="bg-sky-500 hover:bg-sky-400 text-slate-950 shadow-sky-500/20 font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow-lg flex items-center gap-2"
           >
             <Plus className="w-4 h-4" /> Add New Item
           </button>
         </div>
       </div>
 
-      {/* NAVIGATION TABS FOR MASTER / TECHNICAL / PRODUCTION / FAULTY */}
+      {/* NAVIGATION TABS FOR MASTER / TECHNICAL CATEGORY / PRODUCTION CATEGORY / FAULTY */}
       <div className="flex border-b border-slate-800 gap-2 overflow-x-auto pb-0.5">
         <button
           onClick={() => {
@@ -645,21 +638,7 @@ export default function InventoryPage() {
               : 'border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900/50'
           }`}
         >
-          <Package className="w-4 h-4" /> Master Inventory ({items.length})
-        </button>
-
-        <button
-          onClick={() => {
-            setUsageFilter('PRODUCTION');
-            setFaultyOnlyFilter(false);
-          }}
-          className={`px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
-            usageFilter === 'PRODUCTION' && !faultyOnlyFilter
-              ? 'border-amber-500 text-amber-400 bg-amber-950/40'
-              : 'border-transparent text-slate-400 hover:text-amber-300 hover:bg-slate-900/50'
-          }`}
-        >
-          <Layers className="w-4 h-4 text-amber-400" /> Production Team Table ({productionItemsCount})
+          <Package className="w-4 h-4" /> All Inventory ({items.length})
         </button>
 
         <button
@@ -673,7 +652,21 @@ export default function InventoryPage() {
               : 'border-transparent text-slate-400 hover:text-sky-200 hover:bg-slate-900/50'
           }`}
         >
-          <Wrench className="w-4 h-4 text-sky-400" /> Technical Team Table ({technicalItemsCount})
+          <Wrench className="w-4 h-4 text-sky-400" /> Technical Category ({technicalItemsCount})
+        </button>
+
+        <button
+          onClick={() => {
+            setUsageFilter('PRODUCTION');
+            setFaultyOnlyFilter(false);
+          }}
+          className={`px-4 py-2.5 rounded-t-xl text-xs font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap cursor-pointer ${
+            usageFilter === 'PRODUCTION' && !faultyOnlyFilter
+              ? 'border-amber-500 text-amber-400 bg-amber-950/40'
+              : 'border-transparent text-slate-400 hover:text-amber-300 hover:bg-slate-900/50'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-amber-400" /> Production Category ({productionItemsCount})
         </button>
 
         <button
