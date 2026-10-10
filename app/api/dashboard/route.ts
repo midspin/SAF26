@@ -123,10 +123,26 @@ export async function GET() {
       availableTechnicalInventory += item.availableQuantity || 0;
     });
 
-    // 4. Projectors breakdown
+    // 4. Projectors breakdown (strictly real projectors, excluding OHP, mounts, bases, and screens)
     const projectorItems = items.filter((i) => {
-      const text = `${i.element || ''} ${i.inventoryCategory || ''} ${i.subCategory || ''} ${i.brandProject || ''} ${i.model || ''}`.toLowerCase();
-      return text.includes('projector') || text.includes('projection');
+      const element = (i.element || '').toLowerCase();
+      const subCat = (i.subCategory || '').toLowerCase();
+      const text = `${element} ${i.inventoryCategory || ''} ${subCat} ${i.brandProject || ''} ${i.model || ''}`.toLowerCase();
+
+      if (
+        element.includes('ohp') ||
+        element.includes('mount') ||
+        element.includes('base for projector') ||
+        element.includes('claw') ||
+        element.includes('screen') ||
+        subCat === 'screen' ||
+        subCat === 'mount' ||
+        subCat === 'stand'
+      ) {
+        return false;
+      }
+
+      return text.includes('projector');
     });
 
     const projGroupMap: Record<
