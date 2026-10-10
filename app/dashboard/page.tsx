@@ -925,47 +925,47 @@ export default function DashboardPage() {
 
       case 'card_equipment_allotment':
         return (
-          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-4 h-full flex flex-col justify-between">
+          <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-3.5 h-full flex flex-col justify-between">
             <div>
-              <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
-                <div className="flex items-center gap-2.5">
-                  <BarChart3 className="w-5 h-5 text-[#8b5cf6]" />
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4.5 h-4.5 text-[#8b5cf6]" />
                   <div>
-                    <h3 className="text-sm font-extrabold text-white tracking-tight">
+                    <h3 className="text-xs font-extrabold text-white tracking-tight">
                       Equipment Allotment Graph
                     </h3>
-                    <p className="text-[10px] text-[#8a8d9b]">Component breakdown & allocation percentages</p>
+                    <p className="text-[9px] text-[#8a8d9b]">Component breakdown & allocation percentages</p>
                   </div>
                 </div>
 
-                <span className="text-xs font-mono font-extrabold text-[#8b5cf6] bg-[#8b5cf6]/10 px-2.5 py-1 rounded-xl border border-[#8b5cf6]/20">
+                <span className="text-[11px] font-mono font-extrabold text-[#8b5cf6] bg-[#8b5cf6]/10 px-2 py-0.5 rounded-xl border border-[#8b5cf6]/20">
                   <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Total Items" />
                 </span>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-2.5">
                 {/* COMPONENT 1: PROJECTORS */}
                 {(() => {
                   const tot = stats.totalProjectors;
                   const alc = stats.allocatedProjectors;
                   const pct = tot > 0 ? Math.round((alc / tot) * 100) : 0;
                   return (
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-2 hover:border-[#f97316]/40 transition-colors">
+                    <div className="p-2.5 px-3 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-1.5 hover:border-[#f97316]/40 transition-colors">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-white flex items-center gap-2">
-                          <Camera className="w-4 h-4 text-[#f97316]" /> Projectors
+                        <span className="font-extrabold text-white flex items-center gap-1.5 text-[11px]">
+                          <Camera className="w-3.5 h-3.5 text-[#f97316]" /> Projectors
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="text-[#8a8d9b] text-[10px]">
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-[#8a8d9b] text-[9px]">
                             <strong className="text-white"><AnimatedNumber value={alc} /></strong> / <AnimatedNumber value={tot} />
                           </span>
-                          <span className="font-bold text-[#f97316] bg-[#f97316]/10 px-2 py-0.5 rounded-md border border-[#f97316]/20">
+                          <span className="font-bold text-[#f97316] bg-[#f97316]/10 px-1.5 py-0.5 rounded border border-[#f97316]/20 text-[10px]">
                             <AnimatedNumber value={pct} suffix="%" />
                           </span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-[#141421] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                      <div className="w-full bg-[#141421] h-2 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
                         <div
                           className="bg-gradient-to-r from-[#ea580c] via-[#f97316] to-[#fb923c] h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
                           style={{ width: `${Math.max(pct, 0)}%` }}
@@ -981,22 +981,22 @@ export default function DashboardPage() {
                   const alc = stats.allocatedHSSpeakers;
                   const pct = tot > 0 ? Math.round((alc / tot) * 100) : 0;
                   return (
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-2 hover:border-[#10b981]/40 transition-colors">
+                    <div className="p-2.5 px-3 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-1.5 hover:border-[#10b981]/40 transition-colors">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-white flex items-center gap-2">
-                          <Volume2 className="w-4 h-4 text-[#10b981]" /> Yamaha HS Speakers
+                        <span className="font-extrabold text-white flex items-center gap-1.5 text-[11px]">
+                          <Volume2 className="w-3.5 h-3.5 text-[#10b981]" /> Yamaha HS Speakers
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="text-[#8a8d9b] text-[10px]">
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-[#8a8d9b] text-[9px]">
                             <strong className="text-white"><AnimatedNumber value={alc} /></strong> / <AnimatedNumber value={tot} />
                           </span>
-                          <span className="font-bold text-[#10b981] bg-[#10b981]/10 px-2 py-0.5 rounded-md border border-[#10b981]/20">
+                          <span className="font-bold text-[#10b981] bg-[#10b981]/10 px-1.5 py-0.5 rounded border border-[#10b981]/20 text-[10px]">
                             <AnimatedNumber value={pct} suffix="%" />
                           </span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-[#141421] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                      <div className="w-full bg-[#141421] h-2 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
                         <div
                           className="bg-gradient-to-r from-[#059669] via-[#10b981] to-[#34d399] h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
                           style={{ width: `${Math.max(pct, 0)}%` }}
@@ -1012,22 +1012,22 @@ export default function DashboardPage() {
                   const alc = stats.allocatedMediaPlayers;
                   const pct = tot > 0 ? Math.round((alc / tot) * 100) : 0;
                   return (
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-2 hover:border-[#38bdf8]/40 transition-colors">
+                    <div className="p-2.5 px-3 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-1.5 hover:border-[#38bdf8]/40 transition-colors">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-white flex items-center gap-2">
-                          <Tv className="w-4 h-4 text-[#38bdf8]" /> Media Players
+                        <span className="font-extrabold text-white flex items-center gap-1.5 text-[11px]">
+                          <Tv className="w-3.5 h-3.5 text-[#38bdf8]" /> Media Players
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="text-[#8a8d9b] text-[10px]">
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-[#8a8d9b] text-[9px]">
                             <strong className="text-white"><AnimatedNumber value={alc} /></strong> / <AnimatedNumber value={tot} />
                           </span>
-                          <span className="font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded-md border border-[#38bdf8]/20">
+                          <span className="font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-1.5 py-0.5 rounded border border-[#38bdf8]/20 text-[10px]">
                             <AnimatedNumber value={pct} suffix="%" />
                           </span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-[#141421] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                      <div className="w-full bg-[#141421] h-2 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
                         <div
                           className="bg-gradient-to-r from-[#0284c7] via-[#38bdf8] to-[#7dd3fc] h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
                           style={{ width: `${Math.max(pct, 0)}%` }}
@@ -1043,22 +1043,22 @@ export default function DashboardPage() {
                   const alc = stats.allocatedTechnicalInventory;
                   const pct = tot > 0 ? Math.round((alc / tot) * 100) : 0;
                   return (
-                    <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-2 hover:border-[#8b5cf6]/40 transition-colors">
+                    <div className="p-2.5 px-3 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-1.5 hover:border-[#8b5cf6]/40 transition-colors">
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-white flex items-center gap-2">
-                          <Wrench className="w-4 h-4 text-[#8b5cf6]" /> Overall Tech Inventory
+                        <span className="font-extrabold text-white flex items-center gap-1.5 text-[11px]">
+                          <Wrench className="w-3.5 h-3.5 text-[#8b5cf6]" /> Overall Tech Inventory
                         </span>
-                        <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="text-[#8a8d9b] text-[10px]">
+                        <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                          <span className="text-[#8a8d9b] text-[9px]">
                             <strong className="text-white"><AnimatedNumber value={alc} /></strong> / <AnimatedNumber value={tot} />
                           </span>
-                          <span className="font-bold text-[#8b5cf6] bg-[#8b5cf6]/10 px-2 py-0.5 rounded-md border border-[#8b5cf6]/20">
+                          <span className="font-bold text-[#8b5cf6] bg-[#8b5cf6]/10 px-1.5 py-0.5 rounded border border-[#8b5cf6]/20 text-[10px]">
                             <AnimatedNumber value={pct} suffix="%" />
                           </span>
                         </div>
                       </div>
 
-                      <div className="w-full bg-[#141421] h-3 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                      <div className="w-full bg-[#141421] h-2 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
                         <div
                           className="bg-gradient-to-r from-[#6d28d9] via-[#8b5cf6] to-[#c084fc] h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
                           style={{ width: `${Math.max(pct, 0)}%` }}
