@@ -702,17 +702,12 @@ export default function DashboardPage() {
                       key={idx}
                       className="p-4 rounded-2xl bg-[#1c1c2a] border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-[#f97316]/40 transition-colors"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-2xl bg-[#f97316]/10 border border-[#f97316]/20 flex items-center justify-center text-[#f97316] font-bold text-xs shrink-0">
-                          {p.brand.slice(0, 3).toUpperCase()}
-                        </div>
                         <div>
                           <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
                             {p.brand} {p.model}
                           </h4>
                           <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
                         </div>
-                      </div>
 
                       <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
                         <div className="text-center">
