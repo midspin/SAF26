@@ -67,8 +67,8 @@ const CARD_COL_SPANS: Record<string, string> = {
   card_projectors: 'lg:col-span-4',
   card_audio_media: 'lg:col-span-4',
   card_equipment_allotment: 'lg:col-span-4',
-  card_allocation_graph: 'lg:col-span-7',
-  card_artwork_distribution: 'lg:col-span-5',
+  card_allocation_graph: 'lg:col-span-6',
+  card_artwork_distribution: 'lg:col-span-6',
 };
 
 // Card Human Readable Labels for Layout Manager
@@ -1181,49 +1181,54 @@ export default function DashboardPage() {
 
       case 'card_artwork_distribution':
         return (
-          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5 h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
-                  <BarChart3 className="w-4.5 h-4.5 text-[#a855f7]" /> Artwork Spatial Distribution Graph
-                </h3>
-                <p className="text-[10px] text-[#8a8d9b]">Artwork assignments per exhibition venue</p>
+          <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-3.5 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4.5 h-4.5 text-[#a855f7]" />
+                  <div>
+                    <h3 className="text-xs font-extrabold text-white tracking-tight">
+                      Artwork Spatial Distribution Graph
+                    </h3>
+                    <p className="text-[9px] text-[#8a8d9b]">Artwork assignments per exhibition venue</p>
+                  </div>
+                </div>
+
+                <Link href="/artworks" className="text-xs text-[#38bdf8] hover:underline font-semibold flex items-center gap-1">
+                  View Artworks <ArrowUpRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
 
-              <Link href="/artworks" className="text-xs text-[#38bdf8] hover:underline font-semibold flex items-center gap-1">
-                View Artworks <ArrowUpRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
+              <div className="space-y-2.5">
+                {venueDistribution.length === 0 ? (
+                  <div className="p-6 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5 space-y-1">
+                    <p className="font-semibold text-white">No venues in database</p>
+                    <p className="text-[11px]">Database is empty. Add venues to view spatial artwork distribution.</p>
+                  </div>
+                ) : (
+                  venueDistribution.slice(0, 5).map((v, idx) => {
+                    const maxVal = Math.max(...venueDistribution.map((vd) => vd.artworkCount), 1);
+                    const pct = Math.round((v.artworkCount / maxVal) * 100);
+                    return (
+                      <div key={idx} className="p-2.5 px-3 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-1.5 hover:border-[#a855f7]/40 transition-colors">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-extrabold text-white flex items-center gap-1.5 text-[11px]">
+                            <Building2 className="w-3.5 h-3.5 text-[#a855f7]" /> {v.name}
+                          </span>
+                          <AnimatedNumber value={v.artworkCount} suffix=" Artworks" className="font-mono font-extrabold text-[#a855f7] text-[11px]" />
+                        </div>
 
-            <div className="space-y-4 py-1">
-              {venueDistribution.length === 0 ? (
-                <div className="p-6 text-center text-[#8a8d9b] text-xs bg-[#1c1c2a] rounded-2xl border border-white/5 space-y-1">
-                  <p className="font-semibold text-white">No venues in database</p>
-                  <p className="text-[11px]">Database is empty. Add venues to view spatial artwork distribution.</p>
-                </div>
-              ) : (
-                venueDistribution.slice(0, 4).map((v, idx) => {
-                  const maxVal = Math.max(...venueDistribution.map((vd) => vd.artworkCount), 1);
-                  const pct = Math.round((v.artworkCount / maxVal) * 100);
-                  return (
-                    <div key={idx} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-extrabold text-white flex items-center gap-2">
-                          <Building2 className="w-3.5 h-3.5 text-[#a855f7]" /> {v.name}
-                        </span>
-                        <AnimatedNumber value={v.artworkCount} suffix=" Artworks" className="font-mono font-bold text-[#a855f7]" />
+                        <div className="w-full bg-[#141421] h-2 rounded-full overflow-hidden p-0.5 border border-white/5 relative">
+                          <div
+                            className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#38bdf8] h-full rounded-full transition-all duration-1000 ease-out shadow-sm"
+                            style={{ width: `${Math.max(pct, 0)}%` }}
+                          />
+                        </div>
                       </div>
-
-                      <div className="w-full bg-[#1c1c2a] h-3 rounded-full overflow-hidden p-0.5 border border-white/5">
-                        <div
-                          className="bg-gradient-to-r from-[#6366f1] via-[#a855f7] to-[#38bdf8] h-full rounded-full transition-all duration-1000"
-                          style={{ width: `${Math.max(pct, 0)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
+                    );
+                  })
+                )}
+              </div>
             </div>
           </div>
         );
