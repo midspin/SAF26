@@ -139,10 +139,10 @@ export async function GET() {
     let balanceProjectors = 0;
 
     projectorItems.forEach((item) => {
-      const brand = item.brandProject && item.brandProject !== 'Na' ? item.brandProject : 'Epson';
-      const model = item.model && item.model !== 'Na' ? item.model : 'EB-PU2010W 10K';
-      const element = item.element || 'Laser Projector';
-      const key = `${brand}-${model}`;
+      const brand = item.brandProject && item.brandProject !== 'Na' ? item.brandProject : '';
+      const model = item.model && item.model !== 'Na' ? item.model : '';
+      const element = item.element || 'Projector';
+      const key = `${element}-${brand}-${model}`;
 
       const tot = item.totalQuantity || 0;
       const alc = item.allocatedQuantity || 0;
@@ -153,7 +153,7 @@ export async function GET() {
       balanceProjectors += bal;
 
       if (!projGroupMap[key]) {
-        projGroupMap[key] = { brand, model, element, total: 0, allocated: 0, balance: 0 };
+        projGroupMap[key] = { brand: brand || 'Item', model: model ? ` ${model}` : '', element, total: 0, allocated: 0, balance: 0 };
       }
       projGroupMap[key].total += tot;
       projGroupMap[key].allocated += alc;

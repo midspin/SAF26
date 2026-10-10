@@ -704,9 +704,11 @@ export default function DashboardPage() {
                     >
                         <div>
                           <h4 className="text-xs font-extrabold text-white flex items-center gap-2">
-                            {p.brand} {p.model}
+                            {p.element}
                           </h4>
-                          <p className="text-[10px] text-[#8a8d9b] mt-0.5">{p.element}</p>
+                          <p className="text-[10px] text-[#8a8d9b] mt-0.5">
+                            {p.brand && p.brand !== 'Item' ? `${p.brand} ${p.model}`.trim() : 'Projector'}
+                          </p>
                         </div>
 
                       <div className="flex items-center gap-3 text-xs shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-white/5">
