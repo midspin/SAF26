@@ -50,25 +50,25 @@ const DEFAULT_STAT_TILES = [
 
 const DEFAULT_CARDS = [
   'card_progress_tracker',
+  'card_equipment_allotment',
+  'card_artwork_distribution',
   'card_project_status_by_venue',
   'card_active_production_projects',
   'card_projectors',
   'card_audio_media',
-  'card_equipment_allotment',
   'card_allocation_graph',
-  'card_artwork_distribution',
 ];
 
 // Card column spans in 12-column grid
 const CARD_COL_SPANS: Record<string, string> = {
-  card_progress_tracker: 'lg:col-span-6',
+  card_progress_tracker: 'lg:col-span-5',
+  card_equipment_allotment: 'lg:col-span-4',
+  card_artwork_distribution: 'lg:col-span-3',
   card_project_status_by_venue: 'lg:col-span-6',
   card_active_production_projects: 'lg:col-span-6',
   card_projectors: 'lg:col-span-4',
   card_audio_media: 'lg:col-span-4',
-  card_equipment_allotment: 'lg:col-span-4',
-  card_allocation_graph: 'lg:col-span-6',
-  card_artwork_distribution: 'lg:col-span-6',
+  card_allocation_graph: 'lg:col-span-4',
 };
 
 // Card Human Readable Labels for Layout Manager
@@ -176,7 +176,7 @@ export default function DashboardPage() {
           const parsed = JSON.parse(savedStatOrder);
           if (Array.isArray(parsed) && parsed.length > 0) setStatOrder(parsed);
         }
-        const savedCardOrder = localStorage.getItem('saf_dashboard_card_order');
+        const savedCardOrder = localStorage.getItem('saf_dashboard_card_order_v3');
         if (savedCardOrder) {
           const parsed = JSON.parse(savedCardOrder);
           if (Array.isArray(parsed) && parsed.length > 0) setCardOrder(parsed);
@@ -239,7 +239,7 @@ export default function DashboardPage() {
   const saveCardOrder = (newOrder: string[]) => {
     setCardOrder(newOrder);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('saf_dashboard_card_order', JSON.stringify(newOrder));
+      localStorage.setItem('saf_dashboard_card_order_v3', JSON.stringify(newOrder));
     }
   };
 
