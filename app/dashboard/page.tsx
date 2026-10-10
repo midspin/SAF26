@@ -68,7 +68,7 @@ const CARD_COL_SPANS: Record<string, string> = {
   card_active_production_projects: 'lg:col-span-4',
   card_projectors: 'lg:col-span-4',
   card_audio_media: 'lg:col-span-4',
-  card_allocation_graph: 'lg:col-span-4',
+  card_allocation_graph: 'lg:col-span-3',
 };
 
 // Card Human Readable Labels for Layout Manager
@@ -1068,104 +1068,108 @@ export default function DashboardPage() {
 
       case 'card_allocation_graph':
         return (
-          <div className="p-6 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-5 h-full flex flex-col justify-between">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div>
-                <h3 className="text-sm font-extrabold text-white tracking-tight flex items-center gap-2">
-                  <PieChart className="w-4.5 h-4.5 text-[#38bdf8]" /> Technical Equipment Allocation Graph
-                </h3>
-                <p className="text-[10px] text-[#8a8d9b]">Proportional allocation & available balance across inventory categories</p>
+          <div className="p-5 rounded-3xl bg-[#232334] border border-white/5 shadow-xl space-y-3.5 h-full flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between border-b border-white/10 pb-2.5 mb-3">
+                <div className="flex items-center gap-2">
+                  <PieChart className="w-4.5 h-4.5 text-[#38bdf8]" />
+                  <div>
+                    <h3 className="text-xs font-extrabold text-white tracking-tight">
+                      Technical Allocation Graph
+                    </h3>
+                    <p className="text-[9px] text-[#8a8d9b]">Proportional allocation & balance</p>
+                  </div>
+                </div>
+
+                <span className="text-[10px] font-mono font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2 py-0.5 rounded-lg border border-[#38bdf8]/20">
+                  <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Pool Items" />
+                </span>
               </div>
 
-              <span className="text-xs font-mono font-bold text-[#38bdf8] bg-[#38bdf8]/10 px-2.5 py-1 rounded-lg border border-[#38bdf8]/20">
-                <AnimatedNumber value={stats.totalTechnicalInventory} suffix=" Technical Pool Items" />
-              </span>
-            </div>
+              <div className="flex flex-col items-center justify-center gap-3 py-1">
+                <div className="relative w-36 h-36 shrink-0 flex items-center justify-center">
+                  <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-xl">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="33" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                    <circle cx="50" cy="50" r="24" fill="none" stroke="#1c1c2a" strokeWidth="5" />
 
-            <div className="flex flex-col sm:flex-row items-center justify-around gap-6 py-2">
-              <div className="relative w-48 h-48 shrink-0 flex items-center justify-center">
-                <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-xl">
-                  <circle cx="50" cy="50" r="42" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                  <circle cx="50" cy="50" r="33" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                  <circle cx="50" cy="50" r="24" fill="none" stroke="#1c1c2a" strokeWidth="5" />
-                  <circle cx="50" cy="50" r="15" fill="none" stroke="#1c1c2a" strokeWidth="5" />
+                    {stats.totalTechnicalInventory > 0 && (
+                      <>
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          fill="none"
+                          stroke="#f97316"
+                          strokeWidth="5"
+                          strokeDasharray="263.89"
+                          strokeDashoffset={263.89 * (1 - (stats.totalProjectors / Math.max(stats.totalTechnicalInventory, 1)))}
+                          strokeLinecap="round"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="33"
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth="5"
+                          strokeDasharray="207.34"
+                          strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
+                          strokeLinecap="round"
+                        />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="24"
+                          fill="none"
+                          stroke="#38bdf8"
+                          strokeWidth="5"
+                          strokeDasharray="150.79"
+                          strokeDashoffset={150.79 * (1 - (stats.totalMediaPlayers / Math.max(stats.totalTechnicalInventory, 1)))}
+                          strokeLinecap="round"
+                        />
+                      </>
+                    )}
+                  </svg>
 
-                  {stats.totalTechnicalInventory > 0 && (
-                    <>
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="42"
-                        fill="none"
-                        stroke="#f97316"
-                        strokeWidth="5"
-                        strokeDasharray="263.89"
-                        strokeDashoffset={263.89 * (1 - (stats.totalProjectors / Math.max(stats.totalTechnicalInventory, 1)))}
-                        strokeLinecap="round"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="33"
-                        fill="none"
-                        stroke="#10b981"
-                        strokeWidth="5"
-                        strokeDasharray="207.34"
-                        strokeDashoffset={207.34 * (1 - (stats.totalHSSpeakers / Math.max(stats.totalTechnicalInventory, 1)))}
-                        strokeLinecap="round"
-                      />
-                      <circle
-                        cx="50"
-                        cy="50"
-                        r="24"
-                        fill="none"
-                        stroke="#38bdf8"
-                        strokeWidth="5"
-                        strokeDasharray="150.79"
-                        strokeDashoffset={150.79 * (1 - (stats.totalMediaPlayers / Math.max(stats.totalTechnicalInventory, 1)))}
-                        strokeLinecap="round"
-                      />
-                    </>
-                  )}
-                </svg>
-
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-                  <AnimatedNumber
-                    value={
-                      stats.totalTechnicalInventory > 0
-                        ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
-                        : 0
-                    }
-                    suffix="%"
-                    className="text-2xl font-black text-white leading-none"
-                  />
-                  <span className="text-[9px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
-                </div>
-              </div>
-
-              <div className="space-y-2.5 text-xs text-[#8a8d9b] w-full sm:w-auto">
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#f97316] shrink-0" />
-                    <span className="font-semibold text-white">Projectors</span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
+                    <AnimatedNumber
+                      value={
+                        stats.totalTechnicalInventory > 0
+                          ? Math.round((stats.allocatedTechnicalInventory / stats.totalTechnicalInventory) * 100)
+                          : 0
+                      }
+                      suffix="%"
+                      className="text-xl font-black text-white leading-none"
+                    />
+                    <span className="text-[8px] text-[#8a8d9b] font-bold uppercase tracking-wider mt-0.5">Allocated</span>
                   </div>
-                  <span className="font-bold text-[#f97316]"><AnimatedNumber value={stats.totalProjectors} suffix=" units" /></span>
                 </div>
 
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#10b981] shrink-0" />
-                    <span className="font-semibold text-white">Yamaha HS Speakers</span>
+                <div className="space-y-1.5 text-[11px] text-[#8a8d9b] w-full">
+                  <div className="flex items-center justify-between gap-2 p-1.5 px-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#f97316] shrink-0" />
+                      <span className="font-semibold text-white truncate text-[10px]">Projectors</span>
+                    </div>
+                    <span className="font-bold text-[#f97316] text-[10px] shrink-0"><AnimatedNumber value={stats.totalProjectors} suffix=" u" /></span>
                   </div>
-                  <span className="font-bold text-[#10b981]"><AnimatedNumber value={stats.totalHSSpeakers} suffix=" units" /></span>
-                </div>
 
-                <div className="flex items-center justify-between gap-4 p-2 rounded-xl bg-[#1c1c2a] border border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-[#38bdf8] shrink-0" />
-                    <span className="font-semibold text-white">Media Players</span>
+                  <div className="flex items-center justify-between gap-2 p-1.5 px-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#10b981] shrink-0" />
+                      <span className="font-semibold text-white truncate text-[10px]">Yamaha Speakers</span>
+                    </div>
+                    <span className="font-bold text-[#10b981] text-[10px] shrink-0"><AnimatedNumber value={stats.totalHSSpeakers} suffix=" u" /></span>
                   </div>
-                  <span className="font-bold text-[#38bdf8]"><AnimatedNumber value={stats.totalMediaPlayers} suffix=" units" /></span>
+
+                  <div className="flex items-center justify-between gap-2 p-1.5 px-2.5 rounded-xl bg-[#1c1c2a] border border-white/5">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#38bdf8] shrink-0" />
+                      <span className="font-semibold text-white truncate text-[10px]">Media Players</span>
+                    </div>
+                    <span className="font-bold text-[#38bdf8] text-[10px] shrink-0"><AnimatedNumber value={stats.totalMediaPlayers} suffix=" u" /></span>
+                  </div>
                 </div>
               </div>
             </div>
