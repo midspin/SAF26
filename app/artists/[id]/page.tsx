@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 
 const ArtistPdfExportModal = dynamic(() => import('@/components/ArtistPdfExportModal'), { ssr: false });
 const ArtistDocketModal = dynamic(() => import('@/components/ArtistDocketModal'), { ssr: false });
+const ArtistProductionItemsSection = dynamic(() => import('@/components/ArtistProductionItemsSection'), { ssr: false });
 import {
   Users,
   User,
@@ -171,6 +172,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
 
   // Can assign items to Production Allotment: Super Admin, Production Team only (PROGRAMMING TEAM is VO)
   const canAssignProductionAllotment = isProductionTeam;
+  const canManageProductionItems = isProductionTeam || isSuperAdmin;
 
   // Can assign items to Technical Stock Allotment: Super Admin, Technical Team, Inventory Team
   const canAssignTechnicalAllotment = isTechnicalOrInventoryTeam;
@@ -2487,6 +2489,15 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
             </div>
+
+            {/* PRODUCTION ITEMS CARD */}
+            <ArtistProductionItemsSection
+              artistId={id}
+              productionRequirements={artistData?.productionRequirements || []}
+              artworks={artistData?.artworks || []}
+              canManage={canManageProductionItems}
+              onItemMutated={() => fetchArtistDetails(false)}
+            />
           </>
         ) : (
           <>
@@ -2572,6 +2583,15 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
             </div>
+
+            {/* PRODUCTION ITEMS CARD */}
+            <ArtistProductionItemsSection
+              artistId={id}
+              productionRequirements={artistData?.productionRequirements || []}
+              artworks={artistData?.artworks || []}
+              canManage={canManageProductionItems}
+              onItemMutated={() => fetchArtistDetails(false)}
+            />
 
             {/* TECHNICAL STOCK ALLOTMENT CARD */}
             <div className="p-6 rounded-3xl bg-[#232334] border border-emerald-500/30 shadow-2xl space-y-4">

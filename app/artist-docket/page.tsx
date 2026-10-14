@@ -153,51 +153,105 @@ export default function ArtistDocketPage() {
         return dept === 'PRODUCTION' || cat === 'PRODUCTION' || usage === 'PRODUCTION';
       });
 
-      if (prodAllocations.length === 0) {
-        alert('No Production Allotment records found matching the current filters.');
+      // Also fetch Production Items (custom requirements)
+      let prodReqItems: any[] = [];
+      try {
+        const pRes = await fetch('/api/production-requirements');
+        const pData = await pRes.json();
+        if (pData.success && Array.isArray(pData.items)) {
+          prodReqItems = pData.items.filter((item: any) => {
+            if (item.artistId && !activeArtistIds.has(item.artistId)) return false;
+            return true;
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching production requirements for export:', e);
+      }
+
+      if (prodAllocations.length === 0 && prodReqItems.length === 0) {
+        alert('No Production Allotment or Production Item records found matching the current filters.');
         return;
       }
 
-      const rows = prodAllocations.map((alloc: any) => {
-        const item = alloc.inventoryItem || {};
-        const artist = alloc.artist || {};
-        const artwork = alloc.artwork || {};
-        const venue = alloc.venue || {};
-        const room = alloc.room || {};
-
-        const dispatchedDateVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString('en-GB') : 'N/A';
-        const dispatchedTimeVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
-
-        return {
-          'Artist Name': artist.artistName || 'Unassigned Artist',
-          'Artwork Name': artwork.artworkName || 'Unassigned Artwork',
-          'Allocated Venue': venue.venueName || 'Unassigned Venue',
-          'Allocated Room Number': room.roomNumber || (room.roomName ? `Room (${room.roomName})` : 'N/A'),
-          'Inventory Category': item.inventoryCategory || 'N/A',
-          'SAF Code': item.safCode || 'N/A',
-          'Sub Category': item.subCategory || 'N/A',
-          'Element / Item Description': item.element || 'N/A',
-          'Brand / Project': item.brandProject || 'N/A',
-          'Model': item.model || 'N/A',
-          'Size LWH': item.sizeLwh || 'N/A',
-          'UOM': item.uom || 'Nos',
-          'Serial No': item.serialNo || 'N/A',
-          'Asset ID': item.assetId || 'N/A',
-          'Requested Quantity': alloc.requestedQuantity ?? 1,
-          'Approved Quantity': alloc.approvedQuantity ?? 1,
-          'Issued Quantity': alloc.issuedQuantity ?? 0,
-          'Allocation Status': alloc.status || 'Approved',
-          'Dispatched By': alloc.dispatchedByName || 'N/A',
-          'Transported By': alloc.transportedByName || 'N/A',
-          'Dispatched Date': dispatchedDateVal,
-          'Dispatched Time': dispatchedTimeVal,
-          'Allocation Notes': alloc.notes || '',
-        };
-      });
-
-      const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, 'Production Allotments');
+
+      if (prodAllocations.length > 0) {
+        const rows = prodAllocations.map((alloc: any) => {
+          const item = alloc.inventoryItem || {};
+          const artist = alloc.artist || {};
+          const artwork = alloc.artwork || {};
+          const venue = alloc.venue || {};
+          const room = alloc.room || {};
+
+          const dispatchedDateVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString('en-GB') : 'N/A';
+          const dispatchedTimeVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
+
+          return {
+            'Artist Name': artist.artistName || 'Unassigned Artist',
+            'Artwork Name': artwork.artworkName || 'Unassigned Artwork',
+            'Allocated Venue': venue.venueName || 'Unassigned Venue',
+            'Allocated Room Number': room.roomNumber || (room.roomName ? `Room (${room.roomName})` : 'N/A'),
+            'Inventory Category': item.inventoryCategory || 'N/A',
+            'SAF Code': item.safCode || 'N/A',
+            'Sub Category': item.subCategory || 'N/A',
+            'Element / Item Description': item.element || 'N/A',
+            'Brand / Project': item.brandProject || 'N/A',
+            'Model': item.model || 'N/A',
+            'Size LWH': item.sizeLwh || 'N/A',
+            'UOM': item.uom || 'Nos',
+            'Serial No': item.serialNo || 'N/A',
+            'Asset ID': item.assetId || 'N/A',
+            'Requested Quantity': alloc.requestedQuantity ?? 1,
+            'Approved Quantity': alloc.approvedQuantity ?? 1,
+            'Issued Quantity': alloc.issuedQuantity ?? 0,
+            'Allocation Status': alloc.status || 'Approved',
+            'Dispatched By': alloc.dispatchedByName || 'N/A',
+            'Transported By': alloc.transportedByName || 'N/A',
+            'Dispatched Date': dispatchedDateVal,
+            'Dispatched Time': dispatchedTimeVal,
+            'Allocation Notes': alloc.notes || '',
+          };
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Production Allotments');
+      }
+
+      if (prodReqItems.length > 0) {
+        const reqRows = prodReqItems.map((item: any) => {
+          let images: string[] = [];
+          try {
+            if (item.referenceImages) images = JSON.parse(item.referenceImages);
+          } catch {
+            images = item.referenceImages ? [item.referenceImages] : [];
+          }
+
+          const hasDim = item.length || item.breadth || item.height;
+          const dimText = hasDim
+            ? `${item.length || '-'}${item.breadth ? ` × ${item.breadth}` : ''}${item.height ? ` × ${item.height}` : ''} ${item.unit || ''}`
+            : '-';
+
+          return {
+            'Artist Name': item.artist?.artistName || 'Unassigned Artist',
+            'Artwork Name': item.artwork?.artworkName || 'Unassigned Artwork',
+            'Production Category': item.productionCategory || item.requirementType || 'Production',
+            'Sub Category': item.subCategory || 'General',
+            'Element / Item': item.element || item.description || 'Production Item',
+            'Type / Spec': item.typeSpec || item.specification || '-',
+            'Dimensions': dimText,
+            'Quantity': item.quantity || 1,
+            'Acquisition / Source': item.source || 'SAF Inventory',
+            'Status': item.status || 'Requisition in pending',
+            'Assigned To': item.assignedTo || '-',
+            'Remarks': item.remarks || item.notes || '-',
+            'Reference Images': images.join(', '),
+          };
+        });
+
+        const reqSheet = XLSX.utils.json_to_sheet(reqRows);
+        XLSX.utils.book_append_sheet(workbook, reqSheet, 'Production Items');
+      }
+
       XLSX.writeFile(workbook, `SAF_Production_Allotments_Master_${Date.now()}.xlsx`);
     } catch (err) {
       console.error('Error exporting Production Allotments Excel:', err);

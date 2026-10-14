@@ -179,6 +179,39 @@ export default function ArtistDocketModal({
     return dept === 'TECHNICAL' || cat === 'TECHNICAL' || usage === 'TECHNICAL' || (!dept && cat !== 'PRODUCTION' && usage !== 'PRODUCTION');
   });
 
+  // Production Items / Requirements
+  const productionItems = (artistData?.productionRequirements || []).map((p: any) => {
+    let images: string[] = [];
+    try {
+      if (p.referenceImages) {
+        images = JSON.parse(p.referenceImages);
+        if (!Array.isArray(images)) images = [];
+      }
+    } catch {
+      images = p.referenceImages ? [p.referenceImages] : [];
+    }
+
+    const hasDim = p.length || p.breadth || p.height;
+    const dimText = hasDim
+      ? `${p.length || '-'}${p.breadth ? ` × ${p.breadth}` : ''}${p.height ? ` × ${p.height}` : ''} ${p.unit || ''}`
+      : '-';
+
+    return {
+      ...p,
+      element: p.element || p.description || 'Production Item',
+      category: p.productionCategory || p.requirementType || 'Production',
+      subCategory: p.subCategory || 'General',
+      spec: p.typeSpec || p.specification || '-',
+      dimensions: dimText,
+      qty: p.quantity || 1,
+      source: p.source || 'SAF Inventory',
+      status: p.status || 'Requisition in pending',
+      assignedTo: p.assignedTo || '-',
+      remarks: p.remarks || p.notes || '-',
+      images,
+    };
+  });
+
   // Purchase / Rentals (Rent | Purchase item LIST)
   const purchaseList = (artistData?.purchaseRequests || []).map((p: any) => ({
     type: 'PURCHASE',
@@ -258,45 +291,69 @@ export default function ArtistDocketModal({
   };
 
   const exportArtistProdExcel = () => {
-    if (!productionAllotments || productionAllotments.length === 0) {
-      alert('No Production Allotment records found for this artist.');
+    if ((!productionAllotments || productionAllotments.length === 0) && productionItems.length === 0) {
+      alert('No Production Allotment or Production Item records found for this artist.');
       return;
     }
-    const rows = productionAllotments.map((alloc: any) => {
-      const item = alloc.inventoryItem || {};
-      const dispatchedDateVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString('en-GB') : 'N/A';
-      const dispatchedTimeVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
-
-      return {
-        'Artist Name': artistData?.artistName || 'N/A',
-        'Artwork Name': primaryArtwork?.artworkName || 'N/A',
-        'Allocated Venue': venueName,
-        'Allocated Room Number': roomName,
-        'Inventory Category': item.inventoryCategory || 'N/A',
-        'SAF Code': item.safCode || 'N/A',
-        'Sub Category': item.subCategory || 'N/A',
-        'Element / Item Description': item.element || 'N/A',
-        'Brand / Project': item.brandProject || 'N/A',
-        'Model': item.model || 'N/A',
-        'Size LWH': item.sizeLwh || 'N/A',
-        'UOM': item.uom || 'Nos',
-        'Serial No': item.serialNo || 'N/A',
-        'Asset ID': item.assetId || 'N/A',
-        'Requested Quantity': alloc.requestedQuantity ?? 1,
-        'Approved Quantity': alloc.approvedQuantity ?? 1,
-        'Issued Quantity': alloc.issuedQuantity ?? 0,
-        'Allocation Status': alloc.status || 'Approved',
-        'Dispatched By': alloc.dispatchedByName || 'N/A',
-        'Transported By': alloc.transportedByName || 'N/A',
-        'Dispatched Date': dispatchedDateVal,
-        'Dispatched Time': dispatchedTimeVal,
-        'Allocation Notes': alloc.notes || '',
-      };
-    });
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Production Allotments');
+
+    if (productionAllotments.length > 0) {
+      const rows = productionAllotments.map((alloc: any) => {
+        const item = alloc.inventoryItem || {};
+        const dispatchedDateVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleDateString('en-GB') : 'N/A';
+        const dispatchedTimeVal = alloc.dispatchedAt ? new Date(alloc.dispatchedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : 'N/A';
+
+        return {
+          'Artist Name': artistData?.artistName || 'N/A',
+          'Artwork Name': primaryArtwork?.artworkName || 'N/A',
+          'Allocated Venue': venueName,
+          'Allocated Room Number': roomName,
+          'Inventory Category': item.inventoryCategory || 'N/A',
+          'SAF Code': item.safCode || 'N/A',
+          'Sub Category': item.subCategory || 'N/A',
+          'Element / Item Description': item.element || 'N/A',
+          'Brand / Project': item.brandProject || 'N/A',
+          'Model': item.model || 'N/A',
+          'Size LWH': item.sizeLwh || 'N/A',
+          'UOM': item.uom || 'Nos',
+          'Serial No': item.serialNo || 'N/A',
+          'Asset ID': item.assetId || 'N/A',
+          'Requested Quantity': alloc.requestedQuantity ?? 1,
+          'Approved Quantity': alloc.approvedQuantity ?? 1,
+          'Issued Quantity': alloc.issuedQuantity ?? 0,
+          'Allocation Status': alloc.status || 'Approved',
+          'Dispatched By': alloc.dispatchedByName || 'N/A',
+          'Transported By': alloc.transportedByName || 'N/A',
+          'Dispatched Date': dispatchedDateVal,
+          'Dispatched Time': dispatchedTimeVal,
+          'Allocation Notes': alloc.notes || '',
+        };
+      });
+
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Production Allotments');
+    }
+
+    if (productionItems.length > 0) {
+      const prodItemRows = productionItems.map((item: any) => ({
+        'Artist Name': artistData?.artistName || 'N/A',
+        'Artwork Name': item.artwork?.artworkName || primaryArtwork?.artworkName || 'N/A',
+        'Production Category': item.category,
+        'Sub Category': item.subCategory,
+        'Element / Item': item.element,
+        'Type / Spec': item.spec,
+        'Dimensions': item.dimensions,
+        'Quantity': item.qty,
+        'Acquisition / Source': item.source,
+        'Status': item.status,
+        'Assigned To': item.assignedTo,
+        'Remarks': item.remarks,
+        'Reference Images': (item.images || []).join(', '),
+      }));
+      const itemSheet = XLSX.utils.json_to_sheet(prodItemRows);
+      XLSX.utils.book_append_sheet(workbook, itemSheet, 'Production Items');
+    }
+
     const safeArtistName = (artistData?.artistName || 'Artist').replace(/[^a-zA-Z0-9]/g, '_');
     XLSX.writeFile(workbook, `SAF_Production_Allotments_${safeArtistName}_${Date.now()}.xlsx`);
   };
@@ -654,6 +711,79 @@ export default function ArtistDocketModal({
                                   </td>
                                   <td className="p-2 font-black text-slate-950 text-center">
                                     {alloc.issuedQuantity || alloc.requestedQuantity || 1}
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Production Items / Requirements Table */}
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-black text-sm text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        Production Items & Specifications ({productionItems.length})
+                      </h3>
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                        Specialized Needs & Fabrications
+                      </span>
+                    </div>
+                    <div className="rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                      <table className="w-full text-left border-collapse text-[11px]">
+                        <thead>
+                          <tr className="bg-[#cad19a] text-[#2c330c] font-black uppercase text-[10px] tracking-wider">
+                            <th className="p-2 border-r border-[#b6bd85]">Sub Category</th>
+                            <th className="p-2 border-r border-[#b6bd85]">Element / Item</th>
+                            <th className="p-2 border-r border-[#b6bd85]">Type / Spec</th>
+                            <th className="p-2 border-r border-[#b6bd85] text-center">Dimensions</th>
+                            <th className="p-2 border-r border-[#b6bd85] text-center">Qty</th>
+                            <th className="p-2 border-r border-[#b6bd85]">Source</th>
+                            <th className="p-2 border-r border-[#b6bd85]">Status</th>
+                            <th className="p-2">Assigned To</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {productionItems.length === 0 ? (
+                            <tr>
+                              <td colSpan={8} className="p-3 text-center text-slate-400 italic bg-[#f3f4f6]">
+                                No custom production items or fabrication requirements registered.
+                              </td>
+                            </tr>
+                          ) : (
+                            productionItems.map((item: any, idx: number) => {
+                              const isEven = idx % 2 === 0;
+                              return (
+                                <tr key={item.id || idx} className={isEven ? 'bg-[#ebecee]' : 'bg-[#f4f5f6]'}>
+                                  <td className="p-2 font-bold text-slate-900 border-r border-slate-200">
+                                    {item.subCategory}
+                                  </td>
+                                  <td className="p-2 font-bold text-slate-900 border-r border-slate-200 truncate max-w-[150px]">
+                                    {item.element}
+                                  </td>
+                                  <td className="p-2 text-slate-700 border-r border-slate-200 truncate max-w-[120px]">
+                                    {item.spec}
+                                  </td>
+                                  <td className="p-2 font-mono text-center text-slate-700 border-r border-slate-200">
+                                    {item.dimensions}
+                                  </td>
+                                  <td className="p-2 font-black text-slate-950 text-center border-r border-slate-200">
+                                    {item.qty}
+                                  </td>
+                                  <td className="p-2 text-slate-800 border-r border-slate-200">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-200 text-slate-800">
+                                      {item.source}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 border-r border-slate-200">
+                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800">
+                                      {item.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-2 text-slate-700 truncate max-w-[100px]">
+                                    {item.assignedTo}
                                   </td>
                                 </tr>
                               );

@@ -445,13 +445,27 @@ model ProductionRequirement {
   artist          Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
   artworkId       String?
   artwork         Artwork? @relation(fields: [artworkId], references: [id], onDelete: SetNull)
-  requirementType String   // Furniture, Fabrication, Carpentry, Metal Work, Printing, Materials, Transport, Labour, Tools, Electrical, Logistics, Consumables, Other
-  description     String
+  requirementType String?  // Furniture, Fabrication, Carpentry, Metal Work, Printing, Materials, Transport, Labour, Tools, Electrical, Logistics, Consumables, Other
+  description     String?
   quantity        Int      @default(1)
   specification   String?
-  priority        String   @default("Medium") // Low, Medium, High, Critical
-  status          String   @default("Open") // Open, Allocated, Procurement Requested, Fulfilled, Cancelled
+  priority        String?  @default("Medium") // Low, Medium, High, Critical
+  status          String   @default("Requisition in pending") // Done, requisition confirmed, requisition on hold, requisition in pending, artist info pending
   notes           String?
+  
+  // Production Item Fields
+  productionCategory String? // T - technical, RI- infrastructure, CF- curtain and flooring, F- furniture, P- printing, SPN- special project needs
+  subCategory        String? // RI- walls, T- audio, T- video, etc.
+  element            String? // Element/Item
+  typeSpec           String? // Type/Spec
+  referenceImages    String? // JSON stringified array of image URLs
+  length             String?
+  breadth            String?
+  height             String?
+  unit               String? // mm, cm, m, inch, ft, pcs
+  source             String? @default("SAF Inventory") // SAF Inventory, purchase, rental, fabricate, By Artist
+  assignedTo         String?
+  remarks            String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 

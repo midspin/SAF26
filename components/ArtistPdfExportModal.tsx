@@ -237,6 +237,18 @@ export default function ArtistPdfExportModal({
 
   const rentPurchaseList = [...purchaseItems, ...rentalItems];
 
+  // Custom Production Items
+  const customProductionItems = (artistData?.productionRequirements || []).map((pr: any) => ({
+    id: pr.id,
+    subCategory: pr.subCategory || pr.productionCategory || 'Production',
+    element: pr.element || pr.description || 'Production Item',
+    typeSpec: pr.typeSpec || pr.specification || '-',
+    qty: pr.quantity || 1,
+    source: pr.source || 'SAF Inventory',
+    status: pr.status || 'Requisition in pending',
+    assignedTo: pr.assignedTo || '-',
+  }));
+
   // Dynamic pagination item splits across 3 distinct tables (fits up to 13 total rows on Page 1)
   const PAGE_1_CAPACITY = 13;
   let page1RemainingCapacity = PAGE_1_CAPACITY;
@@ -490,6 +502,47 @@ export default function ArtistPdfExportModal({
                             </tbody>
                           </table>
                         </div>
+
+                        {/* TABLE: PRODUCTION ITEMS & SPECIFICATIONS */}
+                        {customProductionItems.length > 0 && (
+                          <div className="space-y-1">
+                            <h3 className="font-extrabold text-[11px] text-slate-900 uppercase tracking-wide flex items-center justify-between">
+                              <span>Production Items & Specifications ({customProductionItems.length})</span>
+                            </h3>
+                            <table className="w-full text-left text-xs border-collapse">
+                              <thead>
+                                <tr className="bg-[#858E38] text-white font-bold uppercase text-[10px]">
+                                  <th className="py-1 px-2.5">Sub Category</th>
+                                  <th className="py-1 px-2.5">Element / Item</th>
+                                  <th className="py-1 px-2.5">Type / Spec</th>
+                                  <th className="py-1 px-2.5 text-center">Qty</th>
+                                  <th className="py-1 px-2.5">Source</th>
+                                  <th className="py-1 px-2.5">Status</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-200">
+                                {customProductionItems.map((item: any) => (
+                                  <tr key={item.id} className="text-slate-800 border-b border-slate-200 text-[11px]">
+                                    <td className="py-1 px-2.5 font-semibold text-amber-800">{item.subCategory}</td>
+                                    <td className="py-1 px-2.5 font-bold">{item.element}</td>
+                                    <td className="py-1 px-2.5 text-slate-600">{item.typeSpec}</td>
+                                    <td className="py-1 px-2.5 text-center font-bold text-slate-900">{item.qty}</td>
+                                    <td className="py-1 px-2.5">
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-slate-100 text-slate-700">
+                                        {item.source}
+                                      </span>
+                                    </td>
+                                    <td className="py-1 px-2.5">
+                                      <span className="px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-amber-100 text-amber-800">
+                                        {item.status}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
 
                         {/* TABLE 2: TECHNICAL STOCK ALLOTMENT */}
                         <div className="space-y-1">
