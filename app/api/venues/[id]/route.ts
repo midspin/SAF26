@@ -1,9 +1,21 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getFromCache, setToCache, invalidateCache } from '@/lib/cache';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+
+    const cacheKey = `venue_${id}`;
+    const cached = getFromCache<any>(cacheKey, 300000);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
 
     const venue = await prisma.venue.findUnique({
       where: { id },
@@ -31,7 +43,15 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
       return NextResponse.json({ success: false, error: 'Venue not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ success: true, venue });
+    const responseData = { success: true, venue };
+    setToCache(cacheKey, responseData);
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+        'X-Cache': 'MISS',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -109,6 +129,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     });
 
+    invalidateCache('venue');
     return NextResponse.json({ success: true, venue });
   } catch (error: any) {
     console.error('Error updating venue:', error);
@@ -139,6 +160,7 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
       },
     });
 
+    invalidateCache('venue');
     return NextResponse.json({ success: true, id });
   } catch (error: any) {
     console.error('Error deleting venue:', error);

@@ -26,7 +26,7 @@ export async function GET(req: Request) {
     const eventId = searchParams.get('eventId');
 
     const cacheKey = `all_artists_${eventId || 'all'}`;
-    const cached = getFromCache<any>(cacheKey, 60000);
+    const cached = getFromCache<any>(cacheKey, 300000); // 5 minutes cache
     if (cached) {
       return NextResponse.json(cached, {
         headers: {
@@ -62,11 +62,7 @@ export async function GET(req: Request) {
         },
         _count: {
           select: {
-            technicalRequirements: true,
-            productionRequirements: true,
             allocations: true,
-            purchaseRequests: true,
-            rentalRecords: true,
           },
         },
       },

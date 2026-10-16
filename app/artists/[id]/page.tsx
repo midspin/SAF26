@@ -259,26 +259,12 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   const [pdfExportModalOpen, setPdfExportModalOpen] = useState(false);
   const [docketModalOpen, setDocketModalOpen] = useState(false);
 
-  const [artistData, setArtistData] = useState<any>(() => {
-    if (typeof window !== 'undefined' && id) {
-      try {
-        const preview = sessionStorage.getItem(`saf_artist_preview_${id}`);
-        if (preview) return JSON.parse(preview);
-      } catch (e) {}
-    }
-    return null;
-  });
+  const [artistData, setArtistData] = useState<any>(null);
   const [completenessScore, setCompletenessScore] = useState<number>(0);
   const [missingFields, setMissingFields] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (typeof window !== 'undefined' && id) {
-      try {
-        if (sessionStorage.getItem(`saf_artist_preview_${id}`)) return false;
-      } catch (e) {}
-    }
-    return true;
-  });
+  const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Spatial Drawing Popup View Modal (Technical & Production Layout)
   const [spatialDrawingModal, setSpatialDrawingModal] = useState<{
@@ -1265,36 +1251,71 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   }, [toastNotification.show]);
 
   useEffect(() => {
-    // If preview was already loaded from cache, fetch silently in background without showing full-page spinner
-    const hasCachedData = typeof window !== 'undefined' && !!sessionStorage.getItem(`saf_artist_preview_${id}`);
-    fetchArtistDetails(!hasCachedData);
+    setFetchError(null);
+    let isCurrent = true;
 
-    // 2. Defer heavy inventory master table fetch to background after text has rendered
+    // 1. Immediately hydrate from preview cache to paint UI in 0ms without delay
+    if (typeof window !== 'undefined' && id) {
+      try {
+        const preview = sessionStorage.getItem(`saf_artist_preview_${id}`);
+        if (preview) {
+          const parsed = JSON.parse(preview);
+          if (parsed && isCurrent) {
+            setArtistData(parsed);
+            setLoading(false);
+          }
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fetch complete details from server
+    fetchArtistDetails();
+
+    // 3. Defer heavy inventory master table fetch to background
     const timer = setTimeout(() => {
-      fetchInventoryPool();
+      if (isCurrent) fetchInventoryPool();
     }, 450);
 
-    return () => clearTimeout(timer);
+    // 4. Safety fallback: never leave user stuck on spinner for >6s
+    const safetyTimer = setTimeout(() => {
+      if (isCurrent) {
+        setLoading(false);
+      }
+    }, 6000);
+
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+      clearTimeout(safetyTimer);
+    };
   }, [id]);
 
-  const fetchArtistDetails = async (isInitial = false) => {
-    if (isInitial) setLoading(true);
+  const fetchArtistDetails = async (showLoading = false) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await fetch(`/api/artists/${id}`);
       const data = await res.json();
       if (data.success && data.artist) {
         setArtistData(data.artist);
-        setCompletenessScore(data.completenessScore);
+        setCompletenessScore(data.completenessScore || 0);
         setMissingFields(data.missingFields || []);
         setActivityLogs(data.activityLogs || []);
+        setFetchError(null);
         try {
           sessionStorage.setItem(`saf_artist_preview_${id}`, JSON.stringify(data.artist));
         } catch (e) {}
+      } else {
+        if (!artistData) {
+          setFetchError(data.error || 'Artist profile could not be found.');
+        }
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('fetchArtistDetails error:', err);
+      if (!artistData) {
+        setFetchError(err.message || 'Network error while loading artist details.');
+      }
     } finally {
-      if (isInitial) setLoading(false);
+      setLoading(false);
     }
   };
 
@@ -1580,11 +1601,67 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     }
   };
 
-  if (loading || !artistData) {
+  if (fetchError && !artistData) {
     return (
-      <div className="p-12 text-center text-slate-400">
+      <div className="p-12 text-center max-w-md mx-auto my-16 glass-card rounded-2xl border border-red-500/30">
+        <div className="w-12 h-12 rounded-2xl bg-red-950/60 text-red-400 flex items-center justify-center mx-auto mb-4 border border-red-800">
+          <AlertTriangle className="w-6 h-6" />
+        </div>
+        <h3 className="text-base font-bold text-slate-100 mb-1">Unable to Load Artist</h3>
+        <p className="text-xs text-slate-400 mb-6">{fetchError}</p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => {
+              setLoading(true);
+              setFetchError(null);
+              fetchArtistDetails(true);
+            }}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer"
+          >
+            Retry Loading
+          </button>
+          <Link
+            href="/artists"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all border border-slate-700"
+          >
+            Back to Directory
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading && !artistData) {
+    return (
+      <div className="p-12 text-center text-slate-400 max-w-sm mx-auto my-16">
         <Sparkles className="w-8 h-8 text-[#38bdf8] animate-spin mx-auto mb-3" />
-        <p className="text-sm font-semibold">Loading Artist 360 Master View...</p>
+        <p className="text-sm font-semibold mb-1">Loading Artist 360 Master View...</p>
+        <p className="text-xs text-slate-500">Retrieving artist profile and project data...</p>
+      </div>
+    );
+  }
+
+  if (!artistData) {
+    return (
+      <div className="p-12 text-center text-slate-400 max-w-md mx-auto my-16 glass-card rounded-2xl border border-slate-800">
+        <p className="text-sm font-semibold text-slate-300 mb-4">Artist details are currently unavailable.</p>
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchArtistDetails(true);
+            }}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer"
+          >
+            Reload Details
+          </button>
+          <Link
+            href="/artists"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition-all border border-slate-700"
+          >
+            Back to Directory
+          </Link>
+        </div>
       </div>
     );
   }

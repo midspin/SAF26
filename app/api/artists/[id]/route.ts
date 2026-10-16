@@ -29,7 +29,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
 
     const cacheKey = `artist_${id}`;
-    const cached = getFromCache<any>(cacheKey, 60000);
+    const cached = getFromCache<any>(cacheKey, 300000); // 5 minutes cache
     if (cached) {
       return NextResponse.json(cached, {
         headers: {

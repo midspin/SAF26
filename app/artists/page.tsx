@@ -401,32 +401,10 @@ function FileUploadBox({
 }
 
 export default function ArtistsPage() {
-  const [artists, setArtists] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('saf_cached_artists_list');
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
-  });
-  const [venuesList, setVenuesList] = useState<any[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = sessionStorage.getItem('saf_cached_venues_list');
-        if (cached) return JSON.parse(cached);
-      } catch (e) {}
-    }
-    return [];
-  });
-  const [loading, setLoading] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        if (sessionStorage.getItem('saf_cached_artists_list')) return false;
-      } catch (e) {}
-    }
-    return true;
-  });
+  const [artists, setArtists] = useState<any[]>([]);
+  const [venuesList, setVenuesList] = useState<any[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [newModalOpen, setNewModalOpen] = useState(false);
 
@@ -712,6 +690,26 @@ export default function ArtistsPage() {
   };
 
   useEffect(() => {
+    // 1. Immediately hydrate from cache without SSR mismatch
+    if (typeof window !== 'undefined') {
+      try {
+        const cachedArtists = sessionStorage.getItem('saf_cached_artists_list');
+        if (cachedArtists) {
+          const parsed = JSON.parse(cachedArtists);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setArtists(parsed);
+            setLoading(false);
+          }
+        }
+        const cachedVenues = sessionStorage.getItem('saf_cached_venues_list');
+        if (cachedVenues) {
+          const parsedV = JSON.parse(cachedVenues);
+          if (Array.isArray(parsedV)) setVenuesList(parsedV);
+        }
+      } catch (e) {}
+    }
+
+    // 2. Fetch fresh data
     fetchArtistsAndVenues();
   }, []);
 
@@ -732,19 +730,37 @@ export default function ArtistsPage() {
   };
 
   const fetchArtistsAndVenues = async () => {
-    const hasCached = typeof window !== 'undefined' && !!sessionStorage.getItem('saf_cached_artists_list');
-    if (!hasCached) setLoading(true);
-    try {
-      const [artistsRes, venuesRes] = await Promise.all([
-        fetch('/api/artists'),
-        fetch('/api/venues'),
-      ]);
+    setFetchError(null);
+    let hasLoaded = false;
 
+    // Safety timeout: Never leave user stuck on loading spinner for more than 4s
+    const timeoutId = setTimeout(() => {
+      if (!hasLoaded) {
+        setLoading(false);
+      }
+    }, 4000);
+
+    // Fetch venues asynchronously in background without blocking artist cards
+    fetch('/api/venues')
+      .then((r) => r.json())
+      .then((venuesData) => {
+        if (venuesData.success && Array.isArray(venuesData.venues)) {
+          setVenuesList(venuesData.venues);
+          try {
+            sessionStorage.setItem('saf_cached_venues_list', JSON.stringify(venuesData.venues));
+          } catch (e) {}
+        }
+      })
+      .catch(console.error);
+
+    try {
+      const artistsRes = await fetch('/api/artists');
       const artistsData = await artistsRes.json();
-      const venuesData = await venuesRes.json();
 
       if (artistsData.success && Array.isArray(artistsData.artists)) {
+        hasLoaded = true;
         setArtists(artistsData.artists);
+        setFetchError(null);
         try {
           sessionStorage.setItem('saf_cached_artists_list', JSON.stringify(artistsData.artists));
           // Prime individual artist previews so clicking any artist loads instantly (0ms)
@@ -754,16 +770,18 @@ export default function ArtistsPage() {
             }
           });
         } catch (e) {}
+      } else {
+        if (!artists.length) {
+          setFetchError(artistsData.error || 'Failed to load artists directory');
+        }
       }
-      if (venuesData.success && Array.isArray(venuesData.venues)) {
-        setVenuesList(venuesData.venues);
-        try {
-          sessionStorage.setItem('saf_cached_venues_list', JSON.stringify(venuesData.venues));
-        } catch (e) {}
-      }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (!artists.length) {
+        setFetchError(err.message || 'Network error loading artists');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -1524,10 +1542,24 @@ export default function ArtistsPage() {
       )}
 
       {/* ARTIST CARDS DIRECTORY GRID */}
-      {loading ? (
+      {loading && artists.length === 0 ? (
         <div className="p-12 text-center text-slate-500">
           <Sparkles className="w-6 h-6 text-sky-400 animate-spin mx-auto mb-2" />
           <p className="text-xs">Loading Artists Directory...</p>
+        </div>
+      ) : fetchError && artists.length === 0 ? (
+        <div className="p-8 text-center text-red-400 glass-card rounded-2xl border border-red-500/20 max-w-md mx-auto my-8">
+          <p className="text-sm font-semibold mb-2">Unable to load artists directory</p>
+          <p className="text-xs text-slate-400 mb-4">{fetchError}</p>
+          <button
+            onClick={() => {
+              setLoading(true);
+              fetchArtistsAndVenues();
+            }}
+            className="px-4 py-2 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs rounded-xl transition-all cursor-pointer"
+          >
+            Retry Loading
+          </button>
         </div>
       ) : filteredArtists.length === 0 ? (
         <div className="p-12 text-center text-slate-500 glass-card rounded-2xl border border-slate-800">
@@ -1550,6 +1582,13 @@ export default function ArtistsPage() {
             return (
               <div
                 key={art.id}
+                onMouseEnter={() => {
+                  try {
+                    sessionStorage.setItem(`saf_artist_preview_${art.id}`, JSON.stringify(art));
+                    // Prefetch and warm cache in background
+                    fetch(`/api/artists/${art.id}`, { priority: 'low' }).catch(() => {});
+                  } catch (e) {}
+                }}
                 className={`glass-card p-5 rounded-2xl border transition-all flex flex-col justify-between group relative overflow-hidden ${
                   isNewlyAdded
                     ? 'border-emerald-400 shadow-[0_0_30px_rgba(16,185,129,0.3)] bg-emerald-950/20 ring-2 ring-emerald-500/50 scale-[1.02]'

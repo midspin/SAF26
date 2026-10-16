@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getFromCache, setToCache, invalidateCache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -7,6 +8,17 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
+
+    const cacheKey = `all_venues_${eventId || 'all'}`;
+    const cached = getFromCache<any>(cacheKey, 300000); // 5 minutes
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
 
     const where: any = {};
     if (eventId) where.eventId = eventId;
@@ -44,11 +56,15 @@ export async function GET(req: Request) {
       },
     });
 
+    const responseData = { success: true, venues };
+    setToCache(cacheKey, responseData);
+
     return NextResponse.json(
-      { success: true, venues },
+      responseData,
       {
         headers: {
-          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60',
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+          'X-Cache': 'MISS',
         },
       }
     );
@@ -118,6 +134,7 @@ export async function POST(req: Request) {
       });
     }
 
+    invalidateCache('venue');
     return NextResponse.json({ success: true, venue });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
