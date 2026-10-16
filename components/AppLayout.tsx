@@ -233,8 +233,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
         setAuthChecked(true);
 
-        // Protection Check: if not logged in and not on /login, redirect to /login
-        if (!savedSession && pathname !== '/login') {
+        // Protection Check: if not logged in and not on /login or public /fabrication/ page, redirect to /login
+        if (!savedSession && pathname !== '/login' && !pathname.startsWith('/fabrication/')) {
           router.push('/login');
         }
       }
@@ -612,8 +612,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
   const rolesList = availableRolesList;
 
-  // If on /login page, render children directly without the layout wrapper
-  if (pathname === '/login') {
+  // If on /login or public /fabrication/ page, render children directly without the layout wrapper
+  if (pathname === '/login' || pathname.startsWith('/fabrication/')) {
     return <>{children}</>;
   }
 

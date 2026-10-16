@@ -20,6 +20,11 @@ import {
   ChevronDown,
   Hammer,
   Sparkles,
+  Share2,
+  Copy,
+  Check,
+  MessageCircle,
+  Printer,
 } from 'lucide-react';
 
 export const PRODUCTION_CATEGORIES = [
@@ -156,6 +161,42 @@ export default function ArtistProductionItemsSection({
   const [editingItem, setEditingItem] = useState<ProductionItem | null>(null);
   const [deleteItemModal, setDeleteItemModal] = useState<ProductionItem | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
+  const [shareModalItem, setShareModalItem] = useState<ProductionItem | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const getShareUrl = (id: string) => {
+    if (typeof window !== 'undefined') {
+      return `${window.location.origin}/fabrication/${id}`;
+    }
+    return `/fabrication/${id}`;
+  };
+
+  const handleCopyLink = (url: string, id: string) => {
+    navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId(null), 2500);
+  };
+
+  const handleWhatsAppShare = (item: ProductionItem) => {
+    const url = getShareUrl(item.id);
+    const cat = normalizeCategory(item.productionCategory);
+    const sub = cleanSubCategory(item.subCategory);
+    const dims = item.length || item.breadth || item.height
+      ? `${item.length || '-'}${item.breadth ? ` × ${item.breadth}` : ''}${item.height ? ` × ${item.height}` : ''} ${item.unit || ''}`
+      : 'Not specified';
+
+    const text = `🛠️ *Serendipity Arts Festival 2026 - Fabrication Specification*\n\n` +
+      `*Item:* ${item.element || 'Fabrication Element'}\n` +
+      `*Category:* ${cat}${sub ? ` - ${sub}` : ''}\n` +
+      `*Dimensions:* ${dims}\n` +
+      `*Quantity:* ${item.quantity || 1} ${item.unit || ''}\n` +
+      `*Source:* ${item.source || 'Fabricate'}\n` +
+      `*Status:* ${item.status || 'Requisition in pending'}\n` +
+      (item.artwork?.artworkName ? `*Artwork / Project:* ${item.artwork.artworkName}\n` : '') +
+      `\n🔗 *View Technical Specification & Visual References:*\n${url}`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
 
   // Filter / Search states
   const [searchQuery, setSearchQuery] = useState('');
@@ -634,7 +675,7 @@ export default function ArtistProductionItemsSection({
                   <th className="py-2.5 px-3">Status</th>
                   <th className="py-2.5 px-3">Assigned To</th>
                   <th className="py-2.5 px-3">Images</th>
-                  {canManage && <th className="py-2.5 px-3 text-right rounded-r-xl">Actions</th>}
+                  <th className="py-2.5 px-3 text-right rounded-r-xl">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
@@ -739,26 +780,35 @@ export default function ArtistProductionItemsSection({
                       </td>
 
                       {/* ACTIONS */}
-                      {canManage && (
-                        <td className="py-3 px-3 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              onClick={() => openEditModal(item)}
-                              className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
-                              title="Edit New Fabrication"
-                            >
-                              <Edit3 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => setDeleteItemModal(item)}
-                              className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                              title="Delete Item"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      )}
+                      <td className="py-3 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => setShareModalItem(item)}
+                            className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-sky-400 hover:bg-sky-500/10 transition-colors cursor-pointer"
+                            title="Share Specification (WhatsApp / Web / PDF)"
+                          >
+                            <Share2 className="w-3.5 h-3.5" />
+                          </button>
+                          {canManage && (
+                            <>
+                              <button
+                                onClick={() => openEditModal(item)}
+                                className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
+                                title="Edit New Fabrication"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeleteItemModal(item)}
+                                className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                                title="Delete Item"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
                     </tr>
                   );
                 })}
@@ -1178,6 +1228,130 @@ export default function ArtistProductionItemsSection({
               alt="Reference Preview"
               className="max-h-[80vh] w-auto object-contain rounded-xl"
             />
+          </div>
+        </div>
+      )}
+      {/* ========================================================================= */}
+      {/* SHARE FABRICATION SPECIFICATION MODAL                                     */}
+      {/* ========================================================================= */}
+      {shareModalItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#232334] border border-sky-500/30 rounded-3xl p-6 max-w-lg w-full space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <button
+              onClick={() => setShareModalItem(null)}
+              className="absolute top-5 right-5 text-[#8a8d9b] hover:text-white p-1 rounded-lg bg-white/5 cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* HEADER */}
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                <Share2 className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-sky-400">
+                  Share Fabrication Spec
+                </span>
+                <h3 className="text-base font-black text-white truncate max-w-xs sm:max-w-sm">
+                  {shareModalItem.element || 'Fabrication Item'}
+                </h3>
+              </div>
+            </div>
+
+            {/* SUMMARY CARD */}
+            <div className="p-3.5 rounded-2xl bg-[#1c1c2a] border border-white/5 space-y-2 text-xs">
+              <div className="flex justify-between items-center text-[#8a8d9b]">
+                <span>Category:</span>
+                <span className="font-bold text-white">
+                  {normalizeCategory(shareModalItem.productionCategory)} / {cleanSubCategory(shareModalItem.subCategory)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[#8a8d9b]">
+                <span>Dimensions (L×B×H):</span>
+                <span className="font-mono text-amber-300 font-bold">
+                  {shareModalItem.length || shareModalItem.breadth || shareModalItem.height
+                    ? `${shareModalItem.length || '-'}${shareModalItem.breadth ? ` × ${shareModalItem.breadth}` : ''}${shareModalItem.height ? ` × ${shareModalItem.height}` : ''} ${shareModalItem.unit || ''}`
+                    : 'Not specified'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[#8a8d9b]">
+                <span>Quantity:</span>
+                <span className="font-bold text-white">
+                  {shareModalItem.quantity || 1} {shareModalItem.unit || 'units'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-[#8a8d9b]">
+                <span>Source:</span>
+                <span className="font-bold text-white">{shareModalItem.source || 'Fabricate'}</span>
+              </div>
+            </div>
+
+            {/* LINK INPUT WITH COPY BUTTON */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-[#cbd5e1] block">
+                Public Spec Sheet Link
+              </label>
+              <div className="flex items-center gap-2 bg-[#1c1c2a] border border-white/10 rounded-xl p-1.5 focus-within:border-sky-400">
+                <input
+                  type="text"
+                  readOnly
+                  value={getShareUrl(shareModalItem.id)}
+                  className="bg-transparent text-xs text-white px-2 w-full focus:outline-none font-mono select-all truncate"
+                />
+                <button
+                  onClick={() => handleCopyLink(getShareUrl(shareModalItem.id), shareModalItem.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs transition-colors shrink-0 cursor-pointer active:scale-95"
+                >
+                  {copiedId === shareModalItem.id ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" /> Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" /> Copy
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-[10px] text-[#8a8d9b]">
+                External fabricators can open this link directly without logging in.
+              </p>
+            </div>
+
+            {/* ACTION CHANNELS (WHATSAPP, VIEW WEBPAGE, PDF) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+              {/* WHATSAPP */}
+              <button
+                onClick={() => handleWhatsAppShare(shareModalItem)}
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs transition-all shadow-md active:scale-95 cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 fill-white" />
+                <span>WhatsApp</span>
+              </button>
+
+              {/* OPEN WEBPAGE */}
+              <a
+                href={`/fabrication/${shareModalItem.id}`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-[#1c1c2a] hover:bg-white/10 text-white font-bold text-xs border border-white/10 transition-all active:scale-95 text-center"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-sky-400" />
+                <span>Open Webpage</span>
+              </a>
+
+              {/* DOWNLOAD PDF */}
+              <a
+                href={`/fabrication/${shareModalItem.id}?print=true`}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition-all shadow-md active:scale-95 text-center"
+              >
+                <Printer className="w-3.5 h-3.5" />
+                <span>PDF Spec</span>
+              </a>
+            </div>
           </div>
         </div>
       )}

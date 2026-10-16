@@ -4,9 +4,32 @@ import { prisma } from '@/lib/prisma';
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
     const artistId = searchParams.get('artistId');
     const eventId = searchParams.get('eventId');
     const status = searchParams.get('status');
+
+    if (id) {
+      const item = await prisma.productionRequirement.findUnique({
+        where: { id },
+        include: {
+          artist: true,
+          artwork: {
+            include: {
+              venue: true,
+              room: true,
+            },
+          },
+          event: true,
+        },
+      });
+
+      if (!item) {
+        return NextResponse.json({ success: false, error: 'Item not found' }, { status: 404 });
+      }
+
+      return NextResponse.json({ success: true, item });
+    }
 
     const where: any = {};
     if (artistId) where.artistId = artistId;
@@ -17,7 +40,12 @@ export async function GET(req: Request) {
       where,
       include: {
         artist: true,
-        artwork: true,
+        artwork: {
+          include: {
+            venue: true,
+            room: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
