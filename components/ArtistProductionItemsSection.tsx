@@ -23,40 +23,72 @@ import {
 } from 'lucide-react';
 
 export const PRODUCTION_CATEGORIES = [
-  { code: 'T', name: 'T - Technical', shortName: 'Technical' },
-  { code: 'RI', name: 'RI - Infrastructure', shortName: 'Infrastructure' },
-  { code: 'CF', name: 'CF - Curtain and Flooring', shortName: 'Curtain and Flooring' },
-  { code: 'F', name: 'F - Furniture', shortName: 'Furniture' },
-  { code: 'P', name: 'P - Printing', shortName: 'Printing' },
-  { code: 'SPN', name: 'SPN - Special Project Needs', shortName: 'Special Project Needs' },
+  { code: 'Technical', name: 'Technical', shortName: 'Technical' },
+  { code: 'Infrastructure', name: 'Infrastructure', shortName: 'Infrastructure' },
+  { code: 'Curtain and Flooring', name: 'Curtain and Flooring', shortName: 'Curtain and Flooring' },
+  { code: 'Furniture', name: 'Furniture', shortName: 'Furniture' },
+  { code: 'Printing', name: 'Printing', shortName: 'Printing' },
+  { code: 'Special Project Needs', name: 'Special Project Needs', shortName: 'Special Project Needs' },
 ];
 
 export const PRODUCTION_SUBCATEGORIES = [
-  { categoryCode: 'RI', label: 'RI- walls' },
-  { categoryCode: 'T', label: 'T- audio' },
-  { categoryCode: 'T', label: 'T- video' },
-  { categoryCode: 'T', label: 'T- IT' },
-  { categoryCode: 'T', label: 'T- cables and connectors' },
-  { categoryCode: 'T', label: 'T- lights' },
-  { categoryCode: 'RI', label: 'RI- ceiling' },
-  { categoryCode: 'RI', label: 'RI- paint' },
-  { categoryCode: 'RI', label: 'RI- electrical' },
-  { categoryCode: 'CF', label: 'CF- curtains' },
-  { categoryCode: 'CF', label: 'CF- carpet' },
-  { categoryCode: 'F', label: 'F- bench' },
-  { categoryCode: 'F', label: 'F- display and pedestals' },
-  { categoryCode: 'F', label: 'F- misc furniture' },
-  { categoryCode: 'P', label: 'P- banner' },
-  { categoryCode: 'P', label: 'P- vinyl/flex' },
-  { categoryCode: 'P', label: 'P- invitation/collateral' },
-  { categoryCode: 'P', label: 'P- signage' },
-  { categoryCode: 'P', label: 'P- artwork' },
-  { categoryCode: 'SPN', label: 'SPN- fabrication' },
-  { categoryCode: 'SPN', label: 'SPN- rigging' },
-  { categoryCode: 'SPN', label: 'SPN- props' },
-  { categoryCode: 'SPN', label: 'SPN- artwork fabrication' },
-  { categoryCode: 'SPN', label: 'SPN- other' },
+  // Technical
+  { categoryCode: 'Technical', label: 'Audio' },
+  { categoryCode: 'Technical', label: 'Video' },
+  { categoryCode: 'Technical', label: 'IT' },
+  { categoryCode: 'Technical', label: 'Cables and Connectors' },
+  { categoryCode: 'Technical', label: 'Lights' },
+
+  // Infrastructure
+  { categoryCode: 'Infrastructure', label: 'Walls' },
+  { categoryCode: 'Infrastructure', label: 'Ceiling' },
+  { categoryCode: 'Infrastructure', label: 'Paint' },
+  { categoryCode: 'Infrastructure', label: 'Electrical' },
+
+  // Curtain and Flooring
+  { categoryCode: 'Curtain and Flooring', label: 'Curtains' },
+  { categoryCode: 'Curtain and Flooring', label: 'Carpet' },
+
+  // Furniture
+  { categoryCode: 'Furniture', label: 'Bench' },
+  { categoryCode: 'Furniture', label: 'Display and Pedestals' },
+  { categoryCode: 'Furniture', label: 'Misc Furniture' },
+
+  // Printing
+  { categoryCode: 'Printing', label: 'Banner' },
+  { categoryCode: 'Printing', label: 'Vinyl/Flex' },
+  { categoryCode: 'Printing', label: 'Invitation/Collateral' },
+  { categoryCode: 'Printing', label: 'Signage' },
+  { categoryCode: 'Printing', label: 'Artwork' },
+
+  // Special Project Needs
+  { categoryCode: 'Special Project Needs', label: 'Fabrication' },
+  { categoryCode: 'Special Project Needs', label: 'Rigging' },
+  { categoryCode: 'Special Project Needs', label: 'Props' },
+  { categoryCode: 'Special Project Needs', label: 'Artwork Fabrication' },
+  { categoryCode: 'Special Project Needs', label: 'Other' },
 ];
+
+export function normalizeCategory(cat?: string | null): string {
+  if (!cat) return 'Technical';
+  const c = cat.trim().toUpperCase();
+  if (c === 'T' || c.startsWith('T -') || c.startsWith('T-') || c.includes('TECHNICAL')) return 'Technical';
+  if (c === 'RI' || c.startsWith('RI -') || c.startsWith('RI-') || c.includes('INFRASTRUCTURE')) return 'Infrastructure';
+  if (c === 'CF' || c.startsWith('CF -') || c.startsWith('CF-') || c.includes('CURTAIN') || c.includes('FLOORING')) return 'Curtain and Flooring';
+  if (c === 'F' || c.startsWith('F -') || c.startsWith('F-') || c.includes('FURNITURE')) return 'Furniture';
+  if (c === 'P' || c.startsWith('P -') || c.startsWith('P-') || c.includes('PRINTING')) return 'Printing';
+  if (c === 'SPN' || c.startsWith('SPN -') || c.startsWith('SPN-') || c.includes('SPECIAL PROJECT')) return 'Special Project Needs';
+  return cat;
+}
+
+export function cleanSubCategory(sub?: string | null): string {
+  if (!sub) return '';
+  const stripped = sub.replace(/^(T|RI|CF|F|P|SPN)\s*[-–—]\s*/i, '').trim();
+  if (stripped.length > 0) {
+    return stripped.charAt(0).toUpperCase() + stripped.slice(1);
+  }
+  return stripped;
+}
 
 export const ACQUISITION_SOURCES = [
   'SAF Inventory',
@@ -133,8 +165,8 @@ export default function ArtistProductionItemsSection({
   // Form states
   const [formData, setFormData] = useState({
     artworkId: '',
-    productionCategory: 'T - Technical',
-    subCategory: 'T- audio',
+    productionCategory: 'Technical',
+    subCategory: 'Audio',
     element: '',
     typeSpec: '',
     referenceImages: [] as string[],
@@ -149,8 +181,7 @@ export default function ArtistProductionItemsSection({
     remarks: '',
   });
 
-  const [subCategoryInput, setSubCategoryInput] = useState('T- audio');
-  const [showSubCatSuggestions, setShowSubCatSuggestions] = useState(false);
+  const [subCategoryInput, setSubCategoryInput] = useState('Audio');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -158,13 +189,19 @@ export default function ArtistProductionItemsSection({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Filter subcategories dynamically based on currently selected category
+  const currentCategory = normalizeCategory(formData.productionCategory);
+  const currentCategorySubcategories = useMemo(() => {
+    return PRODUCTION_SUBCATEGORIES.filter((s) => s.categoryCode === currentCategory);
+  }, [currentCategory]);
+
   // Open modal for creating new item
   const openCreateModal = () => {
     setEditingItem(null);
     setFormData({
       artworkId: artworks[0]?.id || '',
-      productionCategory: 'T - Technical',
-      subCategory: 'T- audio',
+      productionCategory: 'Technical',
+      subCategory: 'Audio',
       element: '',
       typeSpec: '',
       referenceImages: [],
@@ -178,7 +215,7 @@ export default function ArtistProductionItemsSection({
       assignedTo: '',
       remarks: '',
     });
-    setSubCategoryInput('T- audio');
+    setSubCategoryInput('Audio');
     setUrlInput('');
     setModalOpen(true);
   };
@@ -196,11 +233,16 @@ export default function ArtistProductionItemsSection({
       parsedImages = item.referenceImages ? [item.referenceImages] : [];
     }
 
-    const currentSub = item.subCategory || 'T- audio';
+    const cat = normalizeCategory(item.productionCategory);
+    const rawClean = cleanSubCategory(item.subCategory);
+    const matchingSubs = PRODUCTION_SUBCATEGORIES.filter((s) => s.categoryCode === cat);
+    const matched = matchingSubs.find((s) => s.label.toLowerCase() === rawClean.toLowerCase());
+    const finalSub = matched ? matched.label : (rawClean || matchingSubs[0]?.label || 'Audio');
+
     setFormData({
       artworkId: item.artworkId || '',
-      productionCategory: item.productionCategory || 'T - Technical',
-      subCategory: currentSub,
+      productionCategory: cat,
+      subCategory: finalSub,
       element: item.element || '',
       typeSpec: item.typeSpec || '',
       referenceImages: parsedImages,
@@ -214,69 +256,23 @@ export default function ArtistProductionItemsSection({
       assignedTo: item.assignedTo || '',
       remarks: item.remarks || '',
     });
-    setSubCategoryInput(currentSub);
+    setSubCategoryInput(finalSub);
     setUrlInput('');
     setModalOpen(true);
   };
 
-  // Handle Category selection & Auto-sync
+  // Handle Category selection & Auto-filter Subcategories
   const handleCategoryChange = (catName: string) => {
-    const foundCat = PRODUCTION_CATEGORIES.find(
-      (c) => c.name === catName || c.code === catName || catName.startsWith(c.code)
-    );
-    const code = foundCat?.code || 'T';
-
-    // Pick first matching subcategory for this category
-    const matchingSub = PRODUCTION_SUBCATEGORIES.find((s) => s.categoryCode === code);
-    const newSub = matchingSub ? matchingSub.label : formData.subCategory;
+    const normalized = normalizeCategory(catName);
+    const matchingSubs = PRODUCTION_SUBCATEGORIES.filter((s) => s.categoryCode === normalized);
+    const defaultSub = matchingSubs[0]?.label || '';
 
     setFormData((prev) => ({
       ...prev,
-      productionCategory: catName,
-      subCategory: newSub,
+      productionCategory: normalized,
+      subCategory: defaultSub,
     }));
-    setSubCategoryInput(newSub);
-  };
-
-  // 3-Letter Auto Fill and Sub Category change handler
-  const handleSubCategoryInputChange = (value: string) => {
-    setSubCategoryInput(value);
-    setShowSubCatSuggestions(true);
-
-    const trimmed = value.trim().toLowerCase();
-
-    // If 3 or more letters typed, check for auto-fill match
-    if (trimmed.length >= 3) {
-      const match = PRODUCTION_SUBCATEGORIES.find(
-        (s) =>
-          s.label.toLowerCase().includes(trimmed) ||
-          s.label.toLowerCase().replace(/[^a-z0-9]/g, '').includes(trimmed.replace(/[^a-z0-9]/g, ''))
-      );
-
-      if (match) {
-        // Auto-detect production category from prefix
-        const matchedCat = PRODUCTION_CATEGORIES.find((c) => c.code === match.categoryCode);
-        if (matchedCat) {
-          setFormData((prev) => ({
-            ...prev,
-            productionCategory: matchedCat.name,
-            subCategory: match.label,
-          }));
-        }
-      }
-    }
-  };
-
-  // Select a subcategory suggestion
-  const selectSubCategory = (sub: { categoryCode: string; label: string }) => {
-    const matchedCat = PRODUCTION_CATEGORIES.find((c) => c.code === sub.categoryCode);
-    setSubCategoryInput(sub.label);
-    setFormData((prev) => ({
-      ...prev,
-      subCategory: sub.label,
-      productionCategory: matchedCat ? matchedCat.name : prev.productionCategory,
-    }));
-    setShowSubCatSuggestions(false);
+    setSubCategoryInput(defaultSub);
   };
 
   // Upload multiple images
@@ -426,10 +422,9 @@ export default function ArtistProductionItemsSection({
     return productionRequirements.filter((item) => {
       // Category filter
       if (selectedCategoryFilter !== 'ALL') {
-        const itemCat = (item.productionCategory || '').toUpperCase();
-        const itemSub = (item.subCategory || '').toUpperCase();
-        const codeMatch = itemCat.includes(selectedCategoryFilter) || itemSub.startsWith(selectedCategoryFilter);
-        if (!codeMatch) return false;
+        const itemCat = normalizeCategory(item.productionCategory || '').toUpperCase();
+        const selectedCat = normalizeCategory(selectedCategoryFilter).toUpperCase();
+        if (itemCat !== selectedCat) return false;
       }
 
       // Status filter
@@ -666,8 +661,11 @@ export default function ArtistProductionItemsSection({
                       {/* CATEGORY & SUBCATEGORY */}
                       <td className="py-3 px-3">
                         <div className="space-y-1">
-                          <span className="font-mono font-bold text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-lg inline-block">
-                            {item.subCategory || item.productionCategory || 'Production'}
+                          <span className="font-bold text-[10px] bg-amber-500/10 text-amber-300 border border-amber-500/20 px-2 py-0.5 rounded-lg inline-block">
+                            {cleanSubCategory(item.subCategory) || normalizeCategory(item.productionCategory) || 'General'}
+                          </span>
+                          <span className="text-[10px] text-[#8a8d9b] block">
+                            {normalizeCategory(item.productionCategory)}
                           </span>
                         </div>
                       </td>
@@ -801,7 +799,7 @@ export default function ArtistProductionItemsSection({
 
             {/* FORM */}
             <form onSubmit={handleSubmit} className="space-y-4 text-xs">
-              {/* ROW 1: CATEGORY & SUBCATEGORY (WITH 3-LETTER AUTOFILL) */}
+              {/* ROW 1: CATEGORY & SUBCATEGORY (FILTERED BY CATEGORY) */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* PRODUCTION CATEGORY DROPDOWN */}
                 <div>
@@ -809,9 +807,9 @@ export default function ArtistProductionItemsSection({
                     Production Category <span className="text-rose-400">*</span>
                   </label>
                   <select
-                    value={formData.productionCategory}
+                    value={normalizeCategory(formData.productionCategory)}
                     onChange={(e) => handleCategoryChange(e.target.value)}
-                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-amber-400"
+                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
                   >
                     {PRODUCTION_CATEGORIES.map((cat) => (
                       <option key={cat.code} value={cat.name}>
@@ -821,60 +819,32 @@ export default function ArtistProductionItemsSection({
                   </select>
                 </div>
 
-                {/* SUBCATEGORY (DROPDOWN + 3-LETTER AUTO FILL) */}
-                <div className="relative">
+                {/* SUBCATEGORY DROPDOWN (FILTERED FOR SELECTED CATEGORY) */}
+                <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[#8a8d9b] font-bold">
                       Sub Category <span className="text-rose-400">*</span>
                     </label>
                     <span className="text-[9px] text-amber-400/80 font-mono">
-                      (Type 3 letters to auto-fill)
+                      (Filtered for {normalizeCategory(formData.productionCategory)})
                     </span>
                   </div>
 
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. RI- walls, T- audio..."
-                      value={subCategoryInput}
-                      onChange={(e) => handleSubCategoryInputChange(e.target.value)}
-                      onFocus={() => setShowSubCatSuggestions(true)}
-                      className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-amber-400"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowSubCatSuggestions(!showSubCatSuggestions)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#8a8d9b] hover:text-white"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* AUTOCOMPLETE SUGGESTIONS POPUP */}
-                  {showSubCatSuggestions && (
-                    <div className="absolute left-0 right-0 top-full mt-1 bg-[#1a1a28] border border-white/15 rounded-xl shadow-2xl max-h-48 overflow-y-auto z-50 divide-y divide-white/5">
-                      {PRODUCTION_SUBCATEGORIES.filter((s) => {
-                        if (!subCategoryInput) return true;
-                        const q = subCategoryInput.toLowerCase();
-                        return (
-                          s.label.toLowerCase().includes(q) ||
-                          s.categoryCode.toLowerCase().includes(q)
-                        );
-                      }).map((sub, i) => (
-                        <div
-                          key={i}
-                          onClick={() => selectSubCategory(sub)}
-                          className="px-3 py-2 hover:bg-amber-500/20 text-white font-medium cursor-pointer flex items-center justify-between text-xs transition-colors"
-                        >
-                          <span>{sub.label}</span>
-                          <span className="text-[10px] font-mono text-amber-400/70 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                            {sub.categoryCode}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <select
+                    value={cleanSubCategory(formData.subCategory)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFormData((prev) => ({ ...prev, subCategory: val }));
+                      setSubCategoryInput(val);
+                    }}
+                    className="w-full bg-[#1c1c2a] border border-white/10 rounded-xl px-3 py-2 text-white font-bold focus:outline-none focus:border-amber-400 cursor-pointer"
+                  >
+                    {currentCategorySubcategories.map((sub, i) => (
+                      <option key={i} value={sub.label}>
+                        {sub.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
