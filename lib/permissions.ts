@@ -178,6 +178,18 @@ const installationTeamPermissions = (): Record<string, ModulePermission> => {
   return perm;
 };
 
+const tblTeamPermissions = (): Record<string, ModulePermission> => {
+  const perm = readOnlyPermissions();
+  ['dashboard', 'events', 'artists', 'venues', 'rooms'].forEach((id) => {
+    if (perm[id]) {
+      perm[id].canView = true;
+      perm[id].canEdit = id === 'artists'; // can edit travel and logistics for artists
+      perm[id].canDelete = false;
+    }
+  });
+  return perm;
+};
+
 export const DEFAULT_ROLES: RoleDefinition[] = [
   {
     id: 'SUPER ADMIN',
@@ -210,6 +222,14 @@ export const DEFAULT_ROLES: RoleDefinition[] = [
     badgeColor: 'amber',
     isSystem: true,
     permissions: progTeamPermissions(),
+  },
+  {
+    id: 'TBL TEAM',
+    name: 'TBL TEAM',
+    description: 'Travel, Boarding & Lodging Team: manages artist travel dates, flights, hotel bookings & transport logistics.',
+    badgeColor: 'indigo',
+    isSystem: true,
+    permissions: tblTeamPermissions(),
   },
   {
     id: 'SPATIAL DESIGNER',

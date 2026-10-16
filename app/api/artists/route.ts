@@ -89,10 +89,13 @@ export async function POST(req: Request) {
       phone,
       website,
       notes,
+      category,
       arrivalDate,
       departureDate,
       travelNotes,
       lodgingDetails,
+      flightDoc,
+      hotelDoc,
       status,
       curatorIds = [],
       pocIds = [],
@@ -138,7 +141,7 @@ export async function POST(req: Request) {
     const safeProductionIds = Array.isArray(productionIds) ? productionIds : [];
     const safeSpatialDesignerIds = Array.isArray(spatialDesignerIds) ? spatialDesignerIds : [];
 
-    // Create Artist record with Travel & Lodging fields
+    // Create Artist record with Category, Travel & Lodging fields
     const artist = await prisma.artist.create({
       data: {
         eventId: targetEventId,
@@ -151,10 +154,13 @@ export async function POST(req: Request) {
         phone: phone || null,
         website: website || null,
         notes: notes || null,
+        category: category || null,
         arrivalDate: arrivalDate || null,
         departureDate: departureDate || null,
         travelNotes: travelNotes || null,
         lodgingDetails: lodgingDetails || null,
+        flightDoc: flightDoc || null,
+        hotelDoc: hotelDoc || null,
         status: status || 'Confirmed',
         curatorAssignments: {
           create: safeCuratorIds.map((cId: string) => ({ curatorId: cId })),
@@ -179,6 +185,21 @@ export async function POST(req: Request) {
       for (const item of artworks) {
         if (!item.artworkName || !item.artworkName.trim()) continue;
 
+        const assignedRoomIds: string[] = Array.isArray(item.roomIds) && item.roomIds.length > 0
+          ? item.roomIds
+          : (item.roomId ? [item.roomId] : []);
+
+        // Validate that room IDs exist in database to prevent foreign key errors
+        const validRooms = assignedRoomIds.length > 0
+          ? await prisma.room.findMany({
+              where: { id: { in: assignedRoomIds } },
+              select: { id: true },
+            })
+          : [];
+        const validRoomIds = validRooms.map((r) => r.id);
+        const primaryRoomId = validRoomIds[0] || null;
+        const roomIdsJson = validRoomIds.length > 0 ? JSON.stringify(validRoomIds) : null;
+
         const createdArtwork = await prisma.artwork.create({
           data: {
             eventId: targetEventId,
@@ -189,22 +210,38 @@ export async function POST(req: Request) {
             installationType: item.installationType || null,
             notes: item.notes || item.description || null,
             venueId: item.venueId || null,
-            roomId: item.roomId || null,
+            roomId: primaryRoomId,
+            roomIdsJson,
           },
         });
 
         // If venue or room is assigned, create/sync installation record
-        if (item.venueId || item.roomId) {
-          await prisma.artistInstallation.create({
-            data: {
-              eventId: targetEventId,
-              artistId: artist.id,
-              artworkId: createdArtwork.id,
-              venueId: item.venueId || null,
-              roomId: item.roomId || null,
-              installationStatus: 'Planned',
-            },
-          });
+        if (item.venueId) {
+          if (validRoomIds.length > 0) {
+            for (const rId of validRoomIds) {
+              await prisma.artistInstallation.create({
+                data: {
+                  eventId: targetEventId,
+                  artistId: artist.id,
+                  artworkId: createdArtwork.id,
+                  venueId: item.venueId,
+                  roomId: rId,
+                  installationStatus: 'Planned',
+                },
+              });
+            }
+          } else {
+            await prisma.artistInstallation.create({
+              data: {
+                eventId: targetEventId,
+                artistId: artist.id,
+                artworkId: createdArtwork.id,
+                venueId: item.venueId,
+                roomId: null,
+                installationStatus: 'Planned',
+              },
+            });
+          }
         }
       }
     }

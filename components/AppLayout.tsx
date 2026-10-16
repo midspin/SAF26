@@ -529,6 +529,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     'TECHNICAL TEAM',
     'PRODUCTION TEAM',
     'PROGRAMMING TEAM',
+    'TBL TEAM',
     'SPATIAL DESIGNER',
     'TECH LAYOUT DESIGNER',
     'INSTALLATION TEAM',

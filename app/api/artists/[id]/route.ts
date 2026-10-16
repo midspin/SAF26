@@ -10,6 +10,12 @@ const ALLOWED_MUTATION_ROLES = [
   'PROGRAMMERS',
   'PROGRAMMING TEAM',
   'PROGRAMMING HEAD',
+  'TBL',
+  'TBL TEAM',
+  'TRAVEL',
+  'TRAVEL TEAM',
+  'TRAVEL & LODGING',
+  'TRAVEL & BOARDING & LODGING',
 ];
 
 function isAuthorized(role?: string): boolean {
@@ -166,10 +172,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       phone,
       website,
       notes,
+      category,
       arrivalDate,
       departureDate,
       travelNotes,
       lodgingDetails,
+      flightDoc,
+      hotelDoc,
       status,
       curatorIds,
       pocIds,
@@ -182,7 +191,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     // Enforce role restriction for Super Admin & Programming Team
     if (userRole && !isAuthorized(userRole)) {
       return NextResponse.json(
-        { success: false, error: 'Access denied: Only Super Admin and Programming Team can edit artists.' },
+        { success: false, error: 'Access denied: Only Super Admin, Programming, and TBL Team can update artist details.' },
         { status: 403 }
       );
     }
@@ -199,10 +208,13 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
         phone,
         website,
         notes,
+        category: category !== undefined ? category : existing.category,
         arrivalDate: arrivalDate !== undefined ? arrivalDate : existing.arrivalDate,
         departureDate: departureDate !== undefined ? departureDate : existing.departureDate,
         travelNotes: travelNotes !== undefined ? travelNotes : existing.travelNotes,
         lodgingDetails: lodgingDetails !== undefined ? lodgingDetails : existing.lodgingDetails,
+        flightDoc: flightDoc !== undefined ? flightDoc : existing.flightDoc,
+        hotelDoc: hotelDoc !== undefined ? hotelDoc : existing.hotelDoc,
         status,
       },
     });
@@ -273,6 +285,21 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       for (const item of artworks) {
         if (!item.artworkName || !item.artworkName.trim()) continue;
 
+        const assignedRoomIds: string[] = Array.isArray(item.roomIds) && item.roomIds.length > 0
+          ? item.roomIds
+          : (item.roomId ? [item.roomId] : []);
+
+        // Validate that room IDs exist in database to prevent foreign key errors
+        const validRooms = assignedRoomIds.length > 0
+          ? await prisma.room.findMany({
+              where: { id: { in: assignedRoomIds } },
+              select: { id: true },
+            })
+          : [];
+        const validRoomIds = validRooms.map((r) => r.id);
+        const primaryRoomId = validRoomIds[0] || null;
+        const roomIdsJson = validRoomIds.length > 0 ? JSON.stringify(validRoomIds) : null;
+
         let artworkRecord;
         if (item.id && existingIds.includes(item.id)) {
           artworkRecord = await prisma.artwork.update({
@@ -284,7 +311,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
               installationType: item.installationType || null,
               notes: item.notes || item.description || null,
               venueId: item.venueId || null,
-              roomId: item.roomId || null,
+              roomId: primaryRoomId,
+              roomIdsJson,
             },
           });
         } else {
@@ -298,33 +326,40 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
               installationType: item.installationType || null,
               notes: item.notes || item.description || null,
               venueId: item.venueId || null,
-              roomId: item.roomId || null,
+              roomId: primaryRoomId,
+              roomIdsJson,
             },
           });
         }
 
-        // Sync ArtistInstallation if venueId/roomId is set
-        if (item.venueId || item.roomId) {
-          const existingInst = await prisma.artistInstallation.findFirst({
+        // Sync ArtistInstallation if venueId is set
+        if (item.venueId) {
+          // Remove outdated installations for this specific artwork
+          await prisma.artistInstallation.deleteMany({
             where: { artistId: artist.id, artworkId: artworkRecord.id },
           });
 
-          if (existingInst) {
-            await prisma.artistInstallation.update({
-              where: { id: existingInst.id },
-              data: {
-                venueId: item.venueId || null,
-                roomId: item.roomId || null,
-              },
-            });
+          if (validRoomIds.length > 0) {
+            for (const rId of validRoomIds) {
+              await prisma.artistInstallation.create({
+                data: {
+                  eventId: artist.eventId,
+                  artistId: artist.id,
+                  artworkId: artworkRecord.id,
+                  venueId: item.venueId,
+                  roomId: rId,
+                  installationStatus: 'Planned',
+                },
+              });
+            }
           } else {
             await prisma.artistInstallation.create({
               data: {
                 eventId: artist.eventId,
                 artistId: artist.id,
                 artworkId: artworkRecord.id,
-                venueId: item.venueId || null,
-                roomId: item.roomId || null,
+                venueId: item.venueId,
+                roomId: null,
                 installationStatus: 'Planned',
               },
             });
