@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getFromCache, setToCache, invalidateCache } from '@/lib/cache';
 
 const ALLOWED_MUTATION_ROLES = [
   'SUPER ADMIN',
@@ -26,6 +27,17 @@ function isAuthorized(role?: string): boolean {
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+
+    const cacheKey = `artist_${id}`;
+    const cached = getFromCache<any>(cacheKey, 60000);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
 
     const artist = await prisma.artist.findUnique({
       where: { id },
@@ -116,38 +128,25 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 
     const completenessScore = Math.round((earnedPoints / totalPoints) * 100);
 
-    // Activity Log for Artist - Lean selection for speed
-    const activityLogs = await prisma.auditLog.findMany({
-      where: {
-        entityId: artist.id,
-      },
-      select: {
-        id: true,
-        action: true,
-        entityType: true,
-        entityId: true,
-        userName: true,
-        userRole: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 10,
-    });
+    // Activity Log - lightweight initialization (audit logs are not displayed on artist 360 overview)
+    const activityLogs: any[] = [];
 
-    return NextResponse.json(
-      {
-        success: true,
-        artist,
-        completenessScore,
-        missingFields,
-        activityLogs,
+    const responseData = {
+      success: true,
+      artist,
+      completenessScore,
+      missingFields,
+      activityLogs,
+    };
+
+    setToCache(cacheKey, responseData);
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+        'X-Cache': 'MISS',
       },
-      {
-        headers: {
-          'Cache-Control': 'private, max-age=5, stale-while-revalidate=30',
-        },
-      }
-    );
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -394,6 +393,8 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
       },
     });
 
+    invalidateCache('artist');
+
     return NextResponse.json({ success: true, artist: fullArtist });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -430,6 +431,8 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         previousValueJson: JSON.stringify(existing),
       },
     });
+
+    invalidateCache('artist');
 
     return NextResponse.json({ success: true, id });
   } catch (error: any) {

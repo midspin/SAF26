@@ -739,6 +739,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
                     <li key={item.href}>
                       <Link
                         href={item.href}
+                        prefetch={true}
                         onClick={() => setMobileMenuOpen(false)}
                         className={`flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-semibold transition-all ${
                           isActive

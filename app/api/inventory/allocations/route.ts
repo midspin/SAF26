@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { invalidateCache } from '@/lib/cache';
 
 export async function GET(req: Request) {
   try {
@@ -199,6 +200,7 @@ export async function POST(req: Request) {
       });
     }
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, allocation: result.allocation });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -273,6 +275,7 @@ export async function PUT(req: Request) {
       return alloc;
     }, { maxWait: 15000, timeout: 30000 });
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, allocation: result });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -357,6 +360,7 @@ export async function DELETE(req: Request) {
       console.error('Audit log creation error:', logErr);
     }
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, deletedId: id, unallocatedQuantity: result.remainingIssued });
   } catch (error: any) {
     console.error('Error removing allocation:', error);
@@ -540,6 +544,7 @@ export async function PATCH(req: Request) {
       console.error('Audit log creation error on reallocation:', logErr);
     }
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, allocation: result.updatedAlloc });
   } catch (error: any) {
     console.error('Error reallocating item:', error);

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { getFromCache, setToCache, invalidateCache } from '@/lib/cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,6 +25,17 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const eventId = searchParams.get('eventId');
 
+    const cacheKey = `all_artists_${eventId || 'all'}`;
+    const cached = getFromCache<any>(cacheKey, 60000);
+    if (cached) {
+      return NextResponse.json(cached, {
+        headers: {
+          'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+          'X-Cache': 'HIT',
+        },
+      });
+    }
+
     const where: any = {};
     if (eventId) where.eventId = eventId;
 
@@ -44,7 +56,6 @@ export async function GET(req: Request) {
         spatialAssignments: { include: { spatialDesigner: true } },
         installations: {
           include: {
-            artwork: true,
             venue: true,
             room: true,
           },
@@ -61,14 +72,15 @@ export async function GET(req: Request) {
       },
     });
 
-    return NextResponse.json(
-      { success: true, artists },
-      {
-        headers: {
-          'Cache-Control': 'private, max-age=10, stale-while-revalidate=60',
-        },
-      }
-    );
+    const responseData = { success: true, artists };
+    setToCache(cacheKey, responseData);
+
+    return NextResponse.json(responseData, {
+      headers: {
+        'Cache-Control': 'private, max-age=60, stale-while-revalidate=120',
+        'X-Cache': 'MISS',
+      },
+    });
   } catch (error: any) {
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   }
@@ -289,6 +301,8 @@ export async function POST(req: Request) {
     } catch (notifErr) {
       console.error('Failed to create artist notification:', notifErr);
     }
+
+    invalidateCache('artist');
 
     return NextResponse.json({ success: true, artist: fullArtist });
   } catch (error: any) {

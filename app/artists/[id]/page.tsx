@@ -259,11 +259,26 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   const [pdfExportModalOpen, setPdfExportModalOpen] = useState(false);
   const [docketModalOpen, setDocketModalOpen] = useState(false);
 
-  const [artistData, setArtistData] = useState<any>(null);
+  const [artistData, setArtistData] = useState<any>(() => {
+    if (typeof window !== 'undefined' && id) {
+      try {
+        const preview = sessionStorage.getItem(`saf_artist_preview_${id}`);
+        if (preview) return JSON.parse(preview);
+      } catch (e) {}
+    }
+    return null;
+  });
   const [completenessScore, setCompletenessScore] = useState<number>(0);
   const [missingFields, setMissingFields] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && id) {
+      try {
+        if (sessionStorage.getItem(`saf_artist_preview_${id}`)) return false;
+      } catch (e) {}
+    }
+    return true;
+  });
 
   // Spatial Drawing Popup View Modal (Technical & Production Layout)
   const [spatialDrawingModal, setSpatialDrawingModal] = useState<{
@@ -1250,8 +1265,9 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
   }, [toastNotification.show]);
 
   useEffect(() => {
-    // 1. Instantly fetch artist details to render text & metadata immediately
-    fetchArtistDetails(true);
+    // If preview was already loaded from cache, fetch silently in background without showing full-page spinner
+    const hasCachedData = typeof window !== 'undefined' && !!sessionStorage.getItem(`saf_artist_preview_${id}`);
+    fetchArtistDetails(!hasCachedData);
 
     // 2. Defer heavy inventory master table fetch to background after text has rendered
     const timer = setTimeout(() => {
@@ -1266,11 +1282,14 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     try {
       const res = await fetch(`/api/artists/${id}`);
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.artist) {
         setArtistData(data.artist);
         setCompletenessScore(data.completenessScore);
         setMissingFields(data.missingFields || []);
         setActivityLogs(data.activityLogs || []);
+        try {
+          sessionStorage.setItem(`saf_artist_preview_${id}`, JSON.stringify(data.artist));
+        } catch (e) {}
       }
     } catch (err) {
       console.error(err);

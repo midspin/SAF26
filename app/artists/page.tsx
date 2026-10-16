@@ -401,9 +401,32 @@ function FileUploadBox({
 }
 
 export default function ArtistsPage() {
-  const [artists, setArtists] = useState<any[]>([]);
-  const [venuesList, setVenuesList] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [artists, setArtists] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('saf_cached_artists_list');
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [venuesList, setVenuesList] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem('saf_cached_venues_list');
+        if (cached) return JSON.parse(cached);
+      } catch (e) {}
+    }
+    return [];
+  });
+  const [loading, setLoading] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        if (sessionStorage.getItem('saf_cached_artists_list')) return false;
+      } catch (e) {}
+    }
+    return true;
+  });
   const [search, setSearch] = useState('');
   const [newModalOpen, setNewModalOpen] = useState(false);
 
@@ -709,7 +732,8 @@ export default function ArtistsPage() {
   };
 
   const fetchArtistsAndVenues = async () => {
-    setLoading(true);
+    const hasCached = typeof window !== 'undefined' && !!sessionStorage.getItem('saf_cached_artists_list');
+    if (!hasCached) setLoading(true);
     try {
       const [artistsRes, venuesRes] = await Promise.all([
         fetch('/api/artists'),
@@ -719,8 +743,24 @@ export default function ArtistsPage() {
       const artistsData = await artistsRes.json();
       const venuesData = await venuesRes.json();
 
-      if (artistsData.success) setArtists(artistsData.artists);
-      if (venuesData.success) setVenuesList(venuesData.venues);
+      if (artistsData.success && Array.isArray(artistsData.artists)) {
+        setArtists(artistsData.artists);
+        try {
+          sessionStorage.setItem('saf_cached_artists_list', JSON.stringify(artistsData.artists));
+          // Prime individual artist previews so clicking any artist loads instantly (0ms)
+          artistsData.artists.forEach((art: any) => {
+            if (art?.id) {
+              sessionStorage.setItem(`saf_artist_preview_${art.id}`, JSON.stringify(art));
+            }
+          });
+        } catch (e) {}
+      }
+      if (venuesData.success && Array.isArray(venuesData.venues)) {
+        setVenuesList(venuesData.venues);
+        try {
+          sessionStorage.setItem('saf_cached_venues_list', JSON.stringify(venuesData.venues));
+        } catch (e) {}
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -1523,7 +1563,11 @@ export default function ArtistsPage() {
                 )}
                 <div>
                   <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3.5">
+                    <Link
+                      href={`/artists/${art.id}`}
+                      prefetch={true}
+                      className="flex items-center gap-3.5 hover:opacity-90 transition-opacity cursor-pointer"
+                    >
                       {art.artistPhoto ? (
                         <img
                           src={art.artistPhoto}
@@ -1544,7 +1588,7 @@ export default function ArtistsPage() {
                           {art.country || 'International'}
                         </p>
                       </div>
-                    </div>
+                    </Link>
                     <div className="flex items-center gap-1.5">
                       {art.category && (
                         <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800 tracking-wide uppercase">
@@ -1703,6 +1747,12 @@ export default function ArtistsPage() {
                 <div className="mt-4 space-y-2">
                   <Link
                     href={`/artists/${art.id}`}
+                    prefetch={true}
+                    onMouseEnter={() => {
+                      try {
+                        sessionStorage.setItem(`saf_artist_preview_${art.id}`, JSON.stringify(art));
+                      } catch (e) {}
+                    }}
                     className="w-full bg-slate-800 hover:bg-sky-500 hover:text-slate-950 text-sky-400 font-bold text-xs py-2 rounded-xl border border-slate-700 transition-all flex items-center justify-center gap-1.5"
                   >
                     Open Artist 360° View <ArrowUpRight className="w-3.5 h-3.5" />

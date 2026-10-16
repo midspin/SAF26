@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { invalidateCache } from '@/lib/cache';
 
 export async function GET(req: Request) {
   try {
@@ -139,6 +140,7 @@ export async function POST(req: Request) {
       },
     });
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, item });
   } catch (error: any) {
     console.error('Error in POST /api/production-requirements:', error);
@@ -203,6 +205,7 @@ export async function PUT(req: Request) {
       },
     });
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true, item });
   } catch (error: any) {
     console.error('Error in PUT /api/production-requirements:', error);
@@ -223,6 +226,7 @@ export async function DELETE(req: Request) {
       where: { id },
     });
 
+    invalidateCache('artist');
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Error in DELETE /api/production-requirements:', error);
