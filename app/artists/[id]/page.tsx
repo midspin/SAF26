@@ -618,7 +618,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
             allocations: [data.allocation, ...(prev?.allocations || [])],
           }));
         }
-        const deptLabel = assignItemModalDepartment === 'PRODUCTION' ? 'Production Allotment' : 'Technical Stock Allotment';
+        const deptLabel = assignItemModalDepartment === 'PRODUCTION' ? 'Production Inventory' : 'Technical Stock Allotment';
         setToastNotification({
           show: true,
           title: `Item Allocated to ${deptLabel}`,
@@ -1204,7 +1204,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
     safCode: '',
     elementName: '',
     quantity: 1,
-    category: 'Production Allotment',
+    category: 'Production Inventory',
   });
 
   const playSuccessChime = () => {
@@ -2407,13 +2407,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
               )}
             </div>
 
-            {/* PRODUCTION ALLOTMENT CARD */}
+            {/* PRODUCTION INVENTORY CARD */}
             <div className="p-6 rounded-3xl bg-[#232334] border border-amber-500/30 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2.5">
                   <Package className="w-5 h-5 text-amber-400" />
                   <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                    Production Allotment ({productionAllocations.length})
+                    Production Inventory ({productionAllocations.length})
                   </h2>
                 </div>
                 {canAssignProductionAllotment && (
@@ -2501,13 +2501,13 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
           </>
         ) : (
           <>
-            {/* PRODUCTION ALLOTMENT CARD */}
+            {/* PRODUCTION INVENTORY CARD */}
             <div className="p-6 rounded-3xl bg-[#232334] border border-amber-500/30 shadow-2xl space-y-4">
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2.5">
                   <Package className="w-5 h-5 text-amber-400" />
                   <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                    Production Allotment ({productionAllocations.length})
+                    Production Inventory ({productionAllocations.length})
                   </h2>
                 </div>
                 {canAssignProductionAllotment && (
@@ -4176,7 +4176,7 @@ export default function Artist360FormPage({ params }: { params: Promise<{ id: st
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <h3 className="text-sm font-black text-white uppercase tracking-wider flex items-center gap-2">
                   <Package className={`w-4 h-4 ${assignItemModalDepartment === 'PRODUCTION' ? 'text-amber-400' : 'text-emerald-400'}`} />
-                  Assign {assignItemModalDepartment === 'PRODUCTION' ? 'Production Allotment' : 'Technical Stock Allotment'} Item
+                  Assign {assignItemModalDepartment === 'PRODUCTION' ? 'Production Inventory' : 'Technical Stock Allotment'} Item
                 </h3>
                 <button onClick={() => setAssignItemModalOpen(false)} className="text-[#8a8d9b] hover:text-white">
                   <X className="w-5 h-5" />

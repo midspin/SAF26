@@ -516,7 +516,7 @@ export default function ArtistProductionItemsSection({
 
   return (
     <>
-      {/* PRODUCTION ITEMS CARD */}
+      {/* NEW FABRICATION CARD */}
       <div className="p-6 rounded-3xl bg-[#232334] border border-amber-500/40 shadow-2xl space-y-4">
         {/* CARD HEADER */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-3">
@@ -527,7 +527,7 @@ export default function ArtistProductionItemsSection({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-black text-white uppercase tracking-wider">
-                  Production Items ({productionRequirements.length})
+                  New Fabrication ({productionRequirements.length})
                 </h2>
                 <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
                   Requirements & Specifications
@@ -545,7 +545,7 @@ export default function ArtistProductionItemsSection({
                 onClick={openCreateModal}
                 className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs px-3.5 py-2 rounded-xl transition-all flex items-center gap-1.5 shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer"
               >
-                <Plus className="w-4 h-4" /> Add Production Item
+                <Plus className="w-4 h-4" /> Add New Fabrication
               </button>
             ) : (
               <span className="text-[10px] font-mono text-[#8a8d9b] bg-[#1c1c2a] px-2.5 py-1 rounded-lg border border-white/5">
@@ -611,19 +611,19 @@ export default function ArtistProductionItemsSection({
         {/* ITEMS LIST TABLE / EMPTY STATE */}
         {productionRequirements.length === 0 ? (
           <div className="p-8 text-center bg-[#1c1c2a] rounded-2xl border border-white/5 text-[#8a8d9b] text-xs space-y-2">
-            <p>No production items or custom requirements added yet for this artist.</p>
+            <p>No new fabrication items or custom requirements added yet for this artist.</p>
             {canManage && (
               <button
                 onClick={openCreateModal}
                 className="inline-flex items-center gap-1.5 text-amber-400 hover:text-amber-300 hover:underline font-bold text-xs"
               >
-                <Plus className="w-3.5 h-3.5" /> Add First Production Item Now
+                <Plus className="w-3.5 h-3.5" /> Add First New Fabrication Now
               </button>
             )}
           </div>
         ) : filteredItems.length === 0 ? (
           <div className="p-6 text-center bg-[#1c1c2a] rounded-2xl border border-white/5 text-[#8a8d9b] text-xs">
-            No production items match your search filters.
+            No new fabrication items match your search filters.
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -747,7 +747,7 @@ export default function ArtistProductionItemsSection({
                             <button
                               onClick={() => openEditModal(item)}
                               className="p-1.5 rounded-lg bg-[#1c1c2a] text-[#8a8d9b] hover:text-amber-400 hover:bg-amber-500/10 transition-colors cursor-pointer"
-                              title="Edit Production Item"
+                              title="Edit New Fabrication"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
                             </button>
@@ -784,7 +784,7 @@ export default function ArtistProductionItemsSection({
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                    {editingItem ? 'Edit Production Item' : 'Add Production Item'}
+                    {editingItem ? 'Edit New Fabrication' : 'Add New Fabrication'}
                   </h3>
                   <p className="text-[10px] text-[#8a8d9b]">
                     Specify custom production, technical infrastructure, or fabrication item
@@ -1143,7 +1143,7 @@ export default function ArtistProductionItemsSection({
                   disabled={isSubmitting}
                   className="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all cursor-pointer"
                 >
-                  {isSubmitting ? 'Saving...' : editingItem ? 'Update Production Item' : 'Add Production Item'}
+                  {isSubmitting ? 'Saving...' : editingItem ? 'Update New Fabrication' : 'Add New Fabrication'}
                 </button>
               </div>
             </form>
@@ -1162,7 +1162,7 @@ export default function ArtistProductionItemsSection({
             </div>
             <div>
               <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                Delete Production Item?
+                Delete New Fabrication?
               </h3>
               <p className="text-xs text-[#8a8d9b] mt-1">
                 Are you sure you want to remove "<strong>{deleteItemModal.element}</strong>"? This action cannot be undone.
