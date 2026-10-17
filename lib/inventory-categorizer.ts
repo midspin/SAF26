@@ -30,6 +30,13 @@ export const TECHNICAL_SUB_CATEGORIES = [
   'Tab',
   'WiFi',
   'Appliance',
+  'Video',
+  'Telephone',
+  'Projection',
+  'Projector',
+  'Projectors',
+  'Phone',
+  'Phones',
 ] as const;
 
 const TECH_SUB_SET = new Set(

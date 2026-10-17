@@ -608,7 +608,7 @@ export default function InventoryPage() {
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            Single unified inventory pool. Tech items are automatically categorized based on SubCategory (Amp, Camera, Cables, Display, Headphone, IT, Media Player, Mic, Misc., Mobile Device, Mount, PC, Screen, Speaker, Sound, Splitter, Tab, WiFi, Appliance).
+            Single unified inventory pool. Tech items are automatically categorized based on SubCategory (Amp, Camera, Cables, Display, Headphone, IT, Media Player, Mic, Misc., Mobile Device, Mount, PC, Screen, Speaker, Sound, Splitter, Tab, WiFi, Appliance, Video, Telephone).
           </p>
         </div>
 
